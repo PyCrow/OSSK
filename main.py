@@ -167,7 +167,7 @@ class Controller(QObject):
         """ Loading configuration """
         succ, config = get_settings()
         if not succ:
-            self.add_log_message(ERROR, "Settings loading error!")
+            self.add_log_message(ERROR, "Ошибка загрузки настроек!")
             return
 
         # Getting channels from config, saving them and adding to GUI
@@ -214,12 +214,12 @@ class Controller(QObject):
 
         suc = save_settings(settings)
         if not suc:
-            self.add_log_message(ERROR, "Settings saving error!")
+            self.add_log_message(ERROR, "Ошибка сохранения настроек!")
 
         # Update Master, Slave and views
         self._update_settings_everywhere(settings)
 
-        self.add_log_message(DEBUG, "Settings updated.")
+        self.add_log_message(DEBUG, "Настройки обновлены.")
 
     def _update_settings_everywhere(
             self,
@@ -250,12 +250,12 @@ class Controller(QObject):
     def run_master(self):
         ytdlp_command = self.Window.settings_window.field_ytdlp.text()
         if not is_callable(ytdlp_command):
-            self.add_log_message(WARNING, "yt-dlp not found.")
+            self.add_log_message(WARNING, "yt-dlp не найден.")
             return
 
         ffmpeg_path = self.Window.settings_window.field_ffmpeg.text()
         if not check_exists_and_callable(ffmpeg_path):
-            self.add_log_message(WARNING, "ffmpeg not found.")
+            self.add_log_message(WARNING, "ffmpeg не найден.")
             return
 
         if self.Master.isRunning() and self.Master.Slave.isRunning():
@@ -309,8 +309,8 @@ class Controller(QObject):
         if channel_name in active_channels:
             self.add_log_message(
                 WARNING,
-                f"Cannot delete channel \"{channel_name}\": "
-                "There are active downloads from this channel.")
+                f"Нельзя удалить канал \"{channel_name}\": "
+                "У канала имеются активные загрузки.")
             return
 
         del self._channels[channel_name]
@@ -407,7 +407,7 @@ class Master(QThread):
         self._start_force_scan = True
 
     def run(self) -> None:
-        self.log(INFO, "Scanning channels started.")
+        self.log(INFO, "Проверка каналов запущена.")
         self.Slave.start()
 
         try:
@@ -421,7 +421,7 @@ class Master(QThread):
                 self.wait_and_check()
         except StopThreads:
             pass
-        self.log(INFO, "Scanning channels stopped.")
+        self.log(INFO, "Проверка каналов приостановлена.")
 
     def wait_and_check(self):
         """ Waiting with a check to stop """
@@ -462,7 +462,7 @@ class Master(QThread):
                     warn = str(e)
                     leftover = warn[warn.find(FLAG_LIVE) + len(FLAG_LIVE):]
                     self.log(WARNING,
-                             f"{channel_name} stream in {leftover}.")
+                             f"Стрим {channel_name} через {leftover}")
                     self.scheduled_streams[channel_name] = True
                 self.s_channel_off[str].emit(channel_name)
                 return
@@ -475,7 +475,7 @@ class Master(QThread):
         # Check channel stream is on
         if info_dict.get("is_live"):
             if self.channel_status_changed(channel_name, True):
-                self.log(INFO, f"Channel {channel_name} is online.")
+                self.log(INFO, f"Канал {channel_name} в сети.")
                 self.s_channel_live[str].emit(channel_name)
 
             # Check if Slave is ready
@@ -493,10 +493,11 @@ class Master(QThread):
                     'title': info_dict['title'],
                 }
                 self.Slave.queue.put(stream_data, block=True)
-                self.log(INFO, f"Recording {channel_name} added to queue.")
+                self.log(INFO, f"Запись канала {channel_name}"
+                               " добавлена в очередь.")
 
         elif self.channel_status_changed(channel_name, False):
-            self.log(INFO, f"Channel {channel_name} is offline.")
+            self.log(INFO, f"Канал {channel_name} не в сети.")
             self.s_channel_off[str].emit(channel_name)
 
 
@@ -525,7 +526,7 @@ class Slave(QThread):
         self.s_log[int, str].emit(level, text)
 
     def run(self):
-        self.log(INFO, "Recorder started.")
+        self.log(INFO, "Загрузчик запущен.")
 
         try:
             while True:
@@ -536,7 +537,7 @@ class Slave(QThread):
                 self.check_for_stop()
         except StopThreads:
             self.stop_downloads()
-        self.log(INFO, "Recorder stopped.")
+        self.log(INFO, "Загрузчик остановлен.")
 
     def get_names_of_active_channels(self):
         return [proc.channel for proc in self.running_downloads]
@@ -557,11 +558,11 @@ class Slave(QThread):
             # Handling finished process
             if ret_code == 0:
                 self.s_stream_finished[int].emit(proc.pid)
-                self.log(INFO, f"Recording {proc.channel} finished.")
+                self.log(INFO, f"Запись {proc.channel} завершилась.")
             else:
                 self.s_stream_fail[int].emit(proc.pid)
-                self.log(ERROR, f"Recording {proc.channel} "
-                                f"stopped with an error code: {ret_code}!")
+                self.log(ERROR, f"Запись канала {proc.channel} "
+                                f"завершилась с ошибкой: {ret_code}!")
             self.handle_process_finished(proc)
 
         self.running_downloads = list_running
@@ -588,7 +589,7 @@ class Slave(QThread):
 
         temp_log = tempfile.TemporaryFile(mode='w+b')
 
-        self.log(INFO, f"Recording {channel_name} started.")
+        self.log(INFO, f"Начата запись канала {channel_name}.")
 
         cmd = self.ytdlp_command.split() + [
             stream_url,
@@ -633,7 +634,7 @@ class Slave(QThread):
                 self.send_process_stop(proc)
 
     def send_process_stop(self, proc: RecordProcess):
-        self.log(INFO, f"Stopping process {proc.pid}...")
+        self.log(INFO, f"Останавливаю процесс {proc.pid}...")
         try:
             # Fixme:
             #  ValueError raises when Windows couldn't indentify SIGINT
@@ -646,7 +647,7 @@ class Slave(QThread):
         """ Stop all downloads """
         if not self.running_downloads:
             return
-        self.log(INFO, "Stopping records.")
+        self.log(INFO, "Останавливаю загрузки.")
 
         for proc in self.running_downloads:
             self.send_process_stop(proc)
@@ -658,13 +659,13 @@ class Slave(QThread):
                     self.s_stream_finished[int].emit(proc.pid)
                 else:
                     self.s_stream_fail[int].emit(proc.pid)
-                    self.log(ERROR, "Error while stopping channel {} record :("
+                    self.log(ERROR, "Ошибка при остановке записи канала {} :("
                              .format(proc.channel))
             except subprocess.TimeoutExpired:
                 proc.kill()
                 self.s_stream_fail[int].emit(proc.pid)
                 self.log(ERROR,
-                         "Recording[{}] of channel {} has been killed!".format(
+                         "Запись[{}] канала {} была убита!".format(
                              proc.pid, proc.channel))
             finally:
                 self.handle_process_finished(proc)

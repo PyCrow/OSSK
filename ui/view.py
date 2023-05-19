@@ -97,19 +97,19 @@ class MainWindow(QWidget):
 
         # Settings window
         self.settings_window = SettingsWindow()
-        button_settings = QPushButton('Settings')
+        button_settings = QPushButton("Настройки")
         button_settings.clicked.connect(self.settings_window.show)
 
         self.field_add_channels = QLineEdit()
-        self.field_add_channels.setPlaceholderText("Enter channel name")
+        self.field_add_channels.setPlaceholderText("Введите название канала")
 
-        self.button_add_channel = QPushButton("Add")
+        self.button_add_channel = QPushButton("Добавить")
 
         hbox_channels_tree_header = QHBoxLayout()
-        hbox_channels_tree_header.addWidget(QLabel("Monitored channels"))
+        hbox_channels_tree_header.addWidget(QLabel("Отслеживаемые каналы"))
         hbox_channels_tree_header.addWidget(self.button_add_channel)
 
-        self.label_next_scan_timer = QLabel("Next scan timer")
+        self.label_next_scan_timer = QLabel("Время до сканирования")
 
         self.widget_channels_tree = ChannelsTree()
 
@@ -131,8 +131,8 @@ class MainWindow(QWidget):
         main_hbox.addLayout(left_vbox, 1)
         main_hbox.addWidget(self.log_tabs, 2)
 
-        self.start_button = QPushButton("Start")
-        self.stop_button = QPushButton("Stop all")
+        self.start_button = QPushButton("Начать")
+        self.stop_button = QPushButton("Остановить всё")
         hbox_master_buttons = QHBoxLayout()
         hbox_master_buttons.addWidget(self.start_button)
         hbox_master_buttons.addWidget(self.stop_button)
@@ -186,7 +186,8 @@ class MainWindow(QWidget):
 
     @pyqtSlot(int)
     def update_next_scan_timer(self, seconds: int):
-        self.label_next_scan_timer.setText(f"Next scan in: {seconds} seconds")
+        self.label_next_scan_timer.setText(
+            f"Сканирование через: {seconds} секунд")
 
 
 class ListView(QListView):
@@ -222,12 +223,12 @@ class ChannelsTree(QTreeView):
         self._map_channel_item: dict[str, ChannelItem] = {}
         self._map_pid_item: dict[int, RecordProcessItem] = {}
 
-        self.on_click_channel_settings = QAction("Channel settings", self)
-        self.on_click_delete_channel = QAction("Delete channel", self)
-        self._on_click_open_tab = QAction("Open tab", self)
+        self.on_click_channel_settings = QAction("Настройки канала", self)
+        self.on_click_delete_channel = QAction("Удалить канал", self)
+        self._on_click_open_tab = QAction("Открыть вкладку", self)
         self._on_click_open_tab.triggered.connect(self._send_open_tab_by_pid)
-        self.on_click_stop = QAction("Stop process", self)
-        self._on_click_hide_process = QAction("Hide", self)
+        self.on_click_stop = QAction("Остановить процесс", self)
+        self._on_click_hide_process = QAction("Скрыть процесс", self)
         self._on_click_hide_process.triggered.connect(
             self._del_finished_process_item)
 
@@ -325,7 +326,8 @@ class ChannelsTree(QTreeView):
     def _del_finished_process_item(self):
         process_item = self._selected_item()
         if not process_item.finished:
-            logger.error("Process cannot be hidden: process not finished yet")
+            logger.error("Процесс не может быть скрыт: "
+                         "процесс ещё не завершён.")
             return
         channel_item = process_item.parent()
         channel_item.removeRow(process_item.row())
@@ -364,7 +366,7 @@ class LogTabWidget(QTabWidget):
         self.tabCloseRequested[int].connect(self._close_tab)
 
         self._common_tab = LogWidget()
-        self.addTab(self._common_tab, "Common")
+        self.addTab(self._common_tab, "Журнал")
 
     def add_common_message(self, text: str, level: int):
         """
@@ -477,7 +479,7 @@ class SettingsWindow(QWidget):
         self._init_ui()
 
     def _init_ui(self):
-        self.setWindowTitle("StreamSaver | Settings")
+        self.setWindowTitle("StreamSaver | Настройки")
         self.setWindowModality(Qt.ApplicationModal)
 
         self.setMinimumSize(500, 360)
@@ -485,100 +487,101 @@ class SettingsWindow(QWidget):
         self.resize(500, 360)
 
         # Field: Path to ffmpeg
-        label_ffmpeg = QLabel("Path to ffmpeg")
+        label_ffmpeg = QLabel("Путь до ffmpeg")
         self.field_ffmpeg = QLineEdit(parent=self)
         self.field_ffmpeg.setPlaceholderText(
-            "Enter path to ffmpeg")
+            "Введите путь до ffmpeg")
         self.field_ffmpeg.textChanged[str].connect(self._check_ffmpeg)
         self.field_ffmpeg.setToolTip(
-            "Checks:\n"
-            "1. Is the specified path available as a file.\n"
-            "2. Is the specified file can be called.\n"
-            "The field is highlighted in red if the path file is\n"
-            " not available.")
+            "Проверяет:\n"
+            "1. Доступен ли указанный путь как файл.\n"
+            "2. Вызывается ли указанный файл.\n"
+            "Поле подсвечивается красным, если файл пути\n"
+            " недоступен.")
         hbox_ffmpeg = QVBoxLayout()
         hbox_ffmpeg.addWidget(label_ffmpeg)
         hbox_ffmpeg.addWidget(self.field_ffmpeg)
 
         # Field: Command or path to yt-dlp
-        label_ytdlp = QLabel("Command or path to yt-dlp")
+        label_ytdlp = QLabel("Команда или путь до yt-dlp")
         self.field_ytdlp = QLineEdit(parent=self)
         self.field_ytdlp.setPlaceholderText(
-            "Enter command or path to yt-dlp")
+            "Введите команду или путь до yt-dlp")
         self.field_ytdlp.textChanged[str].connect(self._check_ytdlp)
         self.field_ytdlp.setToolTip(
-            "Checks:\n"
-            "1. Is called as a command.\n"
-            "2. Is the specified path available as a file.\n"
-            "3. Is the specified file can be called.\n"
-            "The field is highlighted in red if the path file is\n"
-            " not available.")
+            "Проверяет:\n"
+            "1. Вызывается как команда.\n"
+            "2. Доступен ли указанный путь как файл.\n"
+            "3. Вызывается ли указанный файл.\n"
+            "Поле подсвечивается красным, если файл пути\n"
+            " недоступен.")
         hbox_ytdlp = QVBoxLayout()
         hbox_ytdlp.addWidget(label_ytdlp)
         hbox_ytdlp.addWidget(self.field_ytdlp)
 
         # Field: Max downloads
-        label_max_downloads = QLabel("Maximum number of synchronous downloads")
+        label_max_downloads = QLabel("Максимальное кол-во"
+                                     " одновременных загрузок")
         self.box_max_downloads = QSpinBox(self)
         self.box_max_downloads.setRange(0, 50)
         self.box_max_downloads.valueChanged[int].connect(
             self._check_max_downloads)
         self.box_max_downloads.setToolTip(
-            "Range from 1 to 50.\n"
-            "It is not recommended to set a value greater than 12 or 0.\n"
-            "0 - no restrictions.")
+            "От 1 до 50.\n"
+            "Не рекомендуется ставить значение больше 12 или 0.\n"
+            "0 - без ограничений.")
         hbox_max_downloads = QHBoxLayout()
         hbox_max_downloads.addWidget(label_max_downloads)
         hbox_max_downloads.addWidget(self.box_max_downloads,
                                      alignment=Qt.AlignRight)
 
         # Field: Time between scans
-        label_scanner_sleep = QLabel("Time between scans (minutes)")
+        label_scanner_sleep = QLabel("Время между сканированиями (в минутах)")
         self.box_scanner_sleep = QSpinBox(self)
         self.box_scanner_sleep.setRange(1, 60)
         self.box_scanner_sleep.valueChanged[int].connect(
             self._check_scanner_sleep)
         self.box_scanner_sleep.setToolTip(
-            "Waiting time between channel scans (minutes).\n"
-            "Range from 1 to 60.\n"
-            "It is not recommended to set it to less than 5 minutes, so\n"
-            " that YouTube does not consider the scan as a DoS attack.")
+            "Время ожидания между сканированиями каналов (в минутах).\n"
+            "От 1 до 60.\n"
+            "Не рекомендуется ставить меньше 5 минут, чтобы\n"
+            " YouTube не счёл сканирование за DoS атаку.")
         hbox_scanner_sleep = QHBoxLayout()
         hbox_scanner_sleep.addWidget(label_scanner_sleep)
         hbox_scanner_sleep.addWidget(self.box_scanner_sleep,
                                      alignment=Qt.AlignRight)
 
         # Field: Process termination timeout
-        label_proc_term_timeout = QLabel("Process termination timeout")
+        label_proc_term_timeout = QLabel("Таймер завершения процесса")
         self.box_proc_term_timeout = QSpinBox(self)
         self.box_proc_term_timeout.setRange(0, 3600)
         self.box_proc_term_timeout.valueChanged[int].connect(
             self._check_proc_term_timeout)
         self.box_proc_term_timeout.setToolTip(
-            "Waiting time for process finished (seconds).\n"
-            "Range from 0 (don't wait) to 3600 (hour).\n"
-            "Default value - 600.\n"
-            "When the time runs out, the process will be killed.\n"
-            "It is not recommended to set it to less than 20 seconds,\n"
-            " since it can take a long time to merge video and audio\n"
-            " tracks of long recordings.")
+            "Время ожидания завершения процесса (в секундах).\n"
+            "От 0 (не ждать) до 3600 (час).\n"
+            "По-умолчанию - 600.\n"
+            "Когда время закончится, процесс будет убит.\n"
+            "Не рекомендуется устанавливать значение меньше 20\n"
+            " секунд, поскольку объединение видео- и аудио-дорожек\n"
+            " долгих записей может занять много времени.")
         hbox_proc_term_timeout = QHBoxLayout()
         hbox_proc_term_timeout.addWidget(label_proc_term_timeout)
         hbox_proc_term_timeout.addWidget(self.box_proc_term_timeout,
                                          alignment=Qt.AlignRight)
 
         # Field: Hide successfully finished processes
-        label_hide_suc_fin_proc = QLabel("Hide successfully "
-                                         "finished processes")
+        label_hide_suc_fin_proc = QLabel("Скрывать успешно "
+                                         "завершённые процессы")
         self.box_hide_suc_fin_proc = QCheckBox()
         self.box_hide_suc_fin_proc.setToolTip(
-            "Successfully finished processes will be hidden.")
+            "Успешно завершённые процессы будут скрыты.")
         hbox_hide_suc_fin_proc = QHBoxLayout()
         hbox_hide_suc_fin_proc.addWidget(label_hide_suc_fin_proc)
         hbox_hide_suc_fin_proc.addWidget(self.box_hide_suc_fin_proc,
                                          alignment=Qt.AlignRight)
 
-        self.button_apply = QPushButton("Accept", self)
+        self.button_apply = QPushButton("Применить", self)
 
         vbox = QVBoxLayout()
         vbox.addLayout(hbox_ffmpeg)
@@ -632,7 +635,7 @@ class ChannelSettingsWindow(QWidget):
         self._init_ui()
 
     def _init_ui(self):
-        self.setWindowTitle("StreamSaver | Channel settings")
+        self.setWindowTitle("StreamSaver | Настройки канала")
         self.setWindowModality(Qt.ApplicationModal)
 
         self.setMinimumWidth(300)
@@ -645,20 +648,20 @@ class ChannelSettingsWindow(QWidget):
 
         self.line_alias = QLineEdit()
         self.line_alias.setPlaceholderText(
-            "Enter readable alias for the channel")
+            "Введите псевдоним для канала")
 
         self.box_svq = QComboBox()
         self.box_svq.addItems(list(AVAILABLE_STREAM_RECORD_QUALITIES.keys()))
 
-        self.button_apply = QPushButton("Accept", self)
+        self.button_apply = QPushButton("Принять", self)
 
         vbox = QVBoxLayout()
         vbox.addWidget(self.label_channel, alignment=Qt.AlignHCenter)
         vbox.addStretch(1)
-        vbox.addWidget(QLabel("Channel alias"))
+        vbox.addWidget(QLabel("Псевдоним"))
         vbox.addWidget(self.line_alias)
         vbox.addStretch(1)
-        vbox.addWidget(QLabel("Stream video quality"))
+        vbox.addWidget(QLabel("Качество записи видео-потока"))
         vbox.addWidget(self.box_svq)
         vbox.addStretch(2)
         vbox.addWidget(self.button_apply)
