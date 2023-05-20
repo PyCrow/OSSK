@@ -1,0 +1,141 @@
+* {
+    font-family: "Courier";
+    font-size: 16px;
+    color: #0f0;
+}
+QWidget {
+    background-color: #262626;
+    border: 0px;
+}
+QLabel {
+    color: white;
+}
+QListView, QTreeView, QLineEdit {
+    background-color: #191919;
+    border-top: 1px solid #000;
+    border-left: 1px solid #333;
+    border-right: 1px solid #333;
+    border-bottom: 1px solid #0a0;
+    border-radius: 12px;
+    padding: 5px; }
+QTreeView::branch {
+    border-image: url(none.png); }
+QTreeView::item:hover:disabled {
+    background-color: black;
+}
+QListView::item, QTreeView::item {
+    height: 22px; }
+QListView::item:hover, QTreeView::item:hover {
+    background-color: black; }
+QListView::item:selected, QTreeView::item:selected {
+    background-color: #0f0;
+    color: black; }
+QListView::item:disabled, QTreeView::item:disabled {
+    color: #aaa;
+   }
+QStandardItem {
+    background-color: yellow;
+    color: red;
+}
+QProgressBar {
+    min-height: 16px;
+    max-height: 16px;
+    background-color: qlineargradient(
+        x1:0, y1:0, x2:0, y2:1,
+        stop:0.02 #fff, stop:0.18 #555,
+        stop:0.82 #444, stop:0.98 #888);
+    font-family: "Courier";
+    font-weight: bold;
+    color: black;
+    text-align: center;
+    border: 1px solid #111;
+    border-radius: 4px; }
+QProgressBar::chunk {
+    border-radius: 4px; }
+#HealthBar::chunk {
+    background-color: qlineargradient(
+        x1:0, y1:0, x2:0, y2:1,
+        stop:0.05 #0f0, stop:0.15 #0b0,
+        stop:0.85 #090, stop:0.95 #050); }
+#HungerBar::chunk {
+    background-color: qlineargradient(
+        x1:0, y1:0, x2:0, y2:1,
+        stop:0.05 #fe0, stop:0.15 #ba0,
+        stop:0.85 #980, stop:0.95 #540); }
+#ExperienceBar::chunk {
+    background-color: qlineargradient(
+        x1:0, y1:0, x2:0, y2:1,
+        stop:0.1 #0ef, stop:0.2 #0ab,
+        stop:0.8 #089, stop:0.9 #045);
+}
+QPushButton {
+    min-height: 22;
+    font-size: 16px;
+    background-color: #303030;
+    border-top: 1px solid #0a0;
+    border-left: 1px solid #242;
+    border-right: 1px solid #353;
+    border-bottom: 1px solid #101010;
+    border-radius: 4px;
+    margin-top: 2;
+    margin-bottom: 2; }
+QPushButton:disabled {
+    color: grey;
+    border-top: 1px solid #505050; }
+QPushButton:hover {
+    background-color: #232323;
+    border-top: 1px solid #101010;
+    border-left: 1px solid #333;
+    border-right: 1px solid #333;
+    border-bottom: 1px solid #0a0; }
+QPushButton:pressed {
+    background-color: #181818;
+    border-top: 1px solid #101010;
+    border-left: 1px solid #333;
+    border-right: 1px solid #333;
+    border-bottom: 1px solid #0a0;
+}
+QCheckBox::indicator {
+    height: 16px;
+    width: 16px;
+    background-color: #191919;
+    border-top: 1px solid #101010;
+    border-left: 1px solid #333;
+    border-right: 1px solid #333;
+    border-bottom: 1px solid #0a0;
+    border-radius: 8px; }
+QCheckBox::indicator:hover {
+    background-color: #030;
+    border-top: 1px solid #444;
+    border-left: 1px solid #050;
+    border-right: 1px solid #050;
+    border-bottom: 1px solid #0a0; }
+QCheckBox::indicator:checked {
+    background-color: #070;
+    border-top: 1px solid #0a0;
+    border-left: 1px solid #0a0;
+    border-right: 1px solid #0a0;
+    border-bottom: 1px solid #0a0;
+}
+QScrollBar:horizontal {
+    background-color: qlineargradient( x1:0, y1:0, x2:0, y2:1,
+        stop:0.42 #191919, stop:0.5 #303030, stop:0.58 #191919); }
+QScrollBar:vertical {
+    background-color: qlineargradient( x1:0, y1:0, x2:1, y2:0,
+        stop:0.42 #191919, stop:0.5 #303030, stop:0.58 #191919); }
+QScrollBar::handle:horizontal, QScrollBar::handle:vertical {
+    background-color: #303030;
+    border-radius: 8px; }
+QScrollBar::add-line, QScrollBar::sub-line {
+    border: none; background: none; }
+QScrollBar::add-page, QScrollBar::sub-page {
+    background: none;
+}
+QToolTip {
+    background-color: black;
+    color: #fff;
+    border-top: 1px solid #505050;
+    border-left: 1px solid #242;
+    border-right: 1px solid #353;
+    border-bottom: 1px solid #101010;
+}
