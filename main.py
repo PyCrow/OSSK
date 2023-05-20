@@ -238,7 +238,8 @@ class Master(QThread):
 
         try:
             while True:
-                self._check_for_streams()
+                for channel_name in self.channels:
+                    self._check_for_stream(channel_name)
                 sleep(10)
         except StopThreads:
             self.log(INFO, "Проверка каналов приостановлена.")
@@ -255,46 +256,45 @@ class Master(QThread):
 
     @raise_on_stop_threads
     @exception_handler
-    def _check_for_streams(self):
-        for channel_name in self.channels:
-            url = f'https://www.youtube.com/c/{channel_name}/live'
+    def _check_for_stream(self, channel_name):
+        url = f'https://www.youtube.com/c/{channel_name}/live'
 
-            ytdl_options = {
-                'quiet': True,
-                'default_search': 'ytsearch',
+        ytdl_options = {
+            'quiet': True,
+            'default_search': 'ytsearch',
+        }
+
+        with yt_dlp.YoutubeDL(ytdl_options) as ydl:
+            try:
+                info_dict = ydl.extract_info(
+                    url, download=False,
+                    extra_info={'quiet': True, 'verbose': False})
+            except Exception as e:
+                if '404' not in str(e) and channel_name not in str(e):
+                    self.log(ERROR, f"<yt-dlp>: {str(e)}")
+                return
+
+        # Check channel stream is on
+        if info_dict.get("is_live"):
+            if self.channel_status_changed(channel_name, True):
+                self.log(INFO, f"Канал {channel_name} в сети.")
+
+            stream_title = info_dict.get('title')
+            stream_data = {
+                'channel_name': channel_name,
+                'title': stream_title,
+                'url': info_dict.get('url')  # m3u8
             }
 
-            with yt_dlp.YoutubeDL(ytdl_options) as ydl:
-                try:
-                    info_dict = ydl.extract_info(
-                        url, download=False,
-                        extra_info={'quiet': True, 'verbose': False})
-                except Exception as e:
-                    if '404' not in str(e) and channel_name not in str(e):
-                        self.log(ERROR, f"<yt-dlp>: {str(e)}")
-                    continue
-
-            # Check channel stream is on
-            if info_dict.get("is_live"):
-                if self.channel_status_changed(channel_name, True):
-                    self.log(INFO, f"Канал {channel_name} в сети.")
-
-                stream_title = info_dict.get('title')
-                stream_data = {
-                    'channel_name': channel_name,
-                    'title': stream_title,
-                    'url': info_dict.get('url')  # m3u8
-                }
-
-                # Проверка готов ли Загрузчик
-                # TODO: check stream_data not in self.Slave.queue
-                if channel_name not in self.Slave.active_dowloading_channels:
-                    self.log(INFO, f"Запись канала {channel_name}"
-                                   " добавлена в очередь.")
-                    self.signal_stream_in_queue.emit(channel_name)  # noqa
-                    self.Slave.queue.put(stream_data, block=True)
-            elif self.channel_status_changed(channel_name, False):
-                self.log(INFO, f"Канал {channel_name} не в сети.")
+            # Проверка готов ли Загрузчик
+            # TODO: check stream_data not in self.Slave.queue
+            if channel_name not in self.Slave.active_dowloading_channels:
+                self.log(INFO, f"Запись канала {channel_name}"
+                               " добавлена в очередь.")
+                self.signal_stream_in_queue.emit(channel_name)  # noqa
+                self.Slave.queue.put(stream_data, block=True)
+        elif self.channel_status_changed(channel_name, False):
+            self.log(INFO, f"Канал {channel_name} не в сети.")
 
 
 class Slave(QThread):
@@ -369,7 +369,7 @@ class Slave(QThread):
 
         channel_name = stream_data.get('channel_name', UNKNOWN)
         stream_title = get_valid_filename(stream_data.get('title', UNKNOWN))
-        stream_url = stream_data.get('url')
+        stream_url = stream_data.get('url')  # m3u8
 
         channel_dir = get_channel_dir(channel_name)
         filename = f'{datetime_now()}_{stream_title}.mp4'
