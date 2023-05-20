@@ -7,15 +7,25 @@ from subprocess import call, DEVNULL
 
 CONFIG_FILE = Path().resolve().joinpath('config')
 CHANNELS = 'channels'
+FFMPEG = 'ffmpeg'
 
 
-def has_ffmpeg(path_to_ffmpeg: str):
+def is_ffmpeg(path_to_ffmpeg: str):
     ffmpeg = path_to_ffmpeg.split()
     ffmpeg.append('--help')
     try:
         return call(ffmpeg, stdout=DEVNULL, stderr=DEVNULL) == 0
-    except FileNotFoundError:
+    except (FileNotFoundError, PermissionError):
         return False
+
+
+def check_ffmpeg(path_to_ffmpeg: str) -> bool:
+    if not Path(path_to_ffmpeg).exists():
+        return False
+    if not is_ffmpeg(path_to_ffmpeg):
+        return False
+    update_ffmpeg_path(path_to_ffmpeg)
+    return True
 
 
 def datetime_now():
@@ -25,7 +35,7 @@ def datetime_now():
 def _config(new_data: dict = None,
             rem_data: dict = None) -> dict[str, list]:
     """ Read, update and save setting """
-    new = {CHANNELS: []}
+    new = {FFMPEG: 'ffmpeg', CHANNELS: []}
 
     Path(CONFIG_FILE).touch(0o777)
     # Try to read config
@@ -42,7 +52,10 @@ def _config(new_data: dict = None,
 
     # Update data
     if new_data:
-        new[CHANNELS].append(new_data[CHANNELS])
+        if CHANNELS in new_data:
+            new[CHANNELS].append(rem_data[CHANNELS])
+        if FFMPEG in new_data:
+            new[FFMPEG] = new_data[FFMPEG]
     if rem_data:
         new[CHANNELS].remove(rem_data[CHANNELS])
 
@@ -53,11 +66,15 @@ def _config(new_data: dict = None,
     return new
 
 
-def write_new_channel(channel_name):
+def update_ffmpeg_path(path_to_ffmpeg: str):
+    _config(new_data={FFMPEG: path_to_ffmpeg})
+
+
+def write_new_channel(channel_name: str):
     _config(new_data={CHANNELS: channel_name})
 
 
-def remove_channel(channel_name):
+def remove_channel(channel_name: str):
     _config(rem_data={CHANNELS: channel_name})
 
 
