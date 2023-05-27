@@ -31,11 +31,10 @@ handler = logging.FileHandler(LOG_FILE)
 handler.setLevel(logging.INFO)
 handler.setFormatter(logging.Formatter(
     '%(asctime)s [%(levelname)s] %(message)s', "%Y-%m-%d %H:%M:%S"))
-
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 logger.addHandler(handler)
-
+DEBUG_LEVELS = {10: 'DEBUG', 20: 'INFO', 30: 'WARNING', 40: 'ERROR'}
 
 STOP_THREADS = False
 
@@ -175,8 +174,7 @@ class MainWindow(QWidget):
         self.Master.start()
 
     def add_log_message(self, lvl: int, text: str):
-        debug_levels = {10: 'DEBUG', 20: 'INFO', 30: 'WARNING', 40: 'ERROR'}
-        self._widget_log.add_message(f"[{debug_levels[lvl]}] {text}")
+        self._widget_log.add_message(f"[{DEBUG_LEVELS[lvl]}] {text}")
         logger.log(lvl, text)
 
     def add_channel(self):
@@ -415,5 +413,7 @@ if __name__ == '__main__':
         window.show()
 
         sys.exit(app.exec_())
+    except Exception as e:
+        logger.exception(e)
     finally:
         STOP_THREADS = True
