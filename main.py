@@ -9,7 +9,7 @@ from time import sleep
 import subprocess
 
 import yt_dlp
-from PyQt5.QtCore import QThread, QFile, QTextStream, pyqtSignal, Qt
+from PyQt5.QtCore import QThread, QFile, QTextStream, pyqtSignal, Qt, pyqtSlot
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLineEdit,
     QLabel)
@@ -82,11 +82,13 @@ class MainWindow(QWidget):
     def __init__(self):
         super(MainWindow, self).__init__()
         self._channels: list[str] = get_list_channels()
+
         self.Master = Master(self._channels)
         self.Master.signal_log.connect(self.add_log_message)  # noqa
+        self.Master.signal_stream_offline.connect(self._stream_offline)  # noqa
         self.Master.signal_stream_in_queue.connect(self._stream_in_queue)  # noqa
         self.Master.Slave.signal_stream_recording.connect(self._stream_recording)  # noqa
-        self.Master.Slave.signal_stream_finished.connect(self._stream_finished)  # noqa
+        self.Master.Slave.signal_stream_offline.connect(self._stream_offline)  # noqa
         self.Master.Slave.signal_stream_failed.connect(self._stream_failed)  # noqa
 
         self._init_ui()
@@ -186,21 +188,22 @@ class MainWindow(QWidget):
             self.Master.channels.remove(channel_name)
         self._widget_list_channels.del_item_by_index(selected_item.row())
 
+    @pyqtSlot(str)
+    def _stream_offline(self, ch_name):
+        ch_index = self._channels.index(ch_name)
+        self._widget_list_channels.set_stream_status(ch_index,
+                                                     ChannelStatus.NONE)
+    @pyqtSlot(str)
     def _stream_in_queue(self, ch_name):
         ch_index = self._channels.index(ch_name)
         self._widget_list_channels.set_stream_status(ch_index,
                                                      ChannelStatus.QUEUE)
-
-    def _stream_recording(self, ch_name):
+    @pyqtSlot(str)
+    def _stream_recording(self, ch_name: str):
         ch_index = self._channels.index(ch_name)
         self._widget_list_channels.set_stream_status(ch_index,
                                                      ChannelStatus.REC)
-
-    def _stream_finished(self, ch_name):
-        ch_index = self._channels.index(ch_name)
-        self._widget_list_channels.set_stream_status(ch_index,
-                                                     ChannelStatus.NONE)
-
+    @pyqtSlot(str)
     def _stream_failed(self, ch_name):
         ch_index = self._channels.index(ch_name)
         self._widget_list_channels.set_stream_status(ch_index,
@@ -216,6 +219,7 @@ class Master(QThread):
     """
 
     signal_log = pyqtSignal(int, str)
+    signal_stream_offline = pyqtSignal(str)
     signal_stream_in_queue = pyqtSignal(str)
 
     def __init__(self, channels):
@@ -290,6 +294,7 @@ class Master(QThread):
                 self.signal_stream_in_queue.emit(channel_name)  # noqa
                 self.Slave.queue.put(stream_data, block=True)
         elif self.channel_status_changed(channel_name, False):
+            self.signal_stream_offline.emit(channel_name)  # noqa
             self.log(INFO, f"Канал {channel_name} не в сети.")
 
 
@@ -297,7 +302,7 @@ class Slave(QThread):
 
     signal_log = pyqtSignal(int, str)
     signal_stream_recording = pyqtSignal(str)
-    signal_stream_finished = pyqtSignal(str)
+    signal_stream_offline = pyqtSignal(str)
     signal_stream_failed = pyqtSignal(str)
 
     def __init__(self):
@@ -334,12 +339,12 @@ class Slave(QThread):
             ret_code = proc.poll()
 
             if ret_code == 0:
-                self.signal_stream_finished.emit(proc.channel)  # noqa
-                self.log(INFO, f"Загрузка[{proc.pid}] завершена успешно.")
+                self.signal_stream_offline.emit(proc.channel)  # noqa
+                self.log(INFO, f"Стрим канала {proc.channel} завершился.")
             else:
                 self.signal_stream_failed.emit(proc.channel)  # noqa
-                self.log(ERROR, f"Загрузка[{proc.pid}] завершилась с ошибкой: "
-                                f"{ret_code}")
+                self.log(ERROR, f"Запись канала {proc.channel} "
+                                f"завершилась с ошибкой: {ret_code}")
 
                 if proc.stdout:
                     self.log(ERROR, f"Процесс[{proc.pid}] вывод:")
@@ -393,8 +398,10 @@ class Slave(QThread):
                 if proc.poll() is None:
                     self.log(INFO, f"Завершение процесса {proc.pid}...")
                 proc.wait(12)
+                self.signal_stream_offline.emit(proc.channel)  # noqa
             except subprocess.TimeoutExpired:
                 proc.kill()
+                self.signal_stream_failed.emit(proc.channel)  # noqa
                 self.log(INFO, f"Пришлось убить процесс {proc.pid} :(")
 
 
