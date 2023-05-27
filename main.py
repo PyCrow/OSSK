@@ -78,14 +78,6 @@ def raise_on_stop_threads(func):
     return _wrapper
 
 
-def get_channel_dir(channel_name: str) -> Path:
-    """ Create channel's dir is not exist and return it's path """
-    channel_dir = RECORDS_PATH.joinpath(channel_name)
-    if not channel_dir.exists():
-        channel_dir.mkdir(parents=True, exist_ok=True)
-    return channel_dir
-
-
 class MainWindow(QWidget):
     def __init__(self):
         super(MainWindow, self).__init__()
