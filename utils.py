@@ -1,9 +1,13 @@
 import re
 import json
+import logging
 from pathlib import Path
 from datetime import datetime
 from subprocess import call, DEVNULL
 
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 CONFIG_FILE = Path().resolve().joinpath('config')
 CHANNELS = 'channels'
@@ -33,35 +37,37 @@ def datetime_now():
 
 
 def _config(new_data: dict = None,
-            rem_data: dict = None) -> dict[str, list]:
+            rem_data: dict = None) -> dict[str, str | list]:
     """ Read, update and save setting """
     new = {FFMPEG: 'ffmpeg', CHANNELS: []}
 
-    Path(CONFIG_FILE).touch(0o777)
-    # Try to read config
-    with open(CONFIG_FILE, 'r') as file:
-        try:
-            old = json.loads(file.read())
-        except Exception:
-            old = new
+    try:
 
-    # Check content
-    for k in new.keys():
-        if k in old:
-            new[k] = old[k]
+        # Try to read config
+        with open(CONFIG_FILE, 'r') as file:
+            try:
+                old = json.loads(file.read())
+            except Exception:
+                old = new
 
-    # Update data
-    if new_data:
-        if CHANNELS in new_data:
-            new[CHANNELS].append(rem_data[CHANNELS])
-        if FFMPEG in new_data:
+        # Check content
+        for k in new.keys():
+            if k in old:
+                new[k] = old[k]
+
+        # Update data
+        if new_data.get(FFMPEG):
             new[FFMPEG] = new_data[FFMPEG]
-    if rem_data:
-        new[CHANNELS].remove(rem_data[CHANNELS])
+        if new_data.get(CHANNELS):
+            new[CHANNELS].append(rem_data[CHANNELS])
+        if rem_data and rem_data[CHANNELS] in new[CHANNELS]:
+            new[CHANNELS].remove(rem_data[CHANNELS])
 
-    # Write config
-    with open(CONFIG_FILE, 'w') as file:
-        json.dump(new, file)
+        # Write config
+        with open(CONFIG_FILE, 'w') as file:
+            json.dump(new, file)
+    except Exception as e:
+        logger.exception(e)
 
     return new
 
