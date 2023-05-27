@@ -3,7 +3,8 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Iterable
 
-from PyQt5.QtGui import QStandardItemModel, QStandardItem, QColor
+from PyQt5.QtGui import QStandardItemModel, QStandardItem, QColor, QPalette, \
+    QLinearGradient, QBrush
 from PyQt5.QtWidgets import QListView, QAbstractItemView
 
 
@@ -16,12 +17,21 @@ class ChannelStatus:
     @staticmethod
     def color(color_id) -> QColor:
         colors = {
-            0: QColor('#000'),  # Nothing
-            1: QColor('#550'),  # IN_QUEUE
-            2: QColor('#050'),  # RECORDING
-            3: QColor('#500')  # FAILED
+            0: QColor(50, 50, 50),  # NONE
+            1: QColor(66, 66, 66),  # IN_QUEUE
+            2: QColor('#080'),  # RECORDING
+            3: QColor('#800')  # FAILED
         }
-        return colors[color_id]
+        color = colors[color_id]
+        # gradient = QLinearGradient(0, 0, 0, 400)
+        gradient = QLinearGradient(0, 0, 1, 0)
+        gradient.setColorAt(0.0, QColor(25, 25, 25))
+        gradient.setColorAt(0.85, QColor(25, 25, 25))
+        gradient.setColorAt(1.0, color)
+
+        pal = QPalette()
+        pal.setBrush(QPalette.Window, QBrush(gradient))
+        return pal
 
 
 class ListView(QListView):
@@ -51,7 +61,8 @@ class ListChannels(ListView):
     def set_stream_status(self, ch_index: int, status: int):
         """ Sets channel's row color """
         color = ChannelStatus.color(status)
-        self._model.item(ch_index).setBackground(color)
+        # self._model.item(ch_index).setBackground(color)
+        self._model.item(ch_index).setPallete(color)
 
 
 class LogWidget(ListView):
