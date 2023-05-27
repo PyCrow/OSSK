@@ -84,7 +84,15 @@ def remove_channel(channel_name: str):
     _config(rem_data={CHANNELS: channel_name})
 
 
-def get_list_channels():
+def get_channel_dir(records_path: Path, channel_name: str) -> Path:
+    """ Create channel's dir is not exist and return its path """
+    channel_dir = records_path.joinpath(channel_name)
+    if not channel_dir.exists():
+        channel_dir.mkdir(parents=True, exist_ok=True)
+    return channel_dir
+
+
+def get_list_channels() -> list:
     # TODO: add handling PermissionError
     return _config()[CHANNELS]
 

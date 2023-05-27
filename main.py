@@ -17,7 +17,7 @@ from PyQt5.QtWidgets import (
 from ui.classes import ListChannels, LogWidget, ChannelStatus
 from utils import (
     check_ffmpeg, get_list_channels, write_new_channel, remove_channel,
-    get_valid_filename, datetime_now)
+    get_valid_filename, datetime_now, get_channel_dir)
 
 
 UNKNOWN = '<UNKNOWN>'
@@ -377,7 +377,7 @@ class Slave(QThread):
         stream_title = get_valid_filename(stream_data.get('title', UNKNOWN))
         stream_url = stream_data.get('url')  # m3u8
 
-        channel_dir = get_channel_dir(channel_name)
+        channel_dir = get_channel_dir(RECORDS_PATH, channel_name)
         filename = f'{datetime_now()}_{stream_title}.mp4'
         file_path = str(channel_dir.joinpath(filename))
         self.log(INFO, f"Начата запись канала {channel_name}.")
