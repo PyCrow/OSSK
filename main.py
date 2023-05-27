@@ -95,7 +95,7 @@ class MainWindow(QWidget):
 
     def _init_ui(self):
         self.setWindowTitle("StreamSaver")
-        self.resize(800, 600)
+        self.resize(900, 600)
 
         self._field_new_channel = QLineEdit()
         self._field_new_channel.setPlaceholderText("Введите название канала")
