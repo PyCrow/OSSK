@@ -97,5 +97,9 @@ def get_list_channels() -> list:
     return _config()[CHANNELS]
 
 
+def get_ffmpeg_path() -> str:
+    return _config()[FFMPEG]
+
+
 def get_valid_filename(text: str):
     return re.sub(r"\W", "", text)

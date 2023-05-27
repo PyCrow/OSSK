@@ -17,7 +17,7 @@ from PyQt5.QtWidgets import (
 from ui.classes import ListChannels, LogWidget, ChannelStatus
 from utils import (
     check_ffmpeg, get_list_channels, write_new_channel, remove_channel,
-    get_valid_filename, datetime_now, get_channel_dir)
+    get_valid_filename, datetime_now, get_channel_dir, get_ffmpeg_path)
 
 
 UNKNOWN = '<UNKNOWN>'
@@ -126,7 +126,7 @@ class MainWindow(QWidget):
         vbox_channels_list.addWidget(label_channels, alignment=Qt.AlignHCenter)
         vbox_channels_list.addWidget(self._widget_list_channels)
 
-        self._field_ffmpeg = QLineEdit()
+        self._field_ffmpeg = QLineEdit(get_ffmpeg_path())
         self._field_ffmpeg.setPlaceholderText("Введите путь до ffmpeg")
 
         label_log = QLabel("Журнал событий")
