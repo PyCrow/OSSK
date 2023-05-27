@@ -3,8 +3,8 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Iterable
 
-from PyQt5.QtGui import QStandardItemModel, QStandardItem, QColor, QPalette, \
-    QLinearGradient, QBrush
+from PyQt5.QtGui import QStandardItemModel, QStandardItem, QLinearGradient, \
+    QColor
 from PyQt5.QtWidgets import QListView, QAbstractItemView
 
 
@@ -14,24 +14,18 @@ class ChannelStatus:
     REC = 2
     FAIL = 3
 
-    @staticmethod
-    def color(color_id) -> QColor:
-        colors = {
-            0: QColor(50, 50, 50),  # NONE
-            1: QColor(66, 66, 66),  # IN_QUEUE
-            2: QColor('#080'),  # RECORDING
-            3: QColor('#800')  # FAILED
-        }
-        color = colors[color_id]
-        # gradient = QLinearGradient(0, 0, 0, 400)
-        gradient = QLinearGradient(0, 0, 1, 0)
-        gradient.setColorAt(0.0, QColor(25, 25, 25))
-        gradient.setColorAt(0.85, QColor(25, 25, 25))
-        gradient.setColorAt(1.0, color)
 
-        pal = QPalette()
-        pal.setBrush(QPalette.Window, QBrush(gradient))
-        return pal
+def _get_channel_status_color(status_id) -> QLinearGradient:
+    colors = {ChannelStatus.NONE: QColor(50, 50, 50),
+              ChannelStatus.QUEUE: QColor(200, 200, 0),
+              ChannelStatus.REC: QColor(0, 200, 0),
+              ChannelStatus.FAIL: QColor(200, 0, 0)}
+    color = colors[status_id]
+    gradient = QLinearGradient(0, 0, 280, 0)
+    gradient.setColorAt(0.0, QColor(25, 25, 25))
+    gradient.setColorAt(0.9, QColor(25, 25, 25))
+    gradient.setColorAt(1.0, color)
+    return gradient
 
 
 class ListView(QListView):
@@ -58,11 +52,10 @@ class ListView(QListView):
 
 class ListChannels(ListView):
 
-    def set_stream_status(self, ch_index: int, status: int):
+    def set_stream_status(self, ch_index: int, status_id: int):
         """ Sets channel's row color """
-        color = ChannelStatus.color(status)
-        # self._model.item(ch_index).setBackground(color)
-        self._model.item(ch_index).setPallete(color)
+        color = _get_channel_status_color(status_id)
+        self._model.item(ch_index).setBackground(color)
 
 
 class LogWidget(ListView):

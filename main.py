@@ -277,6 +277,7 @@ class Master(QThread):
                     url, download=False,
                     extra_info={'quiet': True, 'verbose': False})
             except Exception as e:
+                self.signal_stream_offline.emit(channel_name)
                 if '404' not in str(e) and channel_name not in str(e):
                     self.log(ERROR, f"<yt-dlp>: {str(e)}")
                 return
