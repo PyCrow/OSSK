@@ -172,7 +172,11 @@ class MainWindow(QWidget):
         logger.log(lvl, text)
 
     def add_channel(self):
+        """ Проверяем есть ли канал в списке, и добавляем его в потоки"""
         channel_name = self._field_new_channel.text()
+        if channel_name in self._channels:
+            return
+
         self._channels.append(channel_name)
         write_new_channel(channel_name)
         if channel_name not in self.Master.channels:
@@ -182,6 +186,9 @@ class MainWindow(QWidget):
     def del_channel(self):
         selected_item = self._widget_list_channels.currentIndex()
         channel_name = str(selected_item.data())
+        if channel_name not in self._channels:
+            return
+
         self._channels.remove(channel_name)
         remove_channel(channel_name)
         if channel_name in self.Master.channels:
