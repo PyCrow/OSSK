@@ -22,13 +22,13 @@ class ChannelStatus:
 
 def _get_channel_status_color(status_id) -> QLinearGradient:
     colors = {ChannelStatus.OFF: QColor(50, 50, 50),
-              ChannelStatus.QUEUE: QColor(200, 200, 0),
-              ChannelStatus.REC: QColor(0, 200, 0),
-              ChannelStatus.FAIL: QColor(200, 0, 0)}
+              ChannelStatus.QUEUE: QColor(180, 180, 0),
+              ChannelStatus.REC: QColor(0, 180, 0),
+              ChannelStatus.FAIL: QColor(180, 0, 0)}
     color = colors[status_id]
-    gradient = QLinearGradient(0, 0, 280, 0)
+    gradient = QLinearGradient(0, 0, 300, 0)
     gradient.setColorAt(0.0, QColor(25, 25, 25))
-    gradient.setColorAt(0.9, QColor(25, 25, 25))
+    gradient.setColorAt(0.6, QColor(25, 25, 25))
     gradient.setColorAt(1.0, color)
     return gradient
 
