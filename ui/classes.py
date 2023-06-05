@@ -5,9 +5,9 @@ from typing import Iterable
 
 from PyQt5.QtCore import pyqtSlot, Qt
 from PyQt5.QtGui import QStandardItemModel, QStandardItem, QLinearGradient, \
-    QColor
+    QColor, QMouseEvent
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QLineEdit, \
-    QListView, QAbstractItemView, QLabel, QSpinBox
+    QListView, QAbstractItemView, QLabel, QSpinBox, QMenu, QAction
 
 from ui.dynamic_style import STYLE
 from utils import check_exists_and_callable, is_callable
@@ -59,6 +59,28 @@ class ListView(QListView):
 
 
 class ListChannels(ListView):
+
+    def __init__(self):
+        super(ListChannels, self).__init__()
+        self.channel_to_action = None
+        self.delete_channel = QAction("Delete channel", self)
+
+    def selected_channel(self) -> str:
+        return self._model.itemFromIndex(self.channel_to_action).text()
+
+    def mousePressEvent(self, e: QMouseEvent):
+        self.clearSelection()
+        self.channel_to_action = None
+        super(ListChannels, self).mousePressEvent(e)
+
+    def contextMenuEvent(self, event):
+        menu = QMenu(self)
+        selected_items = self.selectedIndexes()
+        if len(selected_items) == 0:
+            return
+        self.channel_to_action = selected_items[0]
+        menu.addAction(self.delete_channel)
+        menu.exec(event.globalPos())
 
     def set_stream_status(self, ch_index: int, status_id: int):
         """ Sets channel's row color """

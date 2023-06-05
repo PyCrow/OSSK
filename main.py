@@ -175,32 +175,31 @@ class MainWindow(QWidget):
         self.setWindowTitle("StreamSaver")
         self.resize(980, 600)
 
-        # Окно настроек
+        # Settings window
         button_settings = QPushButton('Settings')
         button_settings.clicked[bool].connect(self.clicked_open_settings)
         self.settings_window = SettingsWindow()
         self.settings_window.button_apply.clicked.connect(self._save_config)
 
-        self._field_channels_edit = QLineEdit()
-        self._field_channels_edit.setPlaceholderText("Enter channel name")
-
-        button_add_channel = QPushButton("Add channel")
-        button_add_channel.clicked[bool].connect(self.add_channel)
-        button_del_channel = QPushButton("Delete channel")
-        button_del_channel.clicked[bool].connect(self.del_channel)
-        hbox_channel_buttons = QHBoxLayout()
-        hbox_channel_buttons.addWidget(button_add_channel)
-        hbox_channel_buttons.addWidget(button_del_channel)
+        self._field_add_channels = QLineEdit()
+        self._field_add_channels.setPlaceholderText("Enter channel name")
 
         label_channels = QLabel("Monitored channels")
+        button_add_channel = QPushButton("Add")
+        button_add_channel.clicked[bool].connect(self.add_channel)
+
+        hbox_channels_list_header = QHBoxLayout()
+        hbox_channels_list_header.addWidget(label_channels)
+        hbox_channels_list_header.addWidget(button_add_channel)
 
         self._widget_list_channels = ListChannels()
+        self._widget_list_channels.delete_channel.triggered.connect(
+            self.del_channel)
 
         left_vbox = QVBoxLayout()
         left_vbox.addWidget(button_settings)
-        left_vbox.addWidget(self._field_channels_edit)
-        left_vbox.addLayout(hbox_channel_buttons)
-        left_vbox.addWidget(label_channels, alignment=Qt.AlignHCenter)
+        left_vbox.addWidget(self._field_add_channels)
+        left_vbox.addLayout(hbox_channels_list_header)
         left_vbox.addWidget(self._widget_list_channels)
 
         # TODO: add tabs for processes event logs
@@ -267,26 +266,26 @@ class MainWindow(QWidget):
     @pyqtSlot(bool)
     def add_channel(self):
         """ Add a channel to the scan list """
-        channel_name = self._field_channels_edit.text()
-        if channel_name in self._channels:
+        channel_name = self._field_add_channels.text()
+        if not channel_name or channel_name in self._channels:
             return
         self._channels.append(channel_name)
         self._save_config()
         self.Master.channels.append(channel_name)
         self._widget_list_channels.add_str_item(channel_name)
-        self._field_channels_edit.clear()
+        self._field_add_channels.clear()
 
     @pyqtSlot(bool)
     def del_channel(self):
         """ Delete a channel from the scan list """
-        channel_name = self._field_channels_edit.text()
+        channel_name = self._widget_list_channels.selected_channel()
         if channel_name not in self._channels:
             return
         self._channels.remove(channel_name)
         self._save_config()
         self.Master.channels.remove(channel_name)
         self._widget_list_channels.del_item_by_name(channel_name)
-        self._field_channels_edit.clear()
+        self._field_add_channels.clear()
 
     @pyqtSlot(str)
     def _stream_off(self, ch_name: str):
