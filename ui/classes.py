@@ -168,30 +168,23 @@ class SettingsWindow(QWidget):
 
     @pyqtSlot(int)
     def _check_max_downloads(self, value: int):
-        if value == 0 or value > 12:
-            self.box_max_downloads.setStyleSheet(STYLE.SPIN_WARNING)
-        else:
-            self.box_max_downloads.setStyleSheet(STYLE.SPIN_VALID)
+        status = STYLE.SPIN_WARNING if value not in range(1, 13) \
+            else STYLE.SPIN_VALID
+        self.box_max_downloads.setStyleSheet(status)
 
     @pyqtSlot(str)
     def _check_ffmpeg(self, ffmpeg_path: str):
         suc = check_exists_and_callable(ffmpeg_path)
-        if not suc:
-            self.field_ffmpeg.setStyleSheet(STYLE.LINE_INVALID)
-        else:
-            self.field_ffmpeg.setStyleSheet(STYLE.LINE_VALID)
+        status = STYLE.LINE_INVALID if not suc else STYLE.LINE_VALID
+        self.field_ffmpeg.setStyleSheet(status)
 
     @pyqtSlot(str)
     def _check_ytdlp(self, ytdlp_path: str):
         suc = is_callable(ytdlp_path)
-        if not suc:
-            self.field_ytdlp.setStyleSheet(STYLE.LINE_INVALID)
-        else:
-            self.field_ytdlp.setStyleSheet(STYLE.LINE_VALID)
+        status = STYLE.LINE_INVALID if not suc else STYLE.LINE_VALID
+        self.field_ytdlp.setStyleSheet(status)
 
     @pyqtSlot(int)
     def _check_scanner_sleep(self, value: int):
-        if value < 5:
-            self.box_scanner_sleep.setStyleSheet(STYLE.SPIN_WARNING)
-        else:
-            self.box_scanner_sleep.setStyleSheet(STYLE.SPIN_VALID)
+        status = STYLE.SPIN_WARNING if value < 5 else STYLE.SPIN_VALID
+        self.box_scanner_sleep.setStyleSheet(status)

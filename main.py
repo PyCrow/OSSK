@@ -7,7 +7,6 @@ from queue import Queue
 from signal import SIGINT
 from time import sleep
 import subprocess
-from typing import Any
 
 import yt_dlp
 from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot, Qt, QMutex
@@ -64,9 +63,9 @@ class ThreadSafeList(list):
         super(ThreadSafeList, self).append(_obj)
         THREADS_LOCK.unlock()
 
-    def pop(self, __index: int = ...) -> Any:
+    def pop(self, _index: int = ...):
         THREADS_LOCK.lock()
-        ret = super(ThreadSafeList, self).pop(__index)
+        ret = super(ThreadSafeList, self).pop(_index)
         THREADS_LOCK.unlock()
         return ret
 
@@ -204,6 +203,7 @@ class MainWindow(QWidget):
         left_vbox.addWidget(label_channels, alignment=Qt.AlignHCenter)
         left_vbox.addWidget(self._widget_list_channels)
 
+        # TODO: add tabs for processes event logs
         label_log = QLabel("Event log")
         self._widget_log = LogWidget()
         vbox_log = QVBoxLayout()
@@ -266,7 +266,7 @@ class MainWindow(QWidget):
 
     @pyqtSlot(bool)
     def add_channel(self):
-        """ Проверяем есть ли канал в списке, и добавляем его в потоки"""
+        """ Add a channel to the scan list """
         channel_name = self._field_channels_edit.text()
         if channel_name in self._channels:
             return
@@ -278,6 +278,7 @@ class MainWindow(QWidget):
 
     @pyqtSlot(bool)
     def del_channel(self):
+        """ Delete a channel from the scan list """
         channel_name = self._field_channels_edit.text()
         if channel_name not in self._channels:
             return
@@ -292,19 +293,16 @@ class MainWindow(QWidget):
         ch_index = self._channels.index(ch_name)
         self._widget_list_channels.set_stream_status(ch_index,
                                                      ChannelStatus.OFF)
-
     @pyqtSlot(str)
     def _stream_in_queue(self, ch_name: str):
         ch_index = self._channels.index(ch_name)
         self._widget_list_channels.set_stream_status(ch_index,
                                                      ChannelStatus.QUEUE)
-
     @pyqtSlot(str)
     def _stream_rec(self, ch_name: str):
         ch_index = self._channels.index(ch_name)
         self._widget_list_channels.set_stream_status(ch_index,
                                                      ChannelStatus.REC)
-
     @pyqtSlot(str)
     def _stream_fail(self, ch_name: str):
         ch_index = self._channels.index(ch_name)
@@ -395,7 +393,7 @@ class Master(QThread):
             if self.channel_status_changed(channel_name, True):
                 self.log(INFO, f"Channel {channel_name} is online.")
 
-            # Проверка готов ли Загрузчик
+            # Check if Slave is ready
             # TODO: check stream_data not in self.Slave.queue
             if channel_name not in self.Slave.active_downloading_channels:
                 stream_data = {'channel_name': channel_name,
