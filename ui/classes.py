@@ -63,7 +63,8 @@ class ListChannels(ListView):
     def __init__(self):
         super(ListChannels, self).__init__()
         self.channel_to_action = None
-        self.delete_channel = QAction("Delete channel", self)
+        self.on_click_settings = QAction("Channel settings", self)
+        self.on_click_delete = QAction("Delete channel", self)
 
     def selected_channel(self) -> str:
         return self._model.itemFromIndex(self.channel_to_action).text()
@@ -79,7 +80,9 @@ class ListChannels(ListView):
         if len(selected_items) == 0:
             return
         self.channel_to_action = selected_items[0]
-        menu.addAction(self.delete_channel)
+        menu.addAction(self.on_click_settings)
+        menu.addSeparator()
+        menu.addAction(self.on_click_delete)
         menu.exec(event.globalPos())
 
     def set_stream_status(self, ch_index: int, status_id: int):

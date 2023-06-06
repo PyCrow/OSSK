@@ -195,7 +195,9 @@ class MainWindow(QWidget):
         hbox_channels_list_header.addWidget(button_add_channel)
 
         self._widget_list_channels = ListChannels()
-        self._widget_list_channels.delete_channel.triggered.connect(
+        self._widget_list_channels.on_click_settings.triggered.connect(
+            self.open_channel_settings)
+        self._widget_list_channels.on_click_delete.triggered.connect(
             self.del_channel)
 
         left_vbox = QVBoxLayout()
@@ -288,6 +290,13 @@ class MainWindow(QWidget):
         self.Master.channels.remove(channel_name)
         self._widget_list_channels.del_item_by_name(channel_name)
         self._field_add_channels.clear()
+
+    @pyqtSlot(bool)
+    def open_channel_settings(self):
+        channel_name = self._widget_list_channels.selected_channel()
+        if channel_name not in self._channels:
+            return
+        print(channel_name)
 
     @pyqtSlot(str)
     def _stream_off(self, ch_name: str):
