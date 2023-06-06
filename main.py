@@ -6,7 +6,9 @@ from logging import DEBUG, INFO, WARNING, ERROR
 from queue import Queue
 from signal import SIGINT
 from time import sleep
+from typing import IO
 import subprocess
+import tempfile
 
 import yt_dlp
 from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot, Qt, QMutex
@@ -259,9 +261,9 @@ class MainWindow(QWidget):
         self.Master.start()
 
     @pyqtSlot(int, str)
-    def add_log_message(self, lvl: int, text: str):
-        self._widget_log.add_message(f"[{DEBUG_LEVELS[lvl]}] {text}")
-        logger.log(lvl, text)
+    def add_log_message(self, level: int, text: str):
+        logger.log(level, text)
+        self._widget_log.add_message(f"[{DEBUG_LEVELS[level]}] {text}")
 
     @pyqtSlot(bool)
     def add_channel(self):
@@ -424,6 +426,7 @@ class Slave(QThread):
         self.queue: Queue[dict[str, str]] = Queue(-1)
         self.max_downloads: int = DEFAULT_MAX_DOWNLOADS
         self.running_downloads: list[RecordProcess] = []
+        self.temp_logs: dict[int, IO] = {}
 
     def log(self, level: int, text: str):
         self.s_log[int, str].emit(level, text)
@@ -450,9 +453,11 @@ class Slave(QThread):
         for proc in self.running_downloads:
             ret_code = proc.poll()
 
+            # Pass if process is not finished yet
             if ret_code is None:
                 list_running.append(proc)
                 continue
+            # Handling finished process
             if ret_code == 0:
                 self.s_stream_off[str].emit(proc.channel)
                 self.log(INFO, f"Recording {proc.channel} finished.")
@@ -460,15 +465,10 @@ class Slave(QThread):
                 self.s_stream_fail[str].emit(proc.channel)
                 self.log(ERROR, f"Recording {proc.channel} "
                                 f"stopped with an error code: {ret_code}")
-                # TODO: add temp buffer
-                if proc.stdout:
-                    self.log(ERROR, f"Process[{proc.pid}] output:")
-                    for i in proc.stdout.readlines():
-                        self.log(ERROR, ">>> " + i)
-                if proc.stderr:
-                    self.log(ERROR, f"Process[{proc.pid}] errors:")
-                    for i in proc.stderr.readlines():
-                        self.log(ERROR, ">>> " + i)
+                self.log(ERROR, f"Process[{proc.pid}] output:")
+                self.log_proc_output(proc)
+            self.temp_logs[proc.pid].close()
+            del self.temp_logs[proc.pid]
             self.active_downloading_channels.remove(proc.channel)
 
         self.running_downloads = list_running
@@ -490,6 +490,8 @@ class Slave(QThread):
 
         channel_dir = str(get_channel_dir(channel_name))
         file_name = '%(title)s.%(ext)s'
+
+        temp_log = tempfile.TemporaryFile(mode='w+b')
 
         self.log(INFO, f"Recording {channel_name} started.")
 
@@ -516,14 +518,9 @@ class Slave(QThread):
             '--hls-use-mpegts',
         ]
 
-        proc = RecordProcess(
-            cmd,
-            stdin=subprocess.PIPE,
-            # TODO: add temp buffer
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            text=True)
+        proc = RecordProcess(cmd, stdout=temp_log, stderr=temp_log)
         proc.channel = channel_name
+        self.temp_logs[proc.pid] = temp_log
         self.active_downloading_channels.append(channel_name)
         self.running_downloads.append(proc)
 
@@ -541,27 +538,32 @@ class Slave(QThread):
                 self.log(INFO, f"Stopping process {proc.pid}...")
                 # FIXME: subprocess on Windows cannot identify SIGINT
                 proc.send_signal(SIGINT)
-                # TODO: add editing "wait-for-process-stopped"
-                ret = proc.wait(30)
+                ret = proc.wait(30)  # TODO: add value editing to settings
                 if ret == 0:
                     self.s_stream_off[str].emit(proc.channel)
+                    self.log_proc_output(proc, level=DEBUG)  # temp debug
                 else:
                     self.s_stream_fail[str].emit(proc.channel)
                     self.log(ERROR, "Error while stopping channel {} record :("
                              .format(proc.channel))
-            except subprocess.TimeoutExpired:
+                    self.log_proc_output(proc)
+            # Fixme:
+            #  ValueError raises when SIGINT couldn't be handled by Windows
+            except (subprocess.TimeoutExpired, ValueError):
                 proc.kill()
                 self.s_stream_fail[str].emit(proc.channel)
                 self.log(WARNING,
                          "Recording[{}] of channel {} resisted, but I'm "
                          "stronger!".format(proc.pid, proc.channel))
-            except ValueError:
-                self.log(ERROR, "Record stop error. Forced stop.")
-                proc.kill()
-                self.s_stream_fail[str].emit(proc.channel)
-                self.log(WARNING,
-                         "Recording[{}] of channel {} resisted, but I'm "
-                         "stronger!".format(proc.pid, proc.channel))
+                self.log_proc_output(proc)
+            finally:
+                self.temp_logs[proc.pid].close()
+                del self.temp_logs[proc.pid]
+
+    def log_proc_output(self, proc: RecordProcess, level=ERROR):
+        self.temp_logs[proc.pid].seek(0)
+        for i in self.temp_logs[proc.pid].readlines():
+            self.log(level, ">>> " + i.decode('utf-8'))
 
 
 if __name__ == '__main__':
