@@ -11,8 +11,8 @@ KEY_SCANNER_SLEEP = 'scanner_sleep'
 KEY_CHANNELS = 'channels'
 
 KEY_CHANNEL_NAME = 'name'
-KEY_CHANNEL_ALIAS = 'alias'
-KEY_CHANNEL_SVQ = 'svq'
+KEY_CHANNEL_ALIAS, DEFAULT_CHANNEL_ALIAS = 'alias', ''
+KEY_CHANNEL_SVQ, DEFAULT_CHANNEL_SVQ = 'svq', '1080'
 
 RECORD_QUALITY_TEMPLATE = 'bv*[height<={video}]+ba/b[height<={on_failed}]'
 
@@ -49,16 +49,18 @@ class ChannelData:
         return RECORD_QUALITY_TEMPLATE.format(
             video=self.svq, on_failed=self.svq)
 
-    def jdump(self) -> dict:
+    def j_dump(self) -> dict:
         return {
             KEY_CHANNEL_NAME: self.name,
             KEY_CHANNEL_ALIAS: self.alias,
             KEY_CHANNEL_SVQ: self.svq,
         }
-    def jload(self, data: dict):
-        self.name = data[KEY_CHANNEL_NAME]
-        self.alias = data[KEY_CHANNEL_ALIAS]
-        self.svq = data[KEY_CHANNEL_SVQ]
+    @staticmethod
+    def j_load(data: dict):
+        channel = ChannelData(data.get(KEY_CHANNEL_NAME, UNKNOWN))
+        channel.alias = data.get(KEY_CHANNEL_ALIAS, DEFAULT_CHANNEL_ALIAS)
+        channel.svq = data.get(KEY_CHANNEL_SVQ, DEFAULT_CHANNEL_SVQ)
+        return channel
 
 
 class StopThreads(Exception):

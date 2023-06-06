@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Iterable
 
 from PyQt5.QtCore import pyqtSlot, Qt
 from PyQt5.QtGui import QStandardItemModel, QStandardItem, QLinearGradient, \
@@ -46,10 +45,6 @@ class ListView(QListView):
         item = QStandardItem(text)
         item.setEditable(False)
         self._model.appendRow(item)
-
-    def add_str_items(self, list_items: Iterable[str]):
-        for i in list_items:
-            self.add_str_item(i)
 
     def del_item_by_name(self, item_name: str):
         for row in range(self._model.rowCount()):

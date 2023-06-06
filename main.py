@@ -18,12 +18,14 @@ from PyQt5.QtWidgets import (
 )
 
 from static_vars import (
-    UNKNOWN, LOG_FILE,
+    LOG_FILE,
     KEY_FFMPEG, KEY_YTDLP, KEY_CHANNELS, KEY_MAX_DOWNLOADS, KEY_SCANNER_SLEEP,
     DEFAULT_MAX_DOWNLOADS, DEFAULT_SCANNER_SLEEP,
-    StopThreads, RecordProcess,
+    KEY_CHANNEL_NAME, KEY_CHANNEL_SVQ,
+    ChannelData, StopThreads, RecordProcess,
     STYLESHEET_PATH, FLAG_LIVE)
 from ui.classes import ListChannels, LogWidget, ChannelStatus, SettingsWindow
+from ui.dynamic_style import STYLE
 from utils import (
     get_config, save_config,
     is_callable, check_exists_and_callable,
@@ -113,7 +115,7 @@ def raise_on_stop_threads(func=None):
 class MainWindow(QWidget):
     def __init__(self):
         super(MainWindow, self).__init__()
-        self._channels: list[str] = []
+        self._channels: dict[str, ChannelData] = {}
 
         self._init_ui()
         self._load_config()
@@ -132,10 +134,14 @@ class MainWindow(QWidget):
         if config is None:
             self.add_log_message(ERROR, "Settings loading error!")
             return
-        self._channels: list = config.get(KEY_CHANNELS, [])
-        if len(self._channels) > 0:
-            self._widget_list_channels.add_str_items(self._channels)
-        # ffmpeg path will be checked on field "textChanged" signal
+
+        # Getting channels from config, saving them and adding to GUI
+        for channel_data in config.get(KEY_CHANNELS, {}):
+            channel_name = channel_data[KEY_CHANNEL_NAME]
+            self._channels[channel_name] = ChannelData.j_load(channel_data)
+            self._widget_list_channels.add_str_item(channel_name)
+
+        # (ffmpeg path will be checked on field "textChanged" signal)
         ffmpeg_value = config.get(KEY_FFMPEG, PATH_TO_FFMPEG)
         ytdlp_value = config.get(KEY_YTDLP, YTDLP_COMMAND)
         max_downloads = config.get(KEY_MAX_DOWNLOADS, DEFAULT_MAX_DOWNLOADS)
@@ -154,12 +160,13 @@ class MainWindow(QWidget):
                          or YTDLP_COMMAND)
         max_downloads = self.settings_window.box_max_downloads.value()
         scanner_sleep = self.settings_window.box_scanner_sleep.value() * 60
+
         suc = save_config({
             KEY_FFMPEG: ffmpeg_path,
             KEY_YTDLP: ytdlp_command,
             KEY_MAX_DOWNLOADS: max_downloads,
             KEY_SCANNER_SLEEP: scanner_sleep,
-            KEY_CHANNELS: self._channels,
+            KEY_CHANNELS: [i.j_dump() for i in self._channels.values()],
         })
         if not suc:
             self.add_log_message(ERROR, "Settings saving error!")
@@ -185,6 +192,8 @@ class MainWindow(QWidget):
 
         self._field_add_channels = QLineEdit()
         self._field_add_channels.setPlaceholderText("Enter channel name")
+        self._field_add_channels.textChanged[str].connect(
+            self.highlight_on_exists)
 
         label_channels = QLabel("Monitored channels")
         button_add_channel = QPushButton("Add")
@@ -273,9 +282,12 @@ class MainWindow(QWidget):
         channel_name = self._field_add_channels.text()
         if not channel_name or channel_name in self._channels:
             return
-        self._channels.append(channel_name)
+        channel_data = ChannelData(channel_name)
+        self._channels[channel_name] = channel_data
         self._save_config()
-        self.Master.channels.append(channel_name)
+        THREADS_LOCK.lock()
+        self.Master.channels[channel_name] = channel_data
+        THREADS_LOCK.unlock()
         self._widget_list_channels.add_str_item(channel_name)
         self._field_add_channels.clear()
 
@@ -285,11 +297,20 @@ class MainWindow(QWidget):
         channel_name = self._widget_list_channels.selected_channel()
         if channel_name not in self._channels:
             return
-        self._channels.remove(channel_name)
+        del self._channels[channel_name]
         self._save_config()
-        self.Master.channels.remove(channel_name)
+        THREADS_LOCK.lock()
+        if channel_name in self.Master.channels:
+            del self.Master.channels[channel_name]
+        THREADS_LOCK.unlock()
         self._widget_list_channels.del_item_by_name(channel_name)
         self._field_add_channels.clear()
+
+    @pyqtSlot(str)
+    def highlight_on_exists(self, ch_name: str):
+        status = STYLE.LINE_INVALID if ch_name in self._channels \
+            else STYLE.LINE_VALID
+        self._field_add_channels.setStyleSheet(status)
 
     @pyqtSlot(bool)
     def open_channel_settings(self):
@@ -300,22 +321,22 @@ class MainWindow(QWidget):
 
     @pyqtSlot(str)
     def _stream_off(self, ch_name: str):
-        ch_index = self._channels.index(ch_name)
+        ch_index = list(self._channels.keys()).index(ch_name)
         self._widget_list_channels.set_stream_status(ch_index,
                                                      ChannelStatus.OFF)
     @pyqtSlot(str)
     def _stream_in_queue(self, ch_name: str):
-        ch_index = self._channels.index(ch_name)
+        ch_index = list(self._channels.keys()).index(ch_name)
         self._widget_list_channels.set_stream_status(ch_index,
                                                      ChannelStatus.QUEUE)
     @pyqtSlot(str)
     def _stream_rec(self, ch_name: str):
-        ch_index = self._channels.index(ch_name)
+        ch_index = list(self._channels.keys()).index(ch_name)
         self._widget_list_channels.set_stream_status(ch_index,
                                                      ChannelStatus.REC)
     @pyqtSlot(str)
     def _stream_fail(self, ch_name: str):
-        ch_index = self._channels.index(ch_name)
+        ch_index = list(self._channels.keys()).index(ch_name)
         self._widget_list_channels.set_stream_status(ch_index,
                                                      ChannelStatus.FAIL)
 
@@ -332,9 +353,9 @@ class Master(QThread):
     s_stream_off = pyqtSignal(str)
     s_stream_in_queue = pyqtSignal(str)
 
-    def __init__(self, channels):
+    def __init__(self, channels: dict[str, ChannelData]):
         super(Master, self).__init__()
-        self.channels: list[str] = ThreadSafeList(channels)
+        self.channels: dict[str, ChannelData] = channels
         self.last_status: dict[str, bool] = {}
         self.scheduled_streams: dict[str, bool] = {}
         self.scanner_sleep: int = DEFAULT_SCANNER_SLEEP * 60
@@ -410,11 +431,16 @@ class Master(QThread):
             # Check if Slave is ready
             # TODO: check stream_data not in self.Slave.queue
             if channel_name not in self.Slave.active_downloading_channels:
-                stream_data = {'channel_name': channel_name,
-                               'url': info_dict.get('webpage_url')}
+
+                stream_data = {
+                    KEY_CHANNEL_NAME: channel_name,
+                    KEY_CHANNEL_SVQ: self.channels[channel_name].svq,
+                    'url': info_dict.get('webpage_url')}
                 self.Slave.queue.put(stream_data, block=True)
+
                 self.log(INFO, f"Recording {channel_name} added to queue.")
                 self.s_stream_in_queue[str].emit(channel_name)
+
         elif self.channel_status_changed(channel_name, False):
             self.s_stream_off[str].emit(channel_name)
             self.log(INFO, f"Channel {channel_name} is offline.")
@@ -494,8 +520,9 @@ class Slave(QThread):
     def record_stream(self, stream_data: dict[str, str]):
         """ Starts stream recording """
 
-        channel_name = stream_data.get('channel_name', UNKNOWN)
-        stream_url = stream_data.get('url')
+        channel_name = stream_data[KEY_CHANNEL_NAME]
+        stream_url = stream_data['url']
+        records_quality = stream_data[KEY_CHANNEL_SVQ]
 
         channel_dir = str(get_channel_dir(channel_name))
         file_name = '%(title)s.%(ext)s'
@@ -519,8 +546,8 @@ class Slave(QThread):
             '--retry-sleep', '5',
             # Без прогресс-бара
             '--no-progress',
-            # Лучшее качество
-            '-f', 'bestvideo*+bestaudio/best',
+            # Формат (выбор качества записи)
+            '-f', records_quality,
             # Объединить в один файл mp4 или mkv
             '--merge-output-format', 'mp4/mkv',
             # Снизить шанс поломки при форсивной остановке
