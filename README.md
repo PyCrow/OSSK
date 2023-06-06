@@ -7,8 +7,8 @@ All records will be saved in a folder next to the program: `./records/<CHANNEL_N
 The event log is stored in the `stream_saver.log` file.
 
 Channel management:
-- To add a channel, enter its YouTube tag in the box and click "Add Channel"
-- To delete a channel, enter its YouTube tag in the box and click "Delete Channel"
+- To add a channel, enter its YouTube tag in the box and click "Add channel"
+- To delete a channel, right-click on its line and select "Delete channel"
 
 Settings (`settings` file):
 - in the ffmpeg field, enter the path to the ffmpeg library / .exe file
@@ -26,7 +26,7 @@ Settings (`settings` file):
 
 Управление каналами:
 - для добавления канала введите его YouTube тэг в поле, и нажмите "Добавить канал"
-- для удаления канала введите его YouTube тэг в поле, и нажмите "Удалить канал"
+- для удаления канала щелкните по его строке правой кнопкой и выберите "Удалить канал"
 
 Настройки (файл `settings`):
 - в поле ffmpeg введите путь до библиотеки / .exe-файла ffmpeg;
