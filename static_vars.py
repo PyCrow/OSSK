@@ -28,5 +28,5 @@ class StopThreads(Exception):
 
 class RecordProcess(Popen):
     def __init__(self, *args, **kwargs) -> None:
-        self.channel = UNKNOWN
+        self.channel: str = UNKNOWN
         super().__init__(*args, **kwargs)

@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from subprocess import call, DEVNULL
+from subprocess import run, DEVNULL
 
 from static_vars import SETTINGS_FILE, RECORDS_PATH
 
@@ -16,7 +16,7 @@ def is_callable(_path: str):
     cmd = _path.split()
     cmd.append('--help')
     try:
-        return call(cmd, stdout=DEVNULL, stderr=DEVNULL) == 0
+        return run(cmd, stdout=DEVNULL, stderr=DEVNULL).returncode == 0
     except (FileNotFoundError, PermissionError):
         return False
     except Exception as e:

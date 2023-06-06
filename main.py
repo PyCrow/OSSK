@@ -343,7 +343,11 @@ class Master(QThread):
                 for channel_name in self.channels:
                     self._check_for_stream(channel_name)
                 raise_on_stop_threads()
-                sleep(self.scanner_sleep)
+
+                # Waiting with a check to stop
+                for sec in range(0, self.scanner_sleep, 5):
+                    sleep(sec)
+                    raise_on_stop_threads()
         except StopThreads:
             pass
         self.log(INFO, "Scanning channels stopped.")
