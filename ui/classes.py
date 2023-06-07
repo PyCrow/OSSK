@@ -208,3 +208,28 @@ class SettingsWindow(QWidget):
     def _check_scanner_sleep(self, value: int):
         status = STYLE.SPIN_WARNING if value < 5 else STYLE.SPIN_VALID
         self.box_scanner_sleep.setStyleSheet(status)
+
+
+class ChannelSettingsWindow(QWidget):
+    def __init__(self):
+        super(ChannelSettingsWindow, self).__init__()
+        self._init_ui()
+
+    def _init_ui(self):
+        self.setWindowTitle("StreamSaver | Channel settings")
+        self.setWindowModality(Qt.ApplicationModal)
+
+        self.setMinimumWidth(400)
+        self.setMaximumWidth(750)
+        self.setMinimumHeight(300)
+        self.setMaximumHeight(500)
+        self.resize(500, 360)
+
+        line_alias = QLineEdit()
+        line_alias.setPlaceholderText("Enter readable alias for the channel")
+
+        vbox = QVBoxLayout()
+        vbox.addWidget(QLabel("Channel alias"))
+        vbox.addWidget(line_alias)
+
+        self.setLayout(vbox)

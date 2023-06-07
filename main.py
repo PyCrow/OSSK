@@ -24,7 +24,8 @@ from static_vars import (
     KEY_CHANNEL_NAME, KEY_CHANNEL_SVQ,
     ChannelData, StopThreads, RecordProcess,
     STYLESHEET_PATH, FLAG_LIVE)
-from ui.classes import ListChannels, LogWidget, ChannelStatus, SettingsWindow
+from ui.classes import ListChannels, LogWidget, ChannelStatus, \
+    SettingsWindow, ChannelSettingsWindow
 from ui.dynamic_style import STYLE
 from utils import (
     get_config, save_config,
@@ -317,7 +318,8 @@ class MainWindow(QWidget):
         channel_name = self._widget_list_channels.selected_channel()
         if channel_name not in self._channels:
             return
-        print(channel_name)
+        ch_sett_win = ChannelSettingsWindow()
+        ch_sett_win.show()
 
     @pyqtSlot(str)
     def _stream_off(self, ch_name: str):
