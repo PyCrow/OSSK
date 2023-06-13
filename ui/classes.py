@@ -6,7 +6,7 @@ from PyQt5.QtCore import pyqtSlot, Qt
 from PyQt5.QtGui import QStandardItemModel, QStandardItem, QLinearGradient, \
     QColor, QMouseEvent
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QLineEdit, \
-    QListView, QAbstractItemView, QLabel, QSpinBox, QMenu, QAction
+    QListView, QAbstractItemView, QLabel, QSpinBox, QMenu, QAction, QComboBox
 
 from ui.dynamic_style import STYLE
 from utils import check_exists_and_callable, is_callable
@@ -225,11 +225,25 @@ class ChannelSettingsWindow(QWidget):
         self.setMaximumHeight(500)
         self.resize(500, 360)
 
+        self.label_channel = QLabel(self)
+
         line_alias = QLineEdit()
         line_alias.setPlaceholderText("Enter readable alias for the channel")
 
+        box_svq = QComboBox()
+        box_svq.addItems(['1080', '720', '480'])  # TODO: move to static vars
+
+        self.button_apply = QPushButton("Accept", self)
+
         vbox = QVBoxLayout()
+        vbox.addWidget(self.label_channel, alignment=Qt.AlignHCenter)
+        vbox.addStretch(0)
         vbox.addWidget(QLabel("Channel alias"))
         vbox.addWidget(line_alias)
+        vbox.addStretch(0)
+        vbox.addWidget(QLabel("Stream video quality"))
+        vbox.addWidget(box_svq)
+        vbox.addStretch(0)
+        vbox.addWidget(self.button_apply)
 
         self.setLayout(vbox)

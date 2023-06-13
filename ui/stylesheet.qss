@@ -32,7 +32,7 @@ QListView::item:disabled {
     color: #aaa;
 }
 
-QLineEdit, QSpinBox {
+QLineEdit, QSpinBox, QComboBox {
     background-color: #191919;
     border-top: 1px solid #000;
     border-left: 1px solid #333;

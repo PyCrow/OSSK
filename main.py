@@ -246,6 +246,12 @@ class MainWindow(QWidget):
         self.setStyleSheet(style)
         self.settings_window.setStyleSheet(style)
 
+        # Channel settings window
+        self.channel_settings_window = ChannelSettingsWindow()
+        # TODO: add function on_click_...
+        self.channel_settings_window.button_apply.clicked.connect(print)
+        self.channel_settings_window.setStyleSheet(style)
+
     @pyqtSlot(bool)
     def clicked_open_settings(self):
         self.settings_window.show()
@@ -318,8 +324,8 @@ class MainWindow(QWidget):
         channel_name = self._widget_list_channels.selected_channel()
         if channel_name not in self._channels:
             return
-        ch_sett_win = ChannelSettingsWindow()
-        ch_sett_win.show()
+        self.channel_settings_window.label_channel.setText(channel_name)
+        self.channel_settings_window.show()
 
     @pyqtSlot(str)
     def _stream_off(self, ch_name: str):
