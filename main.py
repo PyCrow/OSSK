@@ -140,7 +140,10 @@ class MainWindow(QWidget):
         for channel_data in config.get(KEY_CHANNELS, {}):
             channel_name = channel_data[KEY_CHANNEL_NAME]
             self._channels[channel_name] = ChannelData.j_load(channel_data)
-            self._widget_list_channels.add_str_item(channel_name)
+            self._widget_list_channels.add_channel_item(
+                channel_name,
+                self._channels[channel_name].alias,
+            )
 
         # (ffmpeg path will be checked on field "textChanged" signal)
         ffmpeg_value = config.get(KEY_FFMPEG, PATH_TO_FFMPEG)
@@ -337,6 +340,7 @@ class MainWindow(QWidget):
         self._channels[channel_name].alias = alias
         self._channels[channel_name].set_svq(svq)
         self._save_config()
+        self._widget_list_channels.set_channel_alias(alias)
 
     @pyqtSlot(str)
     def _stream_off(self, ch_name: str):

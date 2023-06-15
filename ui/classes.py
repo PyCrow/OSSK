@@ -20,6 +20,12 @@ class ChannelStatus:
     FAIL = 3
 
 
+class ChannelItem(QStandardItem):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.channel: str = ''
+
+
 def _get_channel_status_color(status_id) -> QLinearGradient:
     colors = {ChannelStatus.OFF: QColor(50, 50, 50),
               ChannelStatus.QUEUE: QColor(180, 180, 0),
@@ -58,28 +64,40 @@ class ListChannels(ListView):
 
     def __init__(self):
         super(ListChannels, self).__init__()
-        self.channel_to_action = None
+        self.channel_index_to_action: int | None = None
         self.on_click_settings = QAction("Channel settings", self)
         self.on_click_delete = QAction("Delete channel", self)
 
+    def add_channel_item(self, channel_name: str, alias: str):
+        text = alias if alias else channel_name
+        item = ChannelItem(text)
+        item.channel = channel_name
+        item.setEditable(False)
+        self._model.appendRow(item)
+
     def selected_channel(self) -> str:
-        return self._model.itemFromIndex(self.channel_to_action).text()
+        return self._model.itemFromIndex(self.channel_index_to_action).channel
+
+    def set_channel_alias(self, alias: str):
+        self._model.itemFromIndex(self.channel_index_to_action).setText(alias)
 
     def mousePressEvent(self, e: QMouseEvent):
         self.clearSelection()
-        self.channel_to_action = None
+        self.channel_index_to_action = None
         super(ListChannels, self).mousePressEvent(e)
 
     def contextMenuEvent(self, event):
-        menu = QMenu(self)
         selected_items = self.selectedIndexes()
-        if len(selected_items) == 0:
-            return
-        self.channel_to_action = selected_items[0]
+        if len(selected_items) == 1:
+            self.channel_index_to_action = selected_items[0]
+            self._single_channel_menu().exec(event.globalPos())
+
+    def _single_channel_menu(self) -> QMenu:
+        menu = QMenu(self)
         menu.addAction(self.on_click_settings)
         menu.addSeparator()
         menu.addAction(self.on_click_delete)
-        menu.exec(event.globalPos())
+        return menu
 
     def set_stream_status(self, ch_index: int, status_id: int):
         """ Sets channel's row color """
@@ -231,8 +249,6 @@ class ChannelSettingsWindow(QWidget):
         self.line_alias = QLineEdit()
         self.line_alias.setPlaceholderText(
             "Enter readable alias for the channel")
-        self.line_alias.setDisabled(True)
-        self.line_alias.setToolTip("This field doesn't work now")
 
         self.box_svq = QComboBox()
         self.box_svq.addItems(list(AVAILABLE_STREAM_RECORD_QUALITIES.keys()))
