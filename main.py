@@ -450,7 +450,6 @@ class Master(QThread):
             # Check if Slave is ready
             # TODO: check stream_data not in self.Slave.queue
             if channel_name not in self.Slave.active_downloading_channels:
-
                 stream_data = {
                     KEY_CHANNEL_NAME: channel_name,
                     KEY_CHANNEL_SVQ: self.channels[channel_name].get_svq(),
@@ -615,6 +614,7 @@ class Slave(QThread):
                 self.temp_logs[proc.pid].close()
                 del self.temp_logs[proc.pid]
         self.running_downloads = []
+        self.active_downloading_channels = []
 
     def log_proc_output(self, proc: RecordProcess, level=ERROR):
         self.temp_logs[proc.pid].seek(0)
