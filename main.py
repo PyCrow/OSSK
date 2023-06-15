@@ -131,7 +131,7 @@ class MainWindow(QWidget):
 
     def _load_config(self):
         """ Loading configuration """
-        config: dict | None = get_config()
+        config: dict | None = get_config()  # TODO: Add "success" return
         if config is None:
             self.add_log_message(ERROR, "Settings loading error!")
             return
@@ -248,8 +248,8 @@ class MainWindow(QWidget):
 
         # Channel settings window
         self.channel_settings_window = ChannelSettingsWindow()
-        # TODO: add function on_click_...
-        self.channel_settings_window.button_apply.clicked.connect(print)
+        self.channel_settings_window.button_apply.clicked.connect(
+            self.clicked_apply_channel_settings)
         self.channel_settings_window.setStyleSheet(style)
 
     @pyqtSlot(bool)
@@ -324,8 +324,19 @@ class MainWindow(QWidget):
         channel_name = self._widget_list_channels.selected_channel()
         if channel_name not in self._channels:
             return
-        self.channel_settings_window.label_channel.setText(channel_name)
+        self.channel_settings_window.update_data(
+            channel_name,
+            self._channels[channel_name].alias,
+            self._channels[channel_name].clean_svq()
+        )
         self.channel_settings_window.show()
+
+    @pyqtSlot(bool)
+    def clicked_apply_channel_settings(self):
+        channel_name, alias, svq = self.channel_settings_window.get_data()
+        self._channels[channel_name].alias = alias
+        self._channels[channel_name].set_svq(svq)
+        self._save_config()
 
     @pyqtSlot(str)
     def _stream_off(self, ch_name: str):
@@ -442,7 +453,7 @@ class Master(QThread):
 
                 stream_data = {
                     KEY_CHANNEL_NAME: channel_name,
-                    KEY_CHANNEL_SVQ: self.channels[channel_name].svq,
+                    KEY_CHANNEL_SVQ: self.channels[channel_name].get_svq(),
                     'url': info_dict.get('webpage_url')}
                 self.Slave.queue.put(stream_data, block=True)
 
@@ -525,12 +536,12 @@ class Slave(QThread):
 
     @raise_on_stop_threads
     @logger_handler
-    def record_stream(self, stream_data: dict[str, str]):
+    def record_stream(self, stream_data: dict[str, str | tuple]):
         """ Starts stream recording """
 
-        channel_name = stream_data[KEY_CHANNEL_NAME]
-        stream_url = stream_data['url']
-        records_quality = stream_data[KEY_CHANNEL_SVQ]
+        channel_name: str = stream_data[KEY_CHANNEL_NAME]
+        stream_url: str = stream_data['url']
+        records_quality: tuple = stream_data[KEY_CHANNEL_SVQ]
 
         channel_dir = str(get_channel_dir(channel_name))
         file_name = '%(title)s.%(ext)s'
@@ -554,8 +565,8 @@ class Slave(QThread):
             '--retry-sleep', '5',
             # Без прогресс-бара
             '--no-progress',
-            # Формат (выбор качества записи)
-            '-f', records_quality,
+            # Качество записи
+            *records_quality,
             # Объединить в один файл mp4 или mkv
             '--merge-output-format', 'mp4/mkv',
             # Снизить шанс поломки при форсивной остановке
@@ -597,12 +608,13 @@ class Slave(QThread):
                 proc.kill()
                 self.s_stream_fail[str].emit(proc.channel)
                 self.log(WARNING,
-                         "Recording[{}] of channel {} resisted, but I'm "
-                         "stronger!".format(proc.pid, proc.channel))
+                         "Recording[{}] of channel {} has been killed!".format(
+                             proc.pid, proc.channel))
                 self.log_proc_output(proc)
             finally:
                 self.temp_logs[proc.pid].close()
                 del self.temp_logs[proc.pid]
+        self.running_downloads = []
 
     def log_proc_output(self, proc: RecordProcess, level=ERROR):
         self.temp_logs[proc.pid].seek(0)

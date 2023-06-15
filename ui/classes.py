@@ -8,6 +8,7 @@ from PyQt5.QtGui import QStandardItemModel, QStandardItem, QLinearGradient, \
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QLineEdit, \
     QListView, QAbstractItemView, QLabel, QSpinBox, QMenu, QAction, QComboBox
 
+from static_vars import AVAILABLE_STREAM_RECORD_QUALITIES
 from ui.dynamic_style import STYLE
 from utils import check_exists_and_callable, is_callable
 
@@ -227,11 +228,12 @@ class ChannelSettingsWindow(QWidget):
 
         self.label_channel = QLabel(self)
 
-        line_alias = QLineEdit()
-        line_alias.setPlaceholderText("Enter readable alias for the channel")
+        self.line_alias = QLineEdit()
+        self.line_alias.setPlaceholderText(
+            "Enter readable alias for the channel")
 
-        box_svq = QComboBox()
-        box_svq.addItems(['1080', '720', '480'])  # TODO: move to static vars
+        self.box_svq = QComboBox()
+        self.box_svq.addItems(list(AVAILABLE_STREAM_RECORD_QUALITIES.keys()))
 
         self.button_apply = QPushButton("Accept", self)
 
@@ -239,11 +241,22 @@ class ChannelSettingsWindow(QWidget):
         vbox.addWidget(self.label_channel, alignment=Qt.AlignHCenter)
         vbox.addStretch(0)
         vbox.addWidget(QLabel("Channel alias"))
-        vbox.addWidget(line_alias)
+        vbox.addWidget(self.line_alias)
         vbox.addStretch(0)
         vbox.addWidget(QLabel("Stream video quality"))
-        vbox.addWidget(box_svq)
+        vbox.addWidget(self.box_svq)
         vbox.addStretch(0)
         vbox.addWidget(self.button_apply)
 
         self.setLayout(vbox)
+
+    def update_data(self, channel_name: str, alias: str, svq: str):
+        self.label_channel.setText(channel_name)
+        self.line_alias.setText(alias)
+        index_svq = self.box_svq.findText(svq)
+        self.box_svq.setCurrentIndex(index_svq)
+
+    def get_data(self) -> tuple[str, str, str]:
+        return (self.label_channel.text(),
+                self.line_alias.text(),
+                self.box_svq.currentText())

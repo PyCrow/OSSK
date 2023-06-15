@@ -11,10 +11,15 @@ KEY_SCANNER_SLEEP = 'scanner_sleep'
 KEY_CHANNELS = 'channels'
 
 KEY_CHANNEL_NAME = 'name'
-KEY_CHANNEL_ALIAS, DEFAULT_CHANNEL_ALIAS = 'alias', ''
-KEY_CHANNEL_SVQ, DEFAULT_CHANNEL_SVQ = 'svq', '1080'
+KEY_CHANNEL_ALIAS = 'alias'
+KEY_CHANNEL_SVQ, DEFAULT_CHANNEL_SVQ = '_svq', '1080'
 
-RECORD_QUALITY_TEMPLATE = 'bv*[height<={video}]+ba/b[height<={on_failed}]'
+AVAILABLE_STREAM_RECORD_QUALITIES = {
+    'best': ('-f', 'bestvideo*+bestaudio/best'),
+    '1080': ('-S', 'res:1080'),
+    '720': ('-S', 'res:720'),
+    '480': ('-S', 'res:480'),
+}
 
 DEFAULT_MAX_DOWNLOADS = 2
 DEFAULT_SCANNER_SLEEP = 300
@@ -43,23 +48,28 @@ class ChannelData:
         """
         self.name: str = name
         self.alias: str = name
-        self.svq: str = "1080"
+        self._svq: str = "1080"
 
-    def stream_quality(self) -> str:
-        return RECORD_QUALITY_TEMPLATE.format(
-            video=self.svq, on_failed=self.svq)
+    def set_svq(self, svq: str):
+        self._svq = svq
+
+    def get_svq(self) -> tuple[str, str]:
+        return AVAILABLE_STREAM_RECORD_QUALITIES[self._svq]
+
+    def clean_svq(self):
+        return str(self._svq)
 
     def j_dump(self) -> dict:
         return {
             KEY_CHANNEL_NAME: self.name,
             KEY_CHANNEL_ALIAS: self.alias,
-            KEY_CHANNEL_SVQ: self.svq,
+            KEY_CHANNEL_SVQ: self._svq,
         }
     @staticmethod
     def j_load(data: dict):
         channel = ChannelData(data.get(KEY_CHANNEL_NAME, UNKNOWN))
-        channel.alias = data.get(KEY_CHANNEL_ALIAS, DEFAULT_CHANNEL_ALIAS)
-        channel.svq = data.get(KEY_CHANNEL_SVQ, DEFAULT_CHANNEL_SVQ)
+        channel.alias = data.get(KEY_CHANNEL_ALIAS, '')
+        channel._svq = data.get(KEY_CHANNEL_SVQ, DEFAULT_CHANNEL_SVQ)
         return channel
 
 
