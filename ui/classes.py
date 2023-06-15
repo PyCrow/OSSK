@@ -71,15 +71,17 @@ class ListChannels(ListView):
         super(ListChannels, self).mousePressEvent(e)
 
     def contextMenuEvent(self, event):
-        menu = QMenu(self)
         selected_items = self.selectedIndexes()
-        if len(selected_items) == 0:
-            return
-        self.channel_to_action = selected_items[0]
+        if len(selected_items) == 1:
+            self.channel_to_action = selected_items[0]
+            self._single_channel_menu().exec(event.globalPos())
+
+    def _single_channel_menu(self) -> QMenu:
+        menu = QMenu(self)
         menu.addAction(self.on_click_settings)
         menu.addSeparator()
         menu.addAction(self.on_click_delete)
-        menu.exec(event.globalPos())
+        return menu
 
     def set_stream_status(self, ch_index: int, status_id: int):
         """ Sets channel's row color """
