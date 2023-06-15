@@ -340,6 +340,7 @@ class MainWindow(QWidget):
         self._channels[channel_name].alias = alias
         self._channels[channel_name].set_svq(svq)
         self._save_config()
+        self._widget_list_channels.set_channel_alias(alias)
 
     @pyqtSlot(str)
     def _stream_off(self, ch_name: str):

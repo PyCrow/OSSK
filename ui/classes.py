@@ -78,6 +78,9 @@ class ListChannels(ListView):
     def selected_channel(self) -> str:
         return self._model.itemFromIndex(self.channel_index_to_action).channel
 
+    def set_channel_alias(self, alias: str):
+        self._model.itemFromIndex(self.channel_index_to_action).setText(alias)
+
     def mousePressEvent(self, e: QMouseEvent):
         self.clearSelection()
         self.channel_index_to_action = None
