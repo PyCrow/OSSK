@@ -231,6 +231,8 @@ class ChannelSettingsWindow(QWidget):
         self.line_alias = QLineEdit()
         self.line_alias.setPlaceholderText(
             "Enter readable alias for the channel")
+        self.line_alias.setDisabled(True)
+        self.line_alias.setToolTip("This field doesn't work now")
 
         self.box_svq = QComboBox()
         self.box_svq.addItems(list(AVAILABLE_STREAM_RECORD_QUALITIES.keys()))

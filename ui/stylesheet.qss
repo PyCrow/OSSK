@@ -13,7 +13,7 @@ QLabel {
     color: white;
 }
 
-QListView {
+QListView, QLineEdit, QSpinBox, QComboBox {
     background-color: #191919;
     border-top: 1px solid #000;
     border-left: 1px solid #333;
@@ -28,18 +28,8 @@ QListView::item:hover {
 QListView::item:selected {
     background-color: #0f0;
     color: black; }
-QListView::item:disabled {
+QListView::item:disabled, QLineEdit:disabled {
     color: #aaa;
-}
-
-QLineEdit, QSpinBox, QComboBox {
-    background-color: #191919;
-    border-top: 1px solid #000;
-    border-left: 1px solid #333;
-    border-right: 1px solid #333;
-    border-bottom: 1px solid #0a0;
-    border-radius: 12px;
-    padding: 5px;
 }
 
 QStandardItem {
