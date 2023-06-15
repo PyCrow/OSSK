@@ -220,11 +220,11 @@ class ChannelSettingsWindow(QWidget):
         self.setWindowTitle("StreamSaver | Channel settings")
         self.setWindowModality(Qt.ApplicationModal)
 
-        self.setMinimumWidth(400)
-        self.setMaximumWidth(750)
+        self.setMinimumWidth(300)
+        self.setMaximumWidth(500)
         self.setMinimumHeight(300)
         self.setMaximumHeight(500)
-        self.resize(500, 360)
+        self.resize(400, 300)
 
         self.label_channel = QLabel(self)
 
