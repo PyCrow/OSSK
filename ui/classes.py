@@ -257,6 +257,8 @@ class ChannelSettingsWindow(QWidget):
         self.box_svq.setCurrentIndex(index_svq)
 
     def get_data(self) -> tuple[str, str, str]:
-        return (self.label_channel.text(),
-                self.line_alias.text(),
-                self.box_svq.currentText())
+        ch_name = self.label_channel.text()
+        alias = self.line_alias.text()
+        svq = self.box_svq.currentText()
+        self.close()
+        return ch_name, alias, svq
