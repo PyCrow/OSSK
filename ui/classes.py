@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Iterable
 
 from PyQt5.QtCore import pyqtSlot, Qt
 from PyQt5.QtGui import QStandardItemModel, QStandardItem, QLinearGradient, \
     QColor, QMouseEvent
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QLineEdit, \
-    QListView, QAbstractItemView, QLabel, QSpinBox, QMenu, QAction
+    QListView, QAbstractItemView, QLabel, QSpinBox, QMenu, QAction, QComboBox
 
+from static_vars import AVAILABLE_STREAM_RECORD_QUALITIES
 from ui.dynamic_style import STYLE
 from utils import check_exists_and_callable, is_callable
 
@@ -47,10 +47,6 @@ class ListView(QListView):
         item.setEditable(False)
         self._model.appendRow(item)
 
-    def add_str_items(self, list_items: Iterable[str]):
-        for i in list_items:
-            self.add_str_item(i)
-
     def del_item_by_name(self, item_name: str):
         for row in range(self._model.rowCount()):
             if self._model.item(row).text() == item_name:
@@ -63,7 +59,8 @@ class ListChannels(ListView):
     def __init__(self):
         super(ListChannels, self).__init__()
         self.channel_to_action = None
-        self.delete_channel = QAction("Delete channel", self)
+        self.on_click_settings = QAction("Channel settings", self)
+        self.on_click_delete = QAction("Delete channel", self)
 
     def selected_channel(self) -> str:
         return self._model.itemFromIndex(self.channel_to_action).text()
@@ -79,7 +76,9 @@ class ListChannels(ListView):
         if len(selected_items) == 0:
             return
         self.channel_to_action = selected_items[0]
-        menu.addAction(self.delete_channel)
+        menu.addAction(self.on_click_settings)
+        menu.addSeparator()
+        menu.addAction(self.on_click_delete)
         menu.exec(event.globalPos())
 
     def set_stream_status(self, ch_index: int, status_id: int):
@@ -174,16 +173,16 @@ class SettingsWindow(QWidget):
         vbox = QVBoxLayout()
         vbox.addWidget(QLabel("Path to ffmpeg"))
         vbox.addWidget(self.field_ffmpeg)
-        vbox.addStretch(0)
+        vbox.addStretch(1)
         vbox.addWidget(QLabel("Command or path to yt-dlp"))
         vbox.addWidget(self.field_ytdlp)
-        vbox.addStretch(0)
+        vbox.addStretch(1)
         vbox.addWidget(QLabel("Maximum number of synchronous downloads"))
         vbox.addWidget(self.box_max_downloads)
-        vbox.addStretch(0)
+        vbox.addStretch(1)
         vbox.addWidget(QLabel("Time between scans (minutes)"))
         vbox.addWidget(self.box_scanner_sleep)
-        vbox.addStretch(0)
+        vbox.addStretch(2)
         vbox.addWidget(self.button_apply)
 
         self.setLayout(vbox)
@@ -210,3 +209,58 @@ class SettingsWindow(QWidget):
     def _check_scanner_sleep(self, value: int):
         status = STYLE.SPIN_WARNING if value < 5 else STYLE.SPIN_VALID
         self.box_scanner_sleep.setStyleSheet(status)
+
+
+class ChannelSettingsWindow(QWidget):
+    def __init__(self):
+        super(ChannelSettingsWindow, self).__init__()
+        self._init_ui()
+
+    def _init_ui(self):
+        self.setWindowTitle("StreamSaver | Channel settings")
+        self.setWindowModality(Qt.ApplicationModal)
+
+        self.setMinimumWidth(300)
+        self.setMaximumWidth(500)
+        self.setMinimumHeight(300)
+        self.setMaximumHeight(500)
+        self.resize(400, 300)
+
+        self.label_channel = QLabel(self)
+
+        self.line_alias = QLineEdit()
+        self.line_alias.setPlaceholderText(
+            "Enter readable alias for the channel")
+        self.line_alias.setDisabled(True)
+        self.line_alias.setToolTip("This field doesn't work now")
+
+        self.box_svq = QComboBox()
+        self.box_svq.addItems(list(AVAILABLE_STREAM_RECORD_QUALITIES.keys()))
+
+        self.button_apply = QPushButton("Accept", self)
+
+        vbox = QVBoxLayout()
+        vbox.addWidget(self.label_channel, alignment=Qt.AlignHCenter)
+        vbox.addStretch(1)
+        vbox.addWidget(QLabel("Channel alias"))
+        vbox.addWidget(self.line_alias)
+        vbox.addStretch(1)
+        vbox.addWidget(QLabel("Stream video quality"))
+        vbox.addWidget(self.box_svq)
+        vbox.addStretch(2)
+        vbox.addWidget(self.button_apply)
+
+        self.setLayout(vbox)
+
+    def update_data(self, channel_name: str, alias: str, svq: str):
+        self.label_channel.setText(channel_name)
+        self.line_alias.setText(alias)
+        index_svq = self.box_svq.findText(svq)
+        self.box_svq.setCurrentIndex(index_svq)
+
+    def get_data(self) -> tuple[str, str, str]:
+        ch_name = self.label_channel.text()
+        alias = self.line_alias.text()
+        svq = self.box_svq.currentText()
+        self.close()
+        return ch_name, alias, svq
