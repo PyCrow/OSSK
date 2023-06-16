@@ -11,7 +11,7 @@ KEY_SCANNER_SLEEP = 'scanner_sleep'
 KEY_CHANNELS = 'channels'
 
 KEY_CHANNEL_NAME = 'name'
-KEY_CHANNEL_ALIAS = 'alias'
+KEY_CHANNEL_ALIAS, DEFAULT_CHANNEL_ALIAS = 'alias', ''
 KEY_CHANNEL_SVQ, DEFAULT_CHANNEL_SVQ = '_svq', '1080'
 
 AVAILABLE_STREAM_RECORD_QUALITIES = {
@@ -47,7 +47,7 @@ class ChannelData:
         Channel GUI alias can be changed in channel settings.
         """
         self.name: str = name
-        self.alias: str = name
+        self.alias: str = DEFAULT_CHANNEL_ALIAS
         self._svq: str = "1080"
 
     def set_svq(self, svq: str):
@@ -68,7 +68,7 @@ class ChannelData:
     @staticmethod
     def j_load(data: dict):
         channel = ChannelData(data.get(KEY_CHANNEL_NAME, UNKNOWN))
-        channel.alias = data.get(KEY_CHANNEL_ALIAS, '')
+        channel.alias = data.get(KEY_CHANNEL_ALIAS, DEFAULT_CHANNEL_ALIAS)
         channel._svq = data.get(KEY_CHANNEL_SVQ, DEFAULT_CHANNEL_SVQ)
         return channel
 

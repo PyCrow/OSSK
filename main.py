@@ -298,7 +298,8 @@ class MainWindow(QWidget):
         THREADS_LOCK.lock()
         self.Master.channels[channel_name] = channel_data
         THREADS_LOCK.unlock()
-        self._widget_list_channels.add_str_item(channel_name)
+        self._widget_list_channels.add_channel_item(
+            channel_name, channel_data.alias)
         self._field_add_channels.clear()
 
     @pyqtSlot(bool)
@@ -314,7 +315,6 @@ class MainWindow(QWidget):
             del self.Master.channels[channel_name]
         THREADS_LOCK.unlock()
         self._widget_list_channels.del_item_by_name(channel_name)
-        self._field_add_channels.clear()
 
     @pyqtSlot(str)
     def highlight_on_exists(self, ch_name: str):
