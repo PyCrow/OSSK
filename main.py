@@ -199,12 +199,11 @@ class MainWindow(QWidget):
         self._field_add_channels.textChanged[str].connect(
             self.highlight_on_exists)
 
-        label_channels = QLabel("Monitored channels")
         button_add_channel = QPushButton("Add")
         button_add_channel.clicked[bool].connect(self.add_channel)
 
         hbox_channels_list_header = QHBoxLayout()
-        hbox_channels_list_header.addWidget(label_channels)
+        hbox_channels_list_header.addWidget(QLabel("Monitored channels"))
         hbox_channels_list_header.addWidget(button_add_channel)
 
         self._widget_list_channels = ListChannels()
@@ -220,10 +219,9 @@ class MainWindow(QWidget):
         left_vbox.addWidget(self._widget_list_channels)
 
         # TODO: add tabs for processes event logs
-        label_log = QLabel("Event log")
         self._widget_log = LogWidget()
         vbox_log = QVBoxLayout()
-        vbox_log.addWidget(label_log, alignment=Qt.AlignHCenter)
+        vbox_log.addWidget(QLabel("Event log"), alignment=Qt.AlignHCenter)
         vbox_log.addWidget(self._widget_log)
 
         main_hbox = QHBoxLayout()
