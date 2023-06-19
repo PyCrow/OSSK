@@ -114,8 +114,25 @@ class LogTabWidget(QTabWidget):
         self._init_ui()
 
     def _init_ui(self):
+        self.setMovable(True)
+        self.setTabShape(QTabWidget.TabShape.Triangular)
+
+        # Add closability
+        self.setTabsClosable(True)
+        self.tabCloseRequested[int].connect(self.close_tab)
+
         self.common = LogWidget()
         self.addTab(self.common, "Common")
+
+    def add_new_process_tab(self, obj):
+        log_widget = LogWidget()
+        self.addTab(log_widget, str(obj))
+
+    @pyqtSlot(int)
+    def close_tab(self, tab_index: int):
+        if tab_index == 0:
+            return
+        self.removeTab(tab_index)
 
 
 class LogWidget(ListView):
