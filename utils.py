@@ -30,17 +30,20 @@ def check_exists_and_callable(_path: str) -> bool:
     return False
 
 
-def get_config() -> dict | None:
+def get_settings() -> tuple[bool, dict | None]:
+    succ = False
+    config = None
     try:
         with open(SETTINGS_FILE, 'r') as conf_file:
             config = json.load(conf_file)
-        return config
+        succ = True
     except Exception as e:
         logger.error(e, exc_info=True)
-        return None
+    finally:
+        return succ, config
 
 
-def save_config(config: dict) -> bool:
+def save_settings(config: dict) -> bool:
     try:
         with open(SETTINGS_FILE, 'w') as conf_file:
             json.dump(config, conf_file)

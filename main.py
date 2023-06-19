@@ -28,7 +28,7 @@ from ui.classes import ListChannels, LogWidget, ChannelStatus, \
     SettingsWindow, ChannelSettingsWindow
 from ui.dynamic_style import STYLE
 from utils import (
-    get_config, save_config,
+    get_settings, save_settings,
     is_callable, check_exists_and_callable,
     get_channel_dir,
 )
@@ -131,8 +131,8 @@ class MainWindow(QWidget):
 
     def _load_config(self):
         """ Loading configuration """
-        config: dict | None = get_config()  # TODO: Add "success" return
-        if config is None:
+        succ, config = get_settings()
+        if not succ:
             self.add_log_message(ERROR, "Settings loading error!")
             return
 
@@ -165,7 +165,7 @@ class MainWindow(QWidget):
         max_downloads = self.settings_window.box_max_downloads.value()
         scanner_sleep = self.settings_window.box_scanner_sleep.value() * 60
 
-        suc = save_config({
+        suc = save_settings({
             KEY_FFMPEG: ffmpeg_path,
             KEY_YTDLP: ytdlp_command,
             KEY_MAX_DOWNLOADS: max_downloads,
