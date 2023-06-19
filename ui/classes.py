@@ -130,7 +130,7 @@ class LogTabWidget(QTabWidget):
 
     @pyqtSlot(int)
     def close_tab(self, tab_index: int):
-        if tab_index == 0:
+        if tab_index == self.indexOf(self.common):
             return
         self.removeTab(tab_index)
 
