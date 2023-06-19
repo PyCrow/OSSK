@@ -5,8 +5,10 @@ from datetime import datetime
 from PyQt5.QtCore import pyqtSlot, Qt
 from PyQt5.QtGui import QStandardItemModel, QStandardItem, QLinearGradient, \
     QColor, QMouseEvent
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QLineEdit, \
-    QListView, QAbstractItemView, QLabel, QSpinBox, QMenu, QAction, QComboBox
+from PyQt5.QtWidgets import (
+    QWidget, QVBoxLayout, QPushButton, QLineEdit, QListView, QAbstractItemView,
+    QLabel, QSpinBox, QMenu, QAction, QComboBox, QTabWidget,
+)
 
 from static_vars import AVAILABLE_STREAM_RECORD_QUALITIES
 from ui.dynamic_style import STYLE
@@ -104,6 +106,16 @@ class ListChannels(ListView):
         # TODO: make it with a dynamic_style or any other way
         color = _get_channel_status_color(status_id)
         self._model.item(ch_index).setBackground(color)
+
+
+class LogTabWidget(QTabWidget):
+    def __init__(self):
+        super(LogTabWidget, self).__init__()
+        self._init_ui()
+
+    def _init_ui(self):
+        self.common = LogWidget()
+        self.addTab(self.common, "Common")
 
 
 class LogWidget(ListView):

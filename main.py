@@ -11,7 +11,7 @@ import subprocess
 import tempfile
 
 import yt_dlp
-from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot, Qt, QMutex
+from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot, QMutex
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLineEdit,
     QLabel
@@ -24,7 +24,7 @@ from static_vars import (
     KEY_CHANNEL_NAME, KEY_CHANNEL_SVQ,
     ChannelData, StopThreads, RecordProcess,
     STYLESHEET_PATH, FLAG_LIVE)
-from ui.classes import ListChannels, LogWidget, ChannelStatus, \
+from ui.classes import ListChannels, LogTabWidget, ChannelStatus, \
     SettingsWindow, ChannelSettingsWindow
 from ui.dynamic_style import STYLE
 from utils import (
@@ -219,14 +219,11 @@ class MainWindow(QWidget):
         left_vbox.addWidget(self._widget_list_channels)
 
         # TODO: add tabs for processes event logs
-        self._widget_log = LogWidget()
-        vbox_log = QVBoxLayout()
-        vbox_log.addWidget(QLabel("Event log"), alignment=Qt.AlignHCenter)
-        vbox_log.addWidget(self._widget_log)
+        self.log_tabs = LogTabWidget()
 
         main_hbox = QHBoxLayout()
         main_hbox.addLayout(left_vbox, 1)
-        main_hbox.addLayout(vbox_log, 2)
+        main_hbox.addWidget(self.log_tabs, 2)
 
         self.start_button = QPushButton("Start")
         self.start_button.clicked[bool].connect(self.run_master)
@@ -282,7 +279,7 @@ class MainWindow(QWidget):
     @pyqtSlot(int, str)
     def add_log_message(self, level: int, text: str):
         logger.log(level, text)
-        self._widget_log.add_message(f"[{DEBUG_LEVELS[level]}] {text}")
+        self.log_tabs.common.add_message(f"[{DEBUG_LEVELS[level]}] {text}")
 
     @pyqtSlot(bool)
     def add_channel(self):
