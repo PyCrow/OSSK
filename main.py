@@ -486,6 +486,7 @@ class Slave(QThread):
         self.max_downloads: int = DEFAULT_MAX_DOWNLOADS
         self.running_downloads: list[RecordProcess] = []
         self.temp_logs: dict[int, IO] = {}
+        self.last_log_byte: dict[int, int] = {}
 
     def log(self, level: int, text: str):
         self.s_log[int, str].emit(level, text)
@@ -513,7 +514,7 @@ class Slave(QThread):
 
             # Pass if process is not finished yet
             if ret_code is None:
-                self.handle_running_process(proc)
+                self.handle_process_output(proc)
                 list_running.append(proc)
                 continue
             # Handling finished process
@@ -525,9 +526,7 @@ class Slave(QThread):
                 self.log(ERROR, f"Recording {proc.channel} "
                                 f"stopped with an error code: {ret_code}")
                 self.log(ERROR, f"Process[{proc.pid}] output:")
-                self.handle_finished_process(proc)
-            self.temp_logs[proc.pid].close()
-            del self.temp_logs[proc.pid]
+            self.handle_process_finished(proc)
             self.active_downloading_channels.remove(proc.channel)
 
         self.running_downloads = list_running
@@ -580,6 +579,7 @@ class Slave(QThread):
 
         proc = RecordProcess(cmd, stdout=temp_log, stderr=temp_log)
         proc.channel = channel_name
+        self.last_log_byte[proc.pid] = 0
         self.temp_logs[proc.pid] = temp_log
         self.active_downloading_channels.append(channel_name)
         self.running_downloads.append(proc)
@@ -601,12 +601,10 @@ class Slave(QThread):
                 ret = proc.wait(60)  # TODO: add value editing to settings
                 if ret == 0:
                     self.s_stream_off[str].emit(proc.channel)
-                    self.handle_finished_process(proc, level=DEBUG)  # temp dbg
                 else:
                     self.s_stream_fail[str].emit(proc.channel)
                     self.log(ERROR, "Error while stopping channel {} record :("
                              .format(proc.channel))
-                    self.handle_finished_process(proc)
             # Fixme:
             #  ValueError raises when SIGINT couldn't be handled by Windows
             except (subprocess.TimeoutExpired, ValueError):
@@ -615,24 +613,25 @@ class Slave(QThread):
                 self.log(WARNING,
                          "Recording[{}] of channel {} has been killed!".format(
                              proc.pid, proc.channel))
-                self.handle_finished_process(proc)
             finally:
-                self.temp_logs[proc.pid].close()
-                del self.temp_logs[proc.pid]
+                self.handle_process_finished(proc)
         self.running_downloads = []
         self.active_downloading_channels = []
 
-    def handle_running_process(self, proc: RecordProcess):
-        # FIXME
+    def handle_process_output(self, proc: RecordProcess):
+        last_byte = self.last_log_byte[proc.pid]
+        self.temp_logs[proc.pid].seek(last_byte)
         line = self.temp_logs[proc.pid].readline()
         if line == b'':
             return
+        self.last_log_byte[proc.pid] = last_byte + len(line)
         self.s_proc_log[int, str].emit(proc.pid, line.decode('utf-8'))
 
-    def handle_finished_process(self, proc: RecordProcess, level=ERROR):
-        self.temp_logs[proc.pid].seek(0)
-        for line in self.temp_logs[proc.pid].readlines():
-            self.log(level, ">>> " + line.decode('utf-8'))
+    def handle_process_finished(self, proc: RecordProcess):
+        self.handle_process_output(proc)
+        self.temp_logs[proc.pid].close()
+        del self.temp_logs[proc.pid]
+        del self.last_log_byte[proc.pid]
 
 
 if __name__ == '__main__':
