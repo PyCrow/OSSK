@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import (
     QLabel, QSpinBox, QMenu, QAction, QComboBox, QTabWidget,
 )
 
-from static_vars import AVAILABLE_STREAM_RECORD_QUALITIES
+from static_vars import AVAILABLE_STREAM_RECORD_QUALITIES, RecordProcess
 from ui.dynamic_style import STYLE
 from utils import check_exists_and_callable, is_callable
 
@@ -123,15 +123,22 @@ class LogTabWidget(QTabWidget):
         self.common = LogWidget()
         self.addTab(self.common, "Common")
 
-    def add_new_process_tab(self, obj):
-        log_widget = LogWidget()
-        self.addTab(log_widget, str(obj))
+    def add_new_process_tab(self, rec_proc: RecordProcess):
+        log_widget = LogWidget(process=rec_proc)
+        self.addTab(log_widget, str(rec_proc.channel))
 
     @pyqtSlot(int)
     def close_tab(self, tab_index: int):
         if tab_index == self.indexOf(self.common):
             return
         self.removeTab(tab_index)
+
+    def update_log_tabs(self):
+        ...
+        # TODO: let's relax and take a moment to think about MVC
+        # for log_widget_index in range(self.count()):
+        #     log_widget: LogWidget = self.widget(log_widget_index)
+        #     log_widget.
 
 
 class LogWidget(ListView):
@@ -142,8 +149,9 @@ class LogWidget(ListView):
         now = datetime.now()
         return now.strftime("%H:%M:%S")
 
-    def __init__(self):
+    def __init__(self, process: RecordProcess | None = None):
         super().__init__()
+        self.process = process
 
     def add_message(self, text):
         message = f"{self.time} {text}"
