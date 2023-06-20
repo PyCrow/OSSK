@@ -125,7 +125,8 @@ class MainWindow(QWidget):
         self.Master.s_log[int, str].connect(self.add_log_message)
         self.Master.s_stream_off[str].connect(self._stream_off)
         self.Master.s_stream_in_queue[str].connect(self._stream_in_queue)
-        self.Master.Slave.s_stream_rec[str].connect(self._stream_rec)
+        self.Master.Slave.s_proc_log[int, str].connect(self._proc_log)
+        self.Master.Slave.s_stream_rec[str, int].connect(self._stream_rec)
         self.Master.Slave.s_stream_off[str].connect(self._stream_off)
         self.Master.Slave.s_stream_fail[str].connect(self._stream_fail)
 
@@ -337,6 +338,10 @@ class MainWindow(QWidget):
         self._save_config()
         self._widget_list_channels.set_channel_alias(alias)
 
+    @pyqtSlot(int, str)
+    def _proc_log(self, pid: int, message: str):
+        self.log_tabs.proc_log(pid, message)
+
     @pyqtSlot(str)
     def _stream_off(self, ch_name: str):
         ch_index = list(self._channels.keys()).index(ch_name)
@@ -347,8 +352,9 @@ class MainWindow(QWidget):
         ch_index = list(self._channels.keys()).index(ch_name)
         self._widget_list_channels.set_stream_status(ch_index,
                                                      ChannelStatus.QUEUE)
-    @pyqtSlot(str)
-    def _stream_rec(self, ch_name: str):
+    @pyqtSlot(str, int)
+    def _stream_rec(self, ch_name: str, pid: int):
+        self.log_tabs.add_new_process_tab(ch_name, pid)
         ch_index = list(self._channels.keys()).index(ch_name)
         self._widget_list_channels.set_stream_status(ch_index,
                                                      ChannelStatus.REC)
@@ -466,7 +472,8 @@ class Master(QThread):
 class Slave(QThread):
     # TODO: add memory check
     s_log = pyqtSignal(int, str)
-    s_stream_rec = pyqtSignal(str)
+    s_proc_log = pyqtSignal(int, str)
+    s_stream_rec = pyqtSignal(str, int)
     s_stream_off = pyqtSignal(str)
     s_stream_fail = pyqtSignal(str)
 
@@ -492,7 +499,6 @@ class Slave(QThread):
                 if self.ready_to_download() and not self.queue.empty():
                     stream_data = self.queue.get()
                     self.record_stream(stream_data)
-                sleep(10)
         except StopThreads:
             self.stop_downloads()
         self.log(INFO, "Recorder stopped.")
@@ -507,6 +513,7 @@ class Slave(QThread):
 
             # Pass if process is not finished yet
             if ret_code is None:
+                self.handle_running_process(proc)
                 list_running.append(proc)
                 continue
             # Handling finished process
@@ -518,7 +525,7 @@ class Slave(QThread):
                 self.log(ERROR, f"Recording {proc.channel} "
                                 f"stopped with an error code: {ret_code}")
                 self.log(ERROR, f"Process[{proc.pid}] output:")
-                self.log_proc_output(proc)
+                self.handle_finished_process(proc)
             self.temp_logs[proc.pid].close()
             del self.temp_logs[proc.pid]
             self.active_downloading_channels.remove(proc.channel)
@@ -577,7 +584,7 @@ class Slave(QThread):
         self.active_downloading_channels.append(channel_name)
         self.running_downloads.append(proc)
 
-        self.s_stream_rec[str].emit(channel_name)
+        self.s_stream_rec[str, int].emit(channel_name, proc.pid)
 
     @logger_handler
     def stop_downloads(self):
@@ -594,12 +601,12 @@ class Slave(QThread):
                 ret = proc.wait(60)  # TODO: add value editing to settings
                 if ret == 0:
                     self.s_stream_off[str].emit(proc.channel)
-                    self.log_proc_output(proc, level=DEBUG)  # temp debug
+                    self.handle_finished_process(proc, level=DEBUG)  # temp dbg
                 else:
                     self.s_stream_fail[str].emit(proc.channel)
                     self.log(ERROR, "Error while stopping channel {} record :("
                              .format(proc.channel))
-                    self.log_proc_output(proc)
+                    self.handle_finished_process(proc)
             # Fixme:
             #  ValueError raises when SIGINT couldn't be handled by Windows
             except (subprocess.TimeoutExpired, ValueError):
@@ -608,17 +615,24 @@ class Slave(QThread):
                 self.log(WARNING,
                          "Recording[{}] of channel {} has been killed!".format(
                              proc.pid, proc.channel))
-                self.log_proc_output(proc)
+                self.handle_finished_process(proc)
             finally:
                 self.temp_logs[proc.pid].close()
                 del self.temp_logs[proc.pid]
         self.running_downloads = []
         self.active_downloading_channels = []
 
-    def log_proc_output(self, proc: RecordProcess, level=ERROR):
+    def handle_running_process(self, proc: RecordProcess):
+        # FIXME
+        line = self.temp_logs[proc.pid].readline()
+        if line == b'':
+            return
+        self.s_proc_log[int, str].emit(proc.pid, line.decode('utf-8'))
+
+    def handle_finished_process(self, proc: RecordProcess, level=ERROR):
         self.temp_logs[proc.pid].seek(0)
-        for i in self.temp_logs[proc.pid].readlines():
-            self.log(level, ">>> " + i.decode('utf-8'))
+        for line in self.temp_logs[proc.pid].readlines():
+            self.log(level, ">>> " + line.decode('utf-8'))
 
 
 if __name__ == '__main__':

@@ -112,6 +112,7 @@ class LogTabWidget(QTabWidget):
     def __init__(self):
         super(LogTabWidget, self).__init__()
         self._init_ui()
+        self._pid_widget: dict[int, LogWidget] = {}
 
     def _init_ui(self):
         self.setMovable(True)
@@ -123,9 +124,9 @@ class LogTabWidget(QTabWidget):
         self.common = LogWidget()
         self.addTab(self.common, "Common")
 
-    def add_new_process_tab(self, rec_proc: RecordProcess):
-        log_widget = LogWidget(process=rec_proc)
-        self.addTab(log_widget, str(rec_proc.channel))
+    def add_new_process_tab(self, channel_name: str, pid: int):
+        self._pid_widget[pid] = LogWidget()
+        self.addTab(self._pid_widget[pid], channel_name)
 
     @pyqtSlot(int)
     def close_tab(self, tab_index: int):
@@ -133,12 +134,8 @@ class LogTabWidget(QTabWidget):
             return
         self.removeTab(tab_index)
 
-    def update_log_tabs(self):
-        ...
-        # TODO: let's relax and take a moment to think about MVC
-        # for log_widget_index in range(self.count()):
-        #     log_widget: LogWidget = self.widget(log_widget_index)
-        #     log_widget.
+    def proc_log(self, pid: int, message: str):
+        self._pid_widget[pid].add_message(message)
 
 
 class LogWidget(ListView):
