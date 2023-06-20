@@ -115,7 +115,6 @@ class LogTabWidget(QTabWidget):
 
     def _init_ui(self):
         self.setMovable(True)
-        self.setTabShape(QTabWidget.TabShape.Triangular)
 
         # Add closability
         self.setTabsClosable(True)

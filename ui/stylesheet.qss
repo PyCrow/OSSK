@@ -13,6 +13,27 @@ QLabel {
     color: white;
 }
 
+QTabWidget::tab-bar {
+    left: 12px;
+}
+QTabBar::tab {
+    background-color: #303030;
+    color: #aaa;
+    border-top: 1px solid #0a0;
+    border-left: 1px solid #242;
+    border-right: 1px solid #353;
+    border-bottom: 1px solid #101010;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    padding-top: 4px;
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-bottom: 4px; }
+QTabBar::tab:selected, QTabBar::tab:hover {
+    color: #0f0; }
+QTabBar::tab:!selected {
+    margin-top: 2px;
+}
 QListView, QLineEdit, QSpinBox, QComboBox {
     background-color: #191919;
     border-top: 1px solid #000;
@@ -45,7 +66,7 @@ QPushButton {
     border-left: 1px solid #242;
     border-right: 1px solid #353;
     border-bottom: 1px solid #101010;
-    border-radius: 4px;
+    border-radius: 6px;
     margin-top: 2;
     margin-bottom: 2; }
 QPushButton:disabled {
