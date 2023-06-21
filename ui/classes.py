@@ -168,9 +168,9 @@ class LogTabWidget(QTabWidget):
         self.common = LogWidget()
         self.addTab(self.common, "Common")
 
-    def add_new_process_tab(self, channel_name: str, pid: int):
+    def add_new_process_tab(self, stream_name: str, pid: int):
         self._map_pid_widget[pid] = LogWidget()
-        self.addTab(self._map_pid_widget[pid], channel_name)
+        self.addTab(self._map_pid_widget[pid], stream_name)
 
     @pyqtSlot(int)
     def close_tab(self, tab_index: int):

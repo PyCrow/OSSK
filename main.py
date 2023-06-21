@@ -354,6 +354,8 @@ class MainWindow(QWidget):
         ch_index = list(self._channels.keys()).index(ch_name)
         self.widget_channels_tree.set_stream_status(ch_index,
                                                     ChannelStatus.REC)
+        self.widget_channels_tree.add_child_process_item(ch_name, pid,
+                                                         stream_name)
     @pyqtSlot(str)
     def _stream_fail(self, ch_name: str):
         ch_index = list(self._channels.keys()).index(ch_name)
@@ -459,7 +461,9 @@ class Master(QThread):
                 stream_data = {
                     KEY_CHANNEL_NAME: channel_name,
                     KEY_CHANNEL_SVQ: self.channels[channel_name].get_svq(),
-                    'url': info_dict.get('webpage_url')}
+                    'url': info_dict['webpage_url'],
+                    'title': info_dict['title'],
+                }
                 self.Slave.queue.put(stream_data, block=True)
 
                 self.log(INFO, f"Recording {channel_name} added to queue.")
@@ -546,6 +550,7 @@ class Slave(QThread):
         channel_name: str = stream_data[KEY_CHANNEL_NAME]
         stream_url: str = stream_data['url']
         records_quality: tuple = stream_data[KEY_CHANNEL_SVQ]
+        stream_title: str = stream_data['title']
 
         channel_dir = str(get_channel_dir(channel_name))
         file_name = '%(title)s.%(ext)s'
