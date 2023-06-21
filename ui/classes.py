@@ -66,6 +66,9 @@ class ChannelsTree(QTreeView):
 
     def __init__(self):
         super(ChannelsTree, self).__init__()
+        self.setMinimumWidth(250)
+        self.setMinimumHeight(135)
+
         self._model = QStandardItemModel()
         self.setModel(self._model)
         self._root = self._model.invisibleRootItem()
@@ -192,6 +195,8 @@ class LogWidget(ListView):
 
     def __init__(self, process: RecordProcess | None = None):
         super().__init__()
+        self.setMinimumWidth(460)
+        self.setMinimumHeight(200)
         self.process = process
 
     def add_message(self, text):
