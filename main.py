@@ -141,7 +141,7 @@ class MainWindow(QWidget):
         for channel_data in config.get(KEY_CHANNELS, {}):
             channel_name = channel_data[KEY_CHANNEL_NAME]
             self._channels[channel_name] = ChannelData.j_load(channel_data)
-            self._widget_list_channels.add_channel_item(
+            self.widget_channels_tree.add_channel_item(
                 channel_name,
                 self._channels[channel_name].alias,
             )
@@ -207,17 +207,17 @@ class MainWindow(QWidget):
         hbox_channels_list_header.addWidget(QLabel("Monitored channels"))
         hbox_channels_list_header.addWidget(button_add_channel)
 
-        self._widget_list_channels = ChannelsTree()
-        self._widget_list_channels.on_click_settings.triggered.connect(
+        self.widget_channels_tree = ChannelsTree()
+        self.widget_channels_tree.on_click_settings.triggered.connect(
             self.open_channel_settings)
-        self._widget_list_channels.on_click_delete.triggered.connect(
+        self.widget_channels_tree.on_click_delete.triggered.connect(
             self.del_channel)
 
         left_vbox = QVBoxLayout()
         left_vbox.addWidget(button_settings)
         left_vbox.addWidget(self._field_add_channels)
         left_vbox.addLayout(hbox_channels_list_header)
-        left_vbox.addWidget(self._widget_list_channels)
+        left_vbox.addWidget(self.widget_channels_tree)
 
         # TODO: add tabs for processes event logs
         self.log_tabs = LogTabWidget()
@@ -290,14 +290,14 @@ class MainWindow(QWidget):
         THREADS_LOCK.lock()
         self.Master.channels[channel_name] = channel_data
         THREADS_LOCK.unlock()
-        self._widget_list_channels.add_channel_item(
+        self.widget_channels_tree.add_channel_item(
             channel_name, channel_data.alias)
         self._field_add_channels.clear()
 
     @pyqtSlot(bool)
     def del_channel(self):
         """ Delete a channel from the scan list """
-        channel_name = self._widget_list_channels.selected_channel_name()
+        channel_name = self.widget_channels_tree.selected_channel_name()
         if channel_name not in self._channels:
             return
         del self._channels[channel_name]
@@ -306,7 +306,7 @@ class MainWindow(QWidget):
         if channel_name in self.Master.channels:
             del self.Master.channels[channel_name]
         THREADS_LOCK.unlock()
-        self._widget_list_channels.del_channel_item()
+        self.widget_channels_tree.del_channel_item()
 
     @pyqtSlot(str)
     def highlight_on_exists(self, ch_name: str):
@@ -316,7 +316,7 @@ class MainWindow(QWidget):
 
     @pyqtSlot(bool)
     def open_channel_settings(self):
-        channel_name = self._widget_list_channels.selected_channel_name()
+        channel_name = self.widget_channels_tree.selected_channel_name()
         if channel_name not in self._channels:
             return
         self.channel_settings_window.update_data(
@@ -332,7 +332,7 @@ class MainWindow(QWidget):
         self._channels[channel_name].alias = alias
         self._channels[channel_name].set_svq(svq)
         self._save_config()
-        self._widget_list_channels.set_channel_alias(alias)
+        self.widget_channels_tree.set_channel_alias(alias)
 
     @pyqtSlot(int, str)
     def _proc_log(self, pid: int, message: str):
@@ -341,24 +341,24 @@ class MainWindow(QWidget):
     @pyqtSlot(str)
     def _stream_off(self, ch_name: str):
         ch_index = list(self._channels.keys()).index(ch_name)
-        self._widget_list_channels.set_stream_status(ch_index,
-                                                     ChannelStatus.OFF)
+        self.widget_channels_tree.set_stream_status(ch_index,
+                                                    ChannelStatus.OFF)
     @pyqtSlot(str)
     def _stream_in_queue(self, ch_name: str):
         ch_index = list(self._channels.keys()).index(ch_name)
-        self._widget_list_channels.set_stream_status(ch_index,
-                                                     ChannelStatus.QUEUE)
+        self.widget_channels_tree.set_stream_status(ch_index,
+                                                    ChannelStatus.QUEUE)
     @pyqtSlot(str, int)
     def _stream_rec(self, ch_name: str, pid: int):
         self.log_tabs.add_new_process_tab(ch_name, pid)
         ch_index = list(self._channels.keys()).index(ch_name)
-        self._widget_list_channels.set_stream_status(ch_index,
-                                                     ChannelStatus.REC)
+        self.widget_channels_tree.set_stream_status(ch_index,
+                                                    ChannelStatus.REC)
     @pyqtSlot(str)
     def _stream_fail(self, ch_name: str):
         ch_index = list(self._channels.keys()).index(ch_name)
-        self._widget_list_channels.set_stream_status(ch_index,
-                                                     ChannelStatus.FAIL)
+        self.widget_channels_tree.set_stream_status(ch_index,
+                                                    ChannelStatus.FAIL)
 
 
 class Master(QThread):
