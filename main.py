@@ -396,7 +396,7 @@ class Master(QThread):
         try:
             while True:
                 raise_on_stop_threads()
-                for channel_name in self.channels:
+                for channel_name in list(self.channels):
                     self._check_for_stream(channel_name)
                 raise_on_stop_threads()
 
