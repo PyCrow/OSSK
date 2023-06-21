@@ -219,7 +219,6 @@ class MainWindow(QWidget):
         left_vbox.addLayout(hbox_channels_list_header)
         left_vbox.addWidget(self.widget_channels_tree)
 
-        # TODO: add tabs for processes event logs
         self.log_tabs = LogTabWidget()
 
         main_hbox = QHBoxLayout()
