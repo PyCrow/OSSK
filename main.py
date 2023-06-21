@@ -126,7 +126,7 @@ class MainWindow(QWidget):
         self.Master.s_stream_off[str].connect(self._stream_off)
         self.Master.s_stream_in_queue[str].connect(self._stream_in_queue)
         self.Master.Slave.s_proc_log[int, str].connect(self._proc_log)
-        self.Master.Slave.s_stream_rec[str, int].connect(self._stream_rec)
+        self.Master.Slave.s_stream_rec[str, int, str].connect(self._stream_rec)
         self.Master.Slave.s_stream_off[str].connect(self._stream_off)
         self.Master.Slave.s_stream_fail[str].connect(self._stream_fail)
 
@@ -348,9 +348,9 @@ class MainWindow(QWidget):
         ch_index = list(self._channels.keys()).index(ch_name)
         self.widget_channels_tree.set_stream_status(ch_index,
                                                     ChannelStatus.QUEUE)
-    @pyqtSlot(str, int)
-    def _stream_rec(self, ch_name: str, pid: int):
-        self.log_tabs.add_new_process_tab(ch_name, pid)
+    @pyqtSlot(str, int, str)
+    def _stream_rec(self, ch_name: str, pid: int, stream_name: str):
+        self.log_tabs.add_new_process_tab(stream_name, pid)
         ch_index = list(self._channels.keys()).index(ch_name)
         self.widget_channels_tree.set_stream_status(ch_index,
                                                     ChannelStatus.REC)
@@ -474,7 +474,7 @@ class Slave(QThread):
     # TODO: add memory check
     s_log = pyqtSignal(int, str)
     s_proc_log = pyqtSignal(int, str)
-    s_stream_rec = pyqtSignal(str, int)
+    s_stream_rec = pyqtSignal(str, int, str)
     s_stream_off = pyqtSignal(str)
     s_stream_fail = pyqtSignal(str)
 
@@ -584,7 +584,8 @@ class Slave(QThread):
         self.active_downloading_channels.append(channel_name)
         self.running_downloads.append(proc)
 
-        self.s_stream_rec[str, int].emit(channel_name, proc.pid)
+        self.s_stream_rec[str, int, str].emit(
+            channel_name, proc.pid, stream_title)
 
     @logger_handler
     def stop_downloads(self):
