@@ -29,12 +29,17 @@ QTabBar::tab {
     padding-left: 8px;
     padding-right: 8px;
     padding-bottom: 4px; }
-QTabBar::tab:selected, QTabBar::tab:hover {
+QTabBar::tab:selected,
+QTabBar::tab:hover {
     color: #0f0; }
 QTabBar::tab:!selected {
     margin-top: 2px;
 }
-QListView, QLineEdit, QSpinBox, QComboBox {
+QListView,
+QTreeView,
+QLineEdit,
+QSpinBox,
+QComboBox {
     background-color: #191919;
     border-top: 1px solid #000;
     border-left: 1px solid #333;
@@ -42,14 +47,19 @@ QListView, QLineEdit, QSpinBox, QComboBox {
     border-bottom: 1px solid #0a0;
     border-radius: 12px;
     padding: 5px; }
-QListView::item {
+QListView::item,
+QTreeView::item {
     height: 22px; }
-QListView::item:hover {
+QListView::item:hover,
+QTreeView::item:hover {
     background-color: black; }
-QListView::item:selected {
+QListView::item:selected,
+QTreeView::item:selected {
     background-color: #0f0;
     color: black; }
-QListView::item:disabled, QLineEdit:disabled {
+QListView::item:disabled,
+QTreeView::item:disabled,
+QLineEdit:disabled {
     color: #aaa;
 }
 
@@ -117,9 +127,11 @@ QScrollBar:vertical {
 QScrollBar::handle:horizontal, QScrollBar::handle:vertical {
     background-color: #303030;
     border-radius: 8px; }
-QScrollBar::add-line, QScrollBar::sub-line {
+QScrollBar::add-line,
+QScrollBar::sub-line {
     border: none; background: none; }
-QScrollBar::add-page, QScrollBar::sub-page {
+QScrollBar::add-page,
+QScrollBar::sub-page {
     background: none;
 }
 

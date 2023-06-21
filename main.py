@@ -24,7 +24,7 @@ from static_vars import (
     KEY_CHANNEL_NAME, KEY_CHANNEL_SVQ,
     ChannelData, StopThreads, RecordProcess,
     STYLESHEET_PATH, FLAG_LIVE)
-from ui.classes import ListChannels, LogTabWidget, ChannelStatus, \
+from ui.classes import ChannelsTree, LogTabWidget, ChannelStatus, \
     SettingsWindow, ChannelSettingsWindow
 from ui.dynamic_style import STYLE
 from utils import (
@@ -207,7 +207,7 @@ class MainWindow(QWidget):
         hbox_channels_list_header.addWidget(QLabel("Monitored channels"))
         hbox_channels_list_header.addWidget(button_add_channel)
 
-        self._widget_list_channels = ListChannels()
+        self._widget_list_channels = ChannelsTree()
         self._widget_list_channels.on_click_settings.triggered.connect(
             self.open_channel_settings)
         self._widget_list_channels.on_click_delete.triggered.connect(

@@ -7,7 +7,7 @@ from PyQt5.QtGui import QStandardItemModel, QStandardItem, QLinearGradient, \
     QColor, QMouseEvent
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QPushButton, QLineEdit, QListView, QAbstractItemView,
-    QLabel, QSpinBox, QMenu, QAction, QComboBox, QTabWidget,
+    QLabel, QSpinBox, QMenu, QAction, QComboBox, QTabWidget, QTreeView
 )
 
 from static_vars import AVAILABLE_STREAM_RECORD_QUALITIES, RecordProcess
@@ -56,10 +56,17 @@ class ListView(QListView):
         self._model.appendRow(item)
 
 
-class ListChannels(ListView):
+class ChannelsTree(QTreeView):
 
     def __init__(self):
-        super(ListChannels, self).__init__()
+        super(ChannelsTree, self).__init__()
+        self._model = QStandardItemModel()
+        self.setModel(self._model)
+        self._root = self._model.invisibleRootItem()
+        self.setRootIsDecorated(False)
+        self.setHeaderHidden(True)
+        self.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
+
         self.channel_index_to_action: int | None = None
         self.on_click_settings = QAction("Channel settings", self)
         self.on_click_delete = QAction("Delete channel", self)
@@ -86,7 +93,7 @@ class ListChannels(ListView):
     def mousePressEvent(self, e: QMouseEvent):
         self.clearSelection()
         self.channel_index_to_action = None
-        super(ListChannels, self).mousePressEvent(e)
+        super(ChannelsTree, self).mousePressEvent(e)
 
     def contextMenuEvent(self, event):
         selected_items = self.selectedIndexes()
