@@ -55,11 +55,8 @@ class ListView(QListView):
         item.setEditable(False)
         self._model.appendRow(item)
 
-    def del_item_by_name(self, item_name: str):
-        for row in range(self._model.rowCount()):
-            if self._model.item(row).text() == item_name:
-                self._model.removeRow(row)
-                break
+    def del_channel_item(self):
+        self._model.removeRow(self._selected_channel().row())
 
 
 class ListChannels(ListView):
@@ -77,8 +74,11 @@ class ListChannels(ListView):
         item.setEditable(False)
         self._model.appendRow(item)
 
-    def selected_channel(self) -> str:
-        return self._model.itemFromIndex(self.channel_index_to_action).channel
+    def _selected_channel(self) -> QStandardItem:
+        return self._model.itemFromIndex(self.channel_index_to_action)
+
+    def selected_channel_name(self) -> str:
+        return self._selected_channel().channel
 
     def set_channel_alias(self, alias: str):
         self._model.itemFromIndex(self.channel_index_to_action).setText(alias)

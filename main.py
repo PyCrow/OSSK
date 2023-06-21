@@ -301,7 +301,7 @@ class MainWindow(QWidget):
     @pyqtSlot(bool)
     def del_channel(self):
         """ Delete a channel from the scan list """
-        channel_name = self._widget_list_channels.selected_channel()
+        channel_name = self._widget_list_channels.selected_channel_name()
         if channel_name not in self._channels:
             return
         del self._channels[channel_name]
@@ -310,7 +310,7 @@ class MainWindow(QWidget):
         if channel_name in self.Master.channels:
             del self.Master.channels[channel_name]
         THREADS_LOCK.unlock()
-        self._widget_list_channels.del_item_by_name(channel_name)
+        self._widget_list_channels.del_channel_item()
 
     @pyqtSlot(str)
     def highlight_on_exists(self, ch_name: str):
@@ -320,7 +320,7 @@ class MainWindow(QWidget):
 
     @pyqtSlot(bool)
     def open_channel_settings(self):
-        channel_name = self._widget_list_channels.selected_channel()
+        channel_name = self._widget_list_channels.selected_channel_name()
         if channel_name not in self._channels:
             return
         self.channel_settings_window.update_data(
