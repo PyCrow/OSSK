@@ -112,7 +112,7 @@ class LogTabWidget(QTabWidget):
     def __init__(self):
         super(LogTabWidget, self).__init__()
         self._init_ui()
-        self._pid_widget: dict[int, LogWidget] = {}
+        self._map_pid_widget: dict[int, LogWidget] = {}
 
     def _init_ui(self):
         self.setMovable(True)
@@ -125,8 +125,8 @@ class LogTabWidget(QTabWidget):
         self.addTab(self.common, "Common")
 
     def add_new_process_tab(self, channel_name: str, pid: int):
-        self._pid_widget[pid] = LogWidget()
-        self.addTab(self._pid_widget[pid], channel_name)
+        self._map_pid_widget[pid] = LogWidget()
+        self.addTab(self._map_pid_widget[pid], channel_name)
 
     @pyqtSlot(int)
     def close_tab(self, tab_index: int):
@@ -135,7 +135,7 @@ class LogTabWidget(QTabWidget):
         self.removeTab(tab_index)
 
     def proc_log(self, pid: int, message: str):
-        self._pid_widget[pid].add_message(message)
+        self._map_pid_widget[pid].add_message(message)
 
 
 class LogWidget(ListView):
