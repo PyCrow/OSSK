@@ -212,6 +212,8 @@ class MainWindow(QWidget):
             self.open_channel_settings)
         self.widget_channels_tree.on_click_delete.triggered.connect(
             self.del_channel)
+        self.widget_channels_tree.on_click_stop.triggered.connect(
+            self.stop_process)
 
         left_vbox = QVBoxLayout()
         left_vbox.addWidget(button_settings)
@@ -271,6 +273,12 @@ class MainWindow(QWidget):
         self.Master.Slave.ytdlp_command = ytdlp_command
         self.Master.Slave.path_to_ffmpeg = ffmpeg_path
         self.Master.start()
+
+    def stop_process(self):
+        pid = self.widget_channels_tree.selected_process_id()
+        THREADS_LOCK.lock()
+        self.Master.Slave.pids_to_stop.append(pid)
+        THREADS_LOCK.unlock()
 
     @pyqtSlot(int, str)
     def add_log_message(self, level: int, text: str):
@@ -489,6 +497,7 @@ class Slave(QThread):
         self.queue: Queue[dict[str, str]] = Queue(-1)
         self.max_downloads: int = DEFAULT_MAX_DOWNLOADS
         self.running_downloads: list[RecordProcess] = []
+        self.pids_to_stop: list[int] = []
         self.temp_logs: dict[int, IO] = {}
         self.last_log_byte: dict[int, int] = {}
 
@@ -504,6 +513,7 @@ class Slave(QThread):
                 if self.ready_to_download() and not self.queue.empty():
                     stream_data = self.queue.get()
                     self.record_stream(stream_data)
+                self.check_for_stop()
         except StopThreads:
             self.stop_downloads()
         self.log(INFO, "Recorder stopped.")
@@ -590,6 +600,21 @@ class Slave(QThread):
 
         self.s_stream_rec[str, int, str].emit(
             channel_name, proc.pid, stream_title)
+
+    def check_for_stop(self):
+        if not self.pids_to_stop:
+            return
+        for proc in self.running_downloads:
+            if proc.pid in self.pids_to_stop:
+                self.pids_to_stop.remove(proc.pid)
+                self.send_process_stop(proc)
+
+    def send_process_stop(self, proc: RecordProcess):
+        self.log(INFO, f"Stopping process {proc.pid}...")
+        try:
+            proc.send_signal(SIGINT)
+        except ValueError:
+            pass
 
     @logger_handler
     def stop_downloads(self):

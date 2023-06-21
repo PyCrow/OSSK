@@ -30,7 +30,7 @@ class ChannelItem(QStandardItem):
 
 class RecordProcessItem(QStandardItem):
     def __init__(self, *args, **kwargs):
-        self.pid = None
+        self.pid: int | None = None
         super(RecordProcessItem, self).__init__(*args, **kwargs)
 
 
@@ -82,7 +82,7 @@ class ChannelsTree(QTreeView):
         self.on_click_settings = QAction("Channel settings", self)
         self.on_click_delete = QAction("Delete channel", self)
         self.on_click_open_tab = QAction("Open tab", self)  # TODO: connect
-        self.on_click_stop = QAction("Stop process", self)  # TODO: connect
+        self.on_click_stop = QAction("Stop process", self)
 
     def add_channel_item(self, channel_name: str, alias: str):
         text = alias if alias else channel_name
