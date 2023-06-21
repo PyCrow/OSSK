@@ -28,6 +28,12 @@ class ChannelItem(QStandardItem):
         self.channel: str = ''
 
 
+class RecordProcessItem(QStandardItem):
+    def __init__(self, *args, **kwargs):
+        self.pid = None
+        super(RecordProcessItem, self).__init__(*args, **kwargs)
+
+
 def _get_channel_status_color(status_id) -> QLinearGradient:
     colors = {ChannelStatus.OFF: QColor(50, 50, 50),
               ChannelStatus.QUEUE: QColor(180, 180, 0),
@@ -63,49 +69,80 @@ class ChannelsTree(QTreeView):
         self._model = QStandardItemModel()
         self.setModel(self._model)
         self._root = self._model.invisibleRootItem()
-        self.setRootIsDecorated(False)
         self.setHeaderHidden(True)
         self.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
 
-        self.channel_index_to_action: int | None = None
+        self._map_channel_item: dict[str, ChannelItem] = {}
+        self._map_pid_item: dict[str, RecordProcessItem] = {}
+
+        self.selected_item_index: int | None = None
         self.on_click_settings = QAction("Channel settings", self)
         self.on_click_delete = QAction("Delete channel", self)
+        self.on_click_open_tab = QAction("Open tab", self)  # TODO: connect
+        self.on_click_stop = QAction("Stop process", self)  # TODO: connect
 
     def add_channel_item(self, channel_name: str, alias: str):
         text = alias if alias else channel_name
         item = ChannelItem(text)
         item.channel = channel_name
         item.setEditable(False)
+        self._map_channel_item[channel_name] = item
         self._model.appendRow(item)
 
     def del_channel_item(self):
+        del self._map_channel_item[self._selected_channel().channel]
         self._model.removeRow(self._selected_channel().row())
 
-    def _selected_channel(self) -> QStandardItem:
-        return self._model.itemFromIndex(self.channel_index_to_action)
+    def _selected_channel(self) -> ChannelItem:
+        return self._model.itemFromIndex(self.selected_item_index)
 
     def selected_channel_name(self) -> str:
         return self._selected_channel().channel
 
     def set_channel_alias(self, alias: str):
-        self._model.itemFromIndex(self.channel_index_to_action).setText(alias)
+        self._model.itemFromIndex(self.selected_item_index).setText(alias)
+
+    def add_child_process_item(self, channel_name: str,
+                               pid: int, stream_name: str):
+        channel_item = self._map_channel_item[channel_name]
+        process_item = RecordProcessItem(stream_name)
+        process_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
+        process_item.pid = pid
+        self._map_pid_item[channel_name] = process_item
+        channel_item.appendRow(process_item)
+        self.expand(self._model.indexFromItem(channel_item))
+
+    def del_child_process_item(self):
+        # self._map_pid_item[channel_name] = process_item
+        ...
 
     def mousePressEvent(self, e: QMouseEvent):
         self.clearSelection()
-        self.channel_index_to_action = None
+        self.selected_item_index = None
         super(ChannelsTree, self).mousePressEvent(e)
 
     def contextMenuEvent(self, event):
-        selected_items = self.selectedIndexes()
-        if len(selected_items) == 1:
-            self.channel_index_to_action = selected_items[0]
-            self._single_channel_menu().exec(event.globalPos())
+        selected_indexes = self.selectedIndexes()
+        if len(selected_indexes) == 1:
+            self.selected_item_index = selected_indexes[0]
+            selected_item = self._model.itemFromIndex(self.selected_item_index)
+            if isinstance(selected_item, ChannelItem):
+                self._single_channel_menu().exec(event.globalPos())
+            elif isinstance(selected_item, RecordProcessItem):
+                self._single_process_menu().exec(event.globalPos())
 
     def _single_channel_menu(self) -> QMenu:
         menu = QMenu(self)
         menu.addAction(self.on_click_settings)
         menu.addSeparator()
         menu.addAction(self.on_click_delete)
+        return menu
+
+    def _single_process_menu(self) -> QMenu:
+        menu = QMenu(self)
+        menu.addAction(self.on_click_open_tab)
+        menu.addSeparator()
+        menu.addAction(self.on_click_stop)
         return menu
 
     def set_stream_status(self, ch_index: int, status_id: int):
