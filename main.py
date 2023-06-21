@@ -449,8 +449,13 @@ class Master(QThread):
                 self.log(INFO, f"Channel {channel_name} is online.")
 
             # Check if Slave is ready
-            # TODO: check stream_data not in self.Slave.queue
-            if channel_name not in self.Slave.active_downloading_channels:
+            THREADS_LOCK.lock()
+            running_downloads = [p.channel
+                                 for p in self.Slave.running_downloads]
+            THREADS_LOCK.unlock()
+
+            # TODO: make sending data more thread-safe
+            if channel_name not in running_downloads:
                 stream_data = {
                     KEY_CHANNEL_NAME: channel_name,
                     KEY_CHANNEL_SVQ: self.channels[channel_name].get_svq(),
