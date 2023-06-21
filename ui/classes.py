@@ -93,14 +93,17 @@ class ChannelsTree(QTreeView):
         self._model.appendRow(item)
 
     def del_channel_item(self):
-        del self._map_channel_item[self._selected_channel().channel]
-        self._model.removeRow(self._selected_channel().row())
+        del self._map_channel_item[self._selected_item().channel]
+        self._model.removeRow(self._selected_item().row())
 
-    def _selected_channel(self) -> ChannelItem:
+    def _selected_item(self) -> ChannelItem | RecordProcessItem:
         return self._model.itemFromIndex(self.selected_item_index)
 
     def selected_channel_name(self) -> str:
-        return self._selected_channel().channel
+        return self._selected_item().channel
+
+    def selected_process_id(self) -> int:
+        return self._selected_item().pid
 
     def set_channel_alias(self, alias: str):
         self._model.itemFromIndex(self.selected_item_index).setText(alias)
