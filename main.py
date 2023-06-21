@@ -190,10 +190,10 @@ class MainWindow(QWidget):
         self.resize(980, 600)
 
         # Settings window
-        button_settings = QPushButton('Settings')
-        button_settings.clicked[bool].connect(self.clicked_open_settings)
         self.settings_window = SettingsWindow()
         self.settings_window.button_apply.clicked.connect(self._save_config)
+        button_settings = QPushButton('Settings')
+        button_settings.clicked[bool].connect(self.settings_window.show)
 
         self._field_add_channels = QLineEdit()
         self._field_add_channels.setPlaceholderText("Enter channel name")
@@ -250,10 +250,6 @@ class MainWindow(QWidget):
         self.channel_settings_window.button_apply.clicked.connect(
             self.clicked_apply_channel_settings)
         self.channel_settings_window.setStyleSheet(style)
-
-    @pyqtSlot(bool)
-    def clicked_open_settings(self):
-        self.settings_window.show()
 
     @pyqtSlot(bool)
     def run_master(self):
