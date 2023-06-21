@@ -55,9 +55,6 @@ class ListView(QListView):
         item.setEditable(False)
         self._model.appendRow(item)
 
-    def del_channel_item(self):
-        self._model.removeRow(self._selected_channel().row())
-
 
 class ListChannels(ListView):
 
@@ -73,6 +70,9 @@ class ListChannels(ListView):
         item.channel = channel_name
         item.setEditable(False)
         self._model.appendRow(item)
+
+    def del_channel_item(self):
+        self._model.removeRow(self._selected_channel().row())
 
     def _selected_channel(self) -> QStandardItem:
         return self._model.itemFromIndex(self.channel_index_to_action)
