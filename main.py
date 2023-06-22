@@ -612,6 +612,8 @@ class Slave(QThread):
     def send_process_stop(self, proc: RecordProcess):
         self.log(INFO, f"Stopping process {proc.pid}...")
         try:
+            # Fixme:
+            #  ValueError raises when Windows couldn't indentify SIGINT
             proc.send_signal(SIGINT)
         except ValueError:
             pass
@@ -622,12 +624,12 @@ class Slave(QThread):
         if not self.running_downloads:
             return
         self.log(INFO, "Stopping records.")
-        # FIXME: refactor iteration
+
+        for proc in self.running_downloads:
+            self.send_process_stop(proc)
+
         for proc in self.running_downloads:
             try:
-                self.log(INFO, f"Stopping process {proc.pid}...")
-                # FIXME: subprocess on Windows cannot identify SIGINT
-                proc.send_signal(SIGINT)
                 ret = proc.wait(12)  # TODO: add value editing to settings
                 if ret == 0:
                     self.s_stream_off[str].emit(proc.channel)
@@ -635,9 +637,7 @@ class Slave(QThread):
                     self.s_stream_fail[str].emit(proc.channel)
                     self.log(ERROR, "Error while stopping channel {} record :("
                              .format(proc.channel))
-            # Fixme:
-            #  ValueError raises when SIGINT couldn't be handled by Windows
-            except (subprocess.TimeoutExpired, ValueError):
+            except subprocess.TimeoutExpired:
                 proc.kill()
                 self.s_stream_fail[str].emit(proc.channel)
                 self.log(WARNING,
