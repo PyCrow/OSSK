@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from PyQt5.QtCore import pyqtSlot, Qt
+from PyQt5.QtCore import pyqtSlot, Qt, QModelIndex
 from PyQt5.QtGui import QStandardItemModel, QStandardItem, QLinearGradient, \
     QColor, QMouseEvent
 from PyQt5.QtWidgets import (
@@ -76,9 +76,9 @@ class ChannelsTree(QTreeView):
         self.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
 
         self._map_channel_item: dict[str, ChannelItem] = {}
-        self._map_pid_item: dict[str, RecordProcessItem] = {}
+        self._map_pid_item: dict[int, RecordProcessItem] = {}
 
-        self.selected_item_index: int | None = None
+        self.selected_item_index: QModelIndex | None = None
         self.on_click_settings = QAction("Channel settings", self)
         self.on_click_delete = QAction("Delete channel", self)
         self.on_click_open_tab = QAction("Open tab", self)  # TODO: connect
@@ -114,7 +114,7 @@ class ChannelsTree(QTreeView):
         process_item = RecordProcessItem(stream_name)
         process_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
         process_item.pid = pid
-        self._map_pid_item[channel_name] = process_item
+        self._map_pid_item[pid] = process_item
         channel_item.appendRow(process_item)
         self.expand(self._model.indexFromItem(channel_item))
 
