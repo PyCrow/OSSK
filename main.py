@@ -123,7 +123,7 @@ class MainWindow(QWidget):
 
         self.Master = Master(self._channels)
         self.Master.s_log[int, str].connect(self.add_log_message)
-        self.Master.s_stream_off[str].connect(self._stream_off)
+        self.Master.s_channel_off[str].connect(self._stream_off)
         self.Master.s_stream_in_queue[str].connect(self._stream_in_queue)
         self.Master.Slave.s_proc_log[int, str].connect(self._proc_log)
         self.Master.Slave.s_stream_rec[str, int, str].connect(self._stream_rec)
@@ -380,7 +380,7 @@ class Master(QThread):
     """
 
     s_log = pyqtSignal(int, str)
-    s_stream_off = pyqtSignal(str)
+    s_channel_off = pyqtSignal(str)
     s_stream_in_queue = pyqtSignal(str)
 
     def __init__(self, channels: dict[str, ChannelData]):
@@ -433,7 +433,7 @@ class Master(QThread):
                     url, download=False,
                     extra_info={'quiet': True, 'verbose': False})
             except yt_dlp.utils.UserNotLive:
-                self.s_stream_off[str].emit(channel_name)
+                self.s_channel_off[str].emit(channel_name)
                 return
             except yt_dlp.utils.DownloadError as e:
                 # Check for live flag and last status
@@ -445,12 +445,12 @@ class Master(QThread):
                     self.log(WARNING,
                              f"{channel_name} stream in {leftover}.")
                     self.scheduled_streams[channel_name] = True
-                self.s_stream_off[str].emit(channel_name)
+                self.s_channel_off[str].emit(channel_name)
                 return
             except Exception as e:
                 logger.exception(e)
                 self.log(ERROR, f"<yt-dlp>: {str(e)}")
-                self.s_stream_off[str].emit(channel_name)
+                self.s_channel_off[str].emit(channel_name)
                 return
 
         # Check channel stream is on
@@ -478,7 +478,7 @@ class Master(QThread):
                 self.s_stream_in_queue[str].emit(channel_name)
 
         elif self.channel_status_changed(channel_name, False):
-            self.s_stream_off[str].emit(channel_name)
+            self.s_channel_off[str].emit(channel_name)
             self.log(INFO, f"Channel {channel_name} is offline.")
 
 
