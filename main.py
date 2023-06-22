@@ -222,6 +222,7 @@ class MainWindow(QWidget):
         left_vbox.addWidget(self.widget_channels_tree)
 
         self.log_tabs = LogTabWidget()
+        self.widget_channels_tree.on_click_open_tab.triggered.connect(print)
 
         main_hbox = QHBoxLayout()
         main_hbox.addLayout(left_vbox, 1)
