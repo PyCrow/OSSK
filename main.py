@@ -24,7 +24,7 @@ from static_vars import (
     KEY_CHANNEL_NAME, KEY_CHANNEL_SVQ,
     ChannelData, StopThreads, RecordProcess,
     STYLESHEET_PATH, FLAG_LIVE)
-from ui.classes import ChannelsTree, LogTabWidget, ChannelStatus, \
+from ui.classes import ChannelsTree, LogTabWidget, Status, \
     SettingsWindow, ChannelSettingsWindow
 from ui.dynamic_style import STYLE
 from utils import (
@@ -123,11 +123,11 @@ class MainWindow(QWidget):
 
         self.Master = Master(self._channels)
         self.Master.s_log[int, str].connect(self.add_log_message)
-        self.Master.s_channel_off[str].connect(self._stream_off)
-        self.Master.s_stream_in_queue[str].connect(self._stream_in_queue)
+        self.Master.s_channel_off[str].connect(self._channel_off)
+        self.Master.s_channel_live[str].connect(self._channel_live)
         self.Master.Slave.s_proc_log[int, str].connect(self._proc_log)
         self.Master.Slave.s_stream_rec[str, int, str].connect(self._stream_rec)
-        self.Master.Slave.s_stream_off[str].connect(self._stream_off)
+        self.Master.Slave.s_stream_finished[int].connect(self._stream_finished)
         self.Master.Slave.s_stream_fail[str].connect(self._stream_fail)
 
     def _load_config(self):
@@ -347,28 +347,26 @@ class MainWindow(QWidget):
         self.log_tabs.proc_log(pid, message)
 
     @pyqtSlot(str)
-    def _stream_off(self, ch_name: str):
+    def _channel_off(self, ch_name: str):
         ch_index = list(self._channels.keys()).index(ch_name)
-        self.widget_channels_tree.set_stream_status(ch_index,
-                                                    ChannelStatus.OFF)
+        self.widget_channels_tree.set_channel_status(ch_index,
+                                                     Status.Channel.OFF)
     @pyqtSlot(str)
-    def _stream_in_queue(self, ch_name: str):
+    def _channel_live(self, ch_name: str):
         ch_index = list(self._channels.keys()).index(ch_name)
-        self.widget_channels_tree.set_stream_status(ch_index,
-                                                    ChannelStatus.QUEUE)
+        self.widget_channels_tree.set_channel_status(ch_index,
+                                                     Status.Channel.LIVE)
     @pyqtSlot(str, int, str)
     def _stream_rec(self, ch_name: str, pid: int, stream_name: str):
         self.log_tabs.add_new_process_tab(stream_name, pid)
-        ch_index = list(self._channels.keys()).index(ch_name)
-        self.widget_channels_tree.set_stream_status(ch_index,
-                                                    ChannelStatus.REC)
         self.widget_channels_tree.add_child_process_item(ch_name, pid,
                                                          stream_name)
+    @pyqtSlot(int)
+    def _stream_finished(self, pid: int):
+        ...
     @pyqtSlot(str)
     def _stream_fail(self, ch_name: str):
-        ch_index = list(self._channels.keys()).index(ch_name)
-        self.widget_channels_tree.set_stream_status(ch_index,
-                                                    ChannelStatus.FAIL)
+        ...
 
 
 class Master(QThread):
@@ -381,7 +379,7 @@ class Master(QThread):
 
     s_log = pyqtSignal(int, str)
     s_channel_off = pyqtSignal(str)
-    s_stream_in_queue = pyqtSignal(str)
+    s_channel_live = pyqtSignal(str)
 
     def __init__(self, channels: dict[str, ChannelData]):
         super(Master, self).__init__()
@@ -457,6 +455,7 @@ class Master(QThread):
         if info_dict.get("is_live"):
             if self.channel_status_changed(channel_name, True):
                 self.log(INFO, f"Channel {channel_name} is online.")
+                self.s_channel_live[str].emit(channel_name)
 
             # Check if Slave is ready
             THREADS_LOCK.lock()
@@ -473,13 +472,11 @@ class Master(QThread):
                     'title': info_dict['title'],
                 }
                 self.Slave.queue.put(stream_data, block=True)
-
                 self.log(INFO, f"Recording {channel_name} added to queue.")
-                self.s_stream_in_queue[str].emit(channel_name)
 
         elif self.channel_status_changed(channel_name, False):
-            self.s_channel_off[str].emit(channel_name)
             self.log(INFO, f"Channel {channel_name} is offline.")
+            self.s_channel_off[str].emit(channel_name)
 
 
 class Slave(QThread):
@@ -487,7 +484,7 @@ class Slave(QThread):
     s_log = pyqtSignal(int, str)
     s_proc_log = pyqtSignal(int, str)
     s_stream_rec = pyqtSignal(str, int, str)
-    s_stream_off = pyqtSignal(str)
+    s_stream_finished = pyqtSignal(int)
     s_stream_fail = pyqtSignal(str)
 
     def __init__(self):
@@ -534,7 +531,7 @@ class Slave(QThread):
                 continue
             # Handling finished process
             if ret_code == 0:
-                self.s_stream_off[str].emit(proc.channel)
+                self.s_stream_finished[str].emit(proc.channel)
                 self.log(INFO, f"Recording {proc.channel} finished.")
             else:
                 self.s_stream_fail[str].emit(proc.channel)
@@ -633,7 +630,7 @@ class Slave(QThread):
             try:
                 ret = proc.wait(12)  # TODO: add value editing to settings
                 if ret == 0:
-                    self.s_stream_off[str].emit(proc.channel)
+                    self.s_stream_finished[int].emit(proc.pid)
                 else:
                     self.s_stream_fail[str].emit(proc.channel)
                     self.log(ERROR, "Error while stopping channel {} record :("

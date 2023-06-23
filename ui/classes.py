@@ -15,11 +15,38 @@ from ui.dynamic_style import STYLE
 from utils import check_exists_and_callable, is_callable
 
 
-class ChannelStatus:
-    OFF = 0
-    QUEUE = 1
-    REC = 2
-    FAIL = 3
+class Status:
+    class Channel:
+        OFF = 0
+        LIVE = 1
+
+        color_map = {OFF: QColor(50, 50, 50),
+                     LIVE: QColor(0, 180, 0)}
+    class Stream:
+        OFF = 0
+        REC = 1
+        FAIL = 2
+
+        color_map = {OFF: QColor(50, 50, 50),
+                     REC: QColor(0, 180, 0),
+                     FAIL: QColor(180, 0, 0)}
+    @staticmethod
+    def get_channel_status_gradient(status_id) -> QLinearGradient:
+        color = Status.Channel.color_map[status_id]
+        return Status.smooth_gradient(color)
+
+    @staticmethod
+    def get_stream_status_gradient(status_id) -> QLinearGradient:
+        color = Status.Stream.color_map[status_id]
+        return Status.smooth_gradient(color)
+
+    @staticmethod
+    def smooth_gradient(qcolor: QColor):
+        gradient = QLinearGradient(0, 0, 300, 0)
+        gradient.setColorAt(0.0, QColor(25, 25, 25))
+        gradient.setColorAt(0.6, QColor(25, 25, 25))
+        gradient.setColorAt(1.0, qcolor)
+        return qcolor
 
 
 class ChannelItem(QStandardItem):
@@ -32,19 +59,6 @@ class RecordProcessItem(QStandardItem):
     def __init__(self, *args, **kwargs):
         self.pid: int | None = None
         super(RecordProcessItem, self).__init__(*args, **kwargs)
-
-
-def _get_channel_status_color(status_id) -> QLinearGradient:
-    colors = {ChannelStatus.OFF: QColor(50, 50, 50),
-              ChannelStatus.QUEUE: QColor(180, 180, 0),
-              ChannelStatus.REC: QColor(0, 180, 0),
-              ChannelStatus.FAIL: QColor(180, 0, 0)}
-    color = colors[status_id]
-    gradient = QLinearGradient(0, 0, 300, 0)
-    gradient.setColorAt(0.0, QColor(25, 25, 25))
-    gradient.setColorAt(0.6, QColor(25, 25, 25))
-    gradient.setColorAt(1.0, color)
-    return gradient
 
 
 class ListView(QListView):
@@ -151,10 +165,10 @@ class ChannelsTree(QTreeView):
         menu.addAction(self.on_click_stop)
         return menu
 
-    def set_stream_status(self, ch_index: int, status_id: int):
+    def set_channel_status(self, ch_index: int, status_id: int):
         """ Sets channel's row color """
         # TODO: make it with a dynamic_style or any other way
-        color = _get_channel_status_color(status_id)
+        color = Status.get_channel_status_gradient(status_id)
         self._model.item(ch_index).setBackground(color)
 
 
