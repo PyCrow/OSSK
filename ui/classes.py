@@ -16,12 +16,14 @@ from utils import check_exists_and_callable, is_callable
 
 
 class Status:
+
     class Channel:
         OFF = 0
         LIVE = 1
 
         color_map = {OFF: QColor(50, 50, 50),
                      LIVE: QColor(0, 180, 0)}
+
     class Stream:
         OFF = 0
         REC = 1
@@ -30,6 +32,7 @@ class Status:
         color_map = {OFF: QColor(50, 50, 50),
                      REC: QColor(0, 180, 0),
                      FAIL: QColor(180, 0, 0)}
+
     @staticmethod
     def get_channel_status_gradient(status_id) -> QLinearGradient:
         color = Status.Channel.color_map[status_id]
