@@ -598,7 +598,7 @@ class Slave(QThread):
                 self.log(INFO, f"Stopping process {proc.pid}...")
                 # FIXME: subprocess on Windows cannot identify SIGINT
                 proc.send_signal(SIGINT)
-                ret = proc.wait(60)  # TODO: add value editing to settings
+                ret = proc.wait(12)  # TODO: add value editing to settings
                 if ret == 0:
                     self.s_stream_off[str].emit(proc.channel)
                 else:
