@@ -39,9 +39,8 @@ class Status:
         return Status.smooth_gradient(color)
 
     @staticmethod
-    def get_stream_status_gradient(status_id) -> QLinearGradient:
-        color = Status.Stream.color_map[status_id]
-        return Status.smooth_gradient(color)
+    def get_stream_status_foreground(status_id) -> QColor:
+        return Status.Stream.color_map[status_id]
 
     @staticmethod
     def smooth_gradient(qcolor: QColor):
@@ -135,9 +134,11 @@ class ChannelsTree(QTreeView):
         channel_item.appendRow(process_item)
         self.expand(self._model.indexFromItem(channel_item))
 
-    def del_child_process_item(self):
-        # self._map_pid_item[channel_name] = process_item
-        ...
+    def del_child_process_item(self, pid: int):
+        process_item = self._map_pid_item[pid]
+        channel_item = process_item.parent()
+        channel_item.removeRow(process_item.row())
+        del self._map_pid_item[pid]
 
     def mousePressEvent(self, e: QMouseEvent):
         self.clearSelection()
@@ -174,6 +175,13 @@ class ChannelsTree(QTreeView):
         color = Status.get_channel_status_gradient(status_id)
         self._model.item(ch_index).setBackground(color)
 
+    def stream_finished(self, pid: int):
+        self.del_child_process_item(pid)
+
+    def stream_failed(self, pid: int):
+        color = Status.get_stream_status_foreground(Status.Stream.FAIL)
+        self._map_pid_item[pid].setForeground(color)
+
 
 class LogTabWidget(QTabWidget):
     def __init__(self):
@@ -206,6 +214,15 @@ class LogTabWidget(QTabWidget):
 
     def proc_log(self, pid: int, message: str):
         self._map_pid_widget[pid].add_message(message)
+
+    def stream_finished(self, pid: int):
+        tab_index = self.indexOf(self._map_pid_widget[pid])
+        self.close_tab(tab_index)
+        del self._map_pid_widget[pid]
+
+    def stream_failed(self, pid: int):
+        tab_index = self.indexOf(self._map_pid_widget[pid])
+        self.close_tab(tab_index)
 
 
 class LogWidget(ListView):

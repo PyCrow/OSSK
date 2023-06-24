@@ -128,7 +128,7 @@ class MainWindow(QWidget):
         self.Master.Slave.s_proc_log[int, str].connect(self._proc_log)
         self.Master.Slave.s_stream_rec[str, int, str].connect(self._stream_rec)
         self.Master.Slave.s_stream_finished[int].connect(self._stream_finished)
-        self.Master.Slave.s_stream_fail[str].connect(self._stream_fail)
+        self.Master.Slave.s_stream_fail[int].connect(self._stream_fail)
 
     def _load_config(self):
         """ Loading configuration """
@@ -363,10 +363,12 @@ class MainWindow(QWidget):
                                                          stream_name)
     @pyqtSlot(int)
     def _stream_finished(self, pid: int):
-        ...
-    @pyqtSlot(str)
-    def _stream_fail(self, ch_name: str):
-        ...
+        self.log_tabs.stream_finished(pid)
+        self.widget_channels_tree.stream_finished(pid)
+    @pyqtSlot(int)
+    def _stream_fail(self, pid: int):
+        self.log_tabs.stream_failed(pid)
+        self.widget_channels_tree.stream_failed(pid)
 
 
 class Master(QThread):
@@ -485,7 +487,7 @@ class Slave(QThread):
     s_proc_log = pyqtSignal(int, str)
     s_stream_rec = pyqtSignal(str, int, str)
     s_stream_finished = pyqtSignal(int)
-    s_stream_fail = pyqtSignal(str)
+    s_stream_fail = pyqtSignal(int)
 
     def __init__(self):
         super().__init__()
@@ -534,7 +536,7 @@ class Slave(QThread):
                 self.s_stream_finished[int].emit(proc.channel)
                 self.log(INFO, f"Recording {proc.channel} finished.")
             else:
-                self.s_stream_fail[str].emit(proc.channel)
+                self.s_stream_fail[int].emit(proc.pid)
                 self.log(ERROR, f"Recording {proc.channel} "
                                 "stopped with an error code!")
             self.handle_process_finished(proc)
@@ -632,12 +634,12 @@ class Slave(QThread):
                 if ret == 0:
                     self.s_stream_finished[int].emit(proc.pid)
                 else:
-                    self.s_stream_fail[str].emit(proc.channel)
+                    self.s_stream_fail[int].emit(proc.pid)
                     self.log(ERROR, "Error while stopping channel {} record :("
                              .format(proc.channel))
             except subprocess.TimeoutExpired:
                 proc.kill()
-                self.s_stream_fail[str].emit(proc.channel)
+                self.s_stream_fail[int].emit(proc.pid)
                 self.log(WARNING,
                          "Recording[{}] of channel {} has been killed!".format(
                              proc.pid, proc.channel))
