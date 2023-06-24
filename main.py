@@ -284,7 +284,7 @@ class MainWindow(QWidget):
     @pyqtSlot(int, str)
     def add_log_message(self, level: int, text: str):
         logger.log(level, text)
-        self.log_tabs.common.add_message(f"[{DEBUG_LEVELS[level]}] {text}")
+        self.log_tabs.add_common_message(f"[{DEBUG_LEVELS[level]}] {text}")
 
     @pyqtSlot(bool)
     def add_channel(self):

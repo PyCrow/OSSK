@@ -185,8 +185,11 @@ class LogTabWidget(QTabWidget):
         self.setTabsClosable(True)
         self.tabCloseRequested[int].connect(self.close_tab)
 
-        self.common = LogWidget()
-        self.addTab(self.common, "Common")
+        self._common_tab = LogWidget()
+        self.addTab(self._common_tab, "Common")
+
+    def add_common_message(self, text: str):
+        self._common_tab.add_message(text)
 
     def add_new_process_tab(self, stream_name: str, pid: int):
         self._map_pid_widget[pid] = LogWidget()
@@ -194,7 +197,7 @@ class LogTabWidget(QTabWidget):
 
     @pyqtSlot(int)
     def close_tab(self, tab_index: int):
-        if tab_index == self.indexOf(self.common):
+        if tab_index == self.indexOf(self._common_tab):
             return
         self.removeTab(tab_index)
 
