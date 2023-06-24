@@ -49,7 +49,7 @@ class Status:
         gradient.setColorAt(0.0, QColor(25, 25, 25))
         gradient.setColorAt(0.6, QColor(25, 25, 25))
         gradient.setColorAt(1.0, qcolor)
-        return qcolor
+        return gradient
 
 
 class ChannelItem(QStandardItem):
