@@ -263,7 +263,7 @@ class MainWindow(QWidget):
             self.add_log_message(WARNING, "ffmpeg not found.")
             return
 
-        if self.Master.isRunning():
+        if self.Master.isRunning() or self.Master.Slave.isRunning():
             return
 
         global GLOBAL_STOP
