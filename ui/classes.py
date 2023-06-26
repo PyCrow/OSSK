@@ -113,59 +113,6 @@ class ChannelsTree(QTreeView):
         self._on_click_hide = QAction("Hide", self)
         self._on_click_hide.triggered.connect(self._del_finished_process_item)
 
-    # Channel management
-    def add_channel_item(self, channel_name: str, alias: str):
-        text = alias if alias else channel_name
-        item = ChannelItem(text)
-        item.channel = channel_name
-        item.setEditable(False)
-        self._map_channel_item[channel_name] = item
-        self._model.appendRow(item)
-
-    def del_channel_item(self):
-        selected_channel_item = self._selected_item()
-        del self._map_channel_item[selected_channel_item.channel]
-        self._model.removeRow(selected_channel_item.row())
-
-    # Selected item functions
-    def _selected_item(self) -> ChannelItem | RecordProcessItem:
-        return self._model.itemFromIndex(self.selected_item_index)
-
-    def selected_channel_name(self) -> str:
-        """
-        Triggering by own on_click_delete_channel through the controller
-        """
-        return self._selected_item().channel
-
-    def selected_process_id(self) -> int:
-        """
-        Triggering by own on_click_stop through the controller
-        """
-        return self._selected_item().pid
-
-    @pyqtSlot()
-    def _del_finished_process_item(self):
-        process_item = self._selected_item()
-        if not process_item.finished:
-            logger.error("Process cannot be hidden: process not finished yet")
-            return
-        channel_item = process_item.parent()
-        channel_item.removeRow(process_item.row())
-        del self._map_pid_item[process_item.pid]
-
-    def set_channel_alias(self, alias: str):
-        self._model.itemFromIndex(self.selected_item_index).setText(alias)
-
-    def add_child_process_item(self, channel_name: str,
-                               pid: int, stream_name: str):
-        channel_item = self._map_channel_item[channel_name]
-        process_item = RecordProcessItem(stream_name)
-        process_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
-        process_item.pid = pid
-        self._map_pid_item[pid] = process_item
-        channel_item.appendRow(process_item)
-        self.expand(self._model.indexFromItem(channel_item))
-
     def mousePressEvent(self, e: QMouseEvent):
         self.clearSelection()
         self.selected_item_index = None
@@ -183,6 +130,30 @@ class ChannelsTree(QTreeView):
                     selected_item.finished
                 ).exec(event.globalPos())
 
+    # Channel management
+    def add_channel_item(self, channel_name: str, alias: str):
+        text = alias if alias else channel_name
+        item = ChannelItem(text)
+        item.channel = channel_name
+        item.setEditable(False)
+        self._map_channel_item[channel_name] = item
+        self._model.appendRow(item)
+
+    def del_channel_item(self):
+        selected_channel_item = self._selected_item()
+        del self._map_channel_item[selected_channel_item.channel]
+        self._model.removeRow(selected_channel_item.row())
+
+    def set_channel_alias(self, alias: str):
+        self._model.itemFromIndex(self.selected_item_index).setText(alias)
+
+    def set_channel_status(self, ch_index: int, status_id: int):
+        """ Sets channel's row color """
+        # TODO: make it with a dynamic_style or any other way
+        color = Status.get_channel_status_gradient(status_id)
+        self._model.item(ch_index).setBackground(color)
+
+    # Context menus
     def _single_channel_menu(self) -> QMenu:
         menu = QMenu(self)
         menu.addAction(self.on_click_channel_settings)
@@ -200,11 +171,42 @@ class ChannelsTree(QTreeView):
             menu.addAction(self._on_click_hide)
         return menu
 
-    def set_channel_status(self, ch_index: int, status_id: int):
-        """ Sets channel's row color """
-        # TODO: make it with a dynamic_style or any other way
-        color = Status.get_channel_status_gradient(status_id)
-        self._model.item(ch_index).setBackground(color)
+    # Selected item functions
+    def _selected_item(self) -> ChannelItem | RecordProcessItem:
+        return self._model.itemFromIndex(self.selected_item_index)
+
+    def selected_channel_name(self) -> str:
+        """
+        Triggering by own on_click_delete_channel through the controller
+        """
+        return self._selected_item().channel
+
+    def selected_process_id(self) -> int:
+        """
+        Triggering by own on_click_stop through the controller
+        """
+        return self._selected_item().pid
+
+    # Process management
+    def add_child_process_item(self, channel_name: str,
+                               pid: int, stream_name: str):
+        channel_item = self._map_channel_item[channel_name]
+        process_item = RecordProcessItem(stream_name)
+        process_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
+        process_item.pid = pid
+        self._map_pid_item[pid] = process_item
+        channel_item.appendRow(process_item)
+        self.expand(self._model.indexFromItem(channel_item))
+
+    @pyqtSlot()
+    def _del_finished_process_item(self):
+        process_item = self._selected_item()
+        if not process_item.finished:
+            logger.error("Process cannot be hidden: process not finished yet")
+            return
+        channel_item = process_item.parent()
+        channel_item.removeRow(process_item.row())
+        del self._map_pid_item[process_item.pid]
 
     def stream_finished(self, pid: int):
         self._map_pid_item[pid].finished = True
