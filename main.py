@@ -339,7 +339,8 @@ class MainWindow(QWidget):
         self._channels[channel_name].alias = alias
         self._channels[channel_name].set_svq(svq)
         self._save_config()
-        self.widget_channels_tree.set_channel_alias(alias)
+        channel_row_text = alias if alias else channel_name
+        self.widget_channels_tree.set_channel_alias(channel_row_text)
 
     @pyqtSlot(str)
     def _channel_off(self, ch_name: str):
