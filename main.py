@@ -359,7 +359,7 @@ class MainWindow(QWidget):
 
     @pyqtSlot(str, int, str)
     def _stream_rec(self, ch_name: str, pid: int, stream_name: str):
-        self.log_tabs.add_new_process_tab(stream_name, pid)
+        self.log_tabs.stream_rec(stream_name, pid)
         self.widget_channels_tree.add_child_process_item(ch_name, pid,
                                                          stream_name)
 

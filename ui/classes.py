@@ -45,14 +45,14 @@ class Status:
     @staticmethod
     def get_channel_status_gradient(status_id) -> QLinearGradient:
         color = Status.Channel.color_map[status_id]
-        return Status.smooth_gradient(color)
+        return Status._smooth_gradient(color)
 
     @staticmethod
     def get_stream_status_foreground(status_id) -> QColor:
         return Status.Stream.color_map[status_id]
 
     @staticmethod
-    def smooth_gradient(qcolor: QColor):
+    def _smooth_gradient(qcolor: QColor):
         gradient = QLinearGradient(0, 0, 300, 0)
         gradient.setColorAt(0.0, QColor(25, 25, 25))
         gradient.setColorAt(0.6, QColor(25, 25, 25))
@@ -69,6 +69,7 @@ class ChannelItem(QStandardItem):
 class RecordProcessItem(QStandardItem):
     def __init__(self, *args, **kwargs):
         self.pid: int | None = None
+        self.finished: bool = False
         super(RecordProcessItem, self).__init__(*args, **kwargs)
 
 
@@ -108,6 +109,8 @@ class ChannelsTree(QTreeView):
         self.on_click_delete = QAction("Delete channel", self)
         self.on_click_open_tab = QAction("Open tab", self)  # TODO: connect
         self.on_click_stop = QAction("Stop process", self)
+        self.on_click_hide = QAction("Hide", self)
+        self.on_click_hide.triggered.connect(self._del_finished_process_item)
 
     def add_channel_item(self, channel_name: str, alias: str):
         text = alias if alias else channel_name
@@ -130,6 +133,16 @@ class ChannelsTree(QTreeView):
     def selected_process_id(self) -> int:
         return self._selected_item().pid
 
+    @pyqtSlot()
+    def _del_finished_process_item(self):
+        process_item = self._selected_item()
+        if not process_item.finished:
+            logger.error("Process cannot be hidden: process not finished yet")
+            return
+        channel_item = process_item.parent()
+        channel_item.removeRow(process_item.row())
+        del self._map_pid_item[process_item.pid]
+
     def set_channel_alias(self, alias: str):
         self._model.itemFromIndex(self.selected_item_index).setText(alias)
 
@@ -142,12 +155,6 @@ class ChannelsTree(QTreeView):
         self._map_pid_item[pid] = process_item
         channel_item.appendRow(process_item)
         self.expand(self._model.indexFromItem(channel_item))
-
-    def del_child_process_item(self, pid: int):
-        process_item = self._map_pid_item[pid]
-        channel_item = process_item.parent()
-        channel_item.removeRow(process_item.row())
-        del self._map_pid_item[pid]
 
     def mousePressEvent(self, e: QMouseEvent):
         self.clearSelection()
@@ -162,7 +169,9 @@ class ChannelsTree(QTreeView):
             if isinstance(selected_item, ChannelItem):
                 self._single_channel_menu().exec(event.globalPos())
             elif isinstance(selected_item, RecordProcessItem):
-                self._single_process_menu().exec(event.globalPos())
+                self._single_process_menu(
+                    selected_item.finished
+                ).exec(event.globalPos())
 
     def _single_channel_menu(self) -> QMenu:
         menu = QMenu(self)
@@ -171,11 +180,14 @@ class ChannelsTree(QTreeView):
         menu.addAction(self.on_click_delete)
         return menu
 
-    def _single_process_menu(self) -> QMenu:
+    def _single_process_menu(self, process_finished: bool) -> QMenu:
         menu = QMenu(self)
         menu.addAction(self.on_click_open_tab)
         menu.addSeparator()
-        menu.addAction(self.on_click_stop)
+        if not process_finished:
+            menu.addAction(self.on_click_stop)
+        else:
+            menu.addAction(self.on_click_hide)
         return menu
 
     def set_channel_status(self, ch_index: int, status_id: int):
@@ -185,9 +197,12 @@ class ChannelsTree(QTreeView):
         self._model.item(ch_index).setBackground(color)
 
     def stream_finished(self, pid: int):
-        self.del_child_process_item(pid)
+        self._map_pid_item[pid].finished = True
+        color = Status.get_stream_status_foreground(Status.Stream.OFF)
+        self._map_pid_item[pid].setForeground(color)
 
     def stream_failed(self, pid: int):
+        self._map_pid_item[pid].finished = True
         color = Status.get_stream_status_foreground(Status.Stream.FAIL)
         self._map_pid_item[pid].setForeground(color)
 
@@ -196,42 +211,80 @@ class LogTabWidget(QTabWidget):
     def __init__(self):
         super(LogTabWidget, self).__init__()
         self._init_ui()
-        self._map_pid_widget: dict[int, LogWidget] = {}
+        self._map_pid_logwidget: dict[int, LogWidget] = {}
 
     def _init_ui(self):
         self.setMovable(True)
 
         # Add closability
         self.setTabsClosable(True)
-        self.tabCloseRequested[int].connect(self.close_tab)
+        self.tabCloseRequested[int].connect(self._close_tab)
 
         self._common_tab = LogWidget()
         self.addTab(self._common_tab, "Common")
 
     def add_common_message(self, text: str):
+        """
+        Print message to tab "Common"
+
+        :param text: Message text
+        """
         self._common_tab.add_message(text)
 
-    def add_new_process_tab(self, stream_name: str, pid: int):
-        self._map_pid_widget[pid] = LogWidget()
-        self.addTab(self._map_pid_widget[pid], stream_name)
-
     @pyqtSlot(int)
-    def close_tab(self, tab_index: int):
+    def _close_tab(self, tab_index: int):
+        """
+        Close tab except "Common" tab
+
+        :param tab_index: Tab index
+        """
         if tab_index == self.indexOf(self._common_tab):
             return
         self.removeTab(tab_index)
 
+    def _close_tab_by_pid(self, pid: int):
+        """
+        Close tab by pid
+
+        :param pid: Process ID
+        """
+        tab_index = self.indexOf(self._map_pid_logwidget[pid])
+        self._close_tab(tab_index)
+
     def proc_log(self, pid: int, message: str):
-        self._map_pid_widget[pid].add_message(message)
+        """
+        Print process message
+
+        :param pid: Process ID
+        :param message: Process message
+        """
+        self._map_pid_logwidget[pid].add_message(message)
+
+    def stream_rec(self, stream_name: str, pid: int):
+        """
+        Create new process tab
+
+        :param stream_name: Stream name
+        :param pid: Process ID
+        """
+        self._map_pid_logwidget[pid] = LogWidget()
+        self.addTab(self._map_pid_logwidget[pid], stream_name)
 
     def stream_finished(self, pid: int):
-        tab_index = self.indexOf(self._map_pid_widget[pid])
-        self.close_tab(tab_index)
-        del self._map_pid_widget[pid]
+        """
+        Close tab
+
+        :param pid: Process ID
+        """
+        self._close_tab_by_pid(pid)
 
     def stream_failed(self, pid: int):
-        tab_index = self.indexOf(self._map_pid_widget[pid])
-        self.close_tab(tab_index)
+        """
+        Close tab
+
+        :param pid: Process ID
+        """
+        self._close_tab_by_pid(pid)
 
 
 class LogWidget(ListView):
