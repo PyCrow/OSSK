@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from subprocess import Popen
 
@@ -32,6 +33,11 @@ STYLESHEET_PATH = CURRENT_PATH.joinpath('ui').joinpath('stylesheet.qss')
 
 FLAG_LIVE = 'live event will begin in '
 
+# Logging config
+logging_handler = logging.FileHandler(LOG_FILE, encoding='utf-8')
+logging_handler.setLevel(logging.DEBUG)
+logging_handler.setFormatter(logging.Formatter(
+    '%(asctime)s [%(levelname)s] %(message)s', "%Y-%m-%d %H:%M:%S"))
 
 class ChannelData:
     """

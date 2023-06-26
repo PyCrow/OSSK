@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from datetime import datetime
 
 from PyQt5.QtCore import pyqtSlot, Qt, QModelIndex
@@ -10,9 +11,17 @@ from PyQt5.QtWidgets import (
     QLabel, QSpinBox, QMenu, QAction, QComboBox, QTabWidget, QTreeView
 )
 
-from static_vars import AVAILABLE_STREAM_RECORD_QUALITIES, RecordProcess
+from static_vars import (
+    AVAILABLE_STREAM_RECORD_QUALITIES,
+    logging_handler,
+    RecordProcess,
+)
 from ui.dynamic_style import STYLE
 from utils import check_exists_and_callable, is_callable
+
+
+logger = logging.getLogger()
+logger.addHandler(logging_handler)
 
 
 class Status:

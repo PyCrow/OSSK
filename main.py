@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import sys
-import logging as lg
+import logging
 from logging import DEBUG, INFO, WARNING, ERROR
 from queue import Queue
 from signal import SIGINT
@@ -18,7 +18,7 @@ from PyQt5.QtWidgets import (
 )
 
 from static_vars import (
-    LOG_FILE,
+    logging_handler,
     KEY_FFMPEG, KEY_YTDLP, KEY_CHANNELS, KEY_MAX_DOWNLOADS,
     KEY_SCANNER_SLEEP_SEC,
     DEFAULT_MAX_DOWNLOADS, DEFAULT_SCANNER_SLEEP_SEC,
@@ -37,16 +37,13 @@ from utils import (
 PATH_TO_FFMPEG = ''
 YTDLP_COMMAND = 'python -m yt_dlp'
 
+# Threads management attributes
 GLOBAL_STOP = False
 THREADS_LOCK = QMutex()
 
-handler = lg.FileHandler(LOG_FILE, encoding='utf-8')
-handler.setLevel(lg.INFO)
-handler.setFormatter(lg.Formatter(
-    '%(asctime)s [%(levelname)s] %(message)s', "%Y-%m-%d %H:%M:%S"))
-logger = lg.getLogger()
-logger.setLevel(DEBUG)
-logger.addHandler(handler)
+# Local logging config
+logger = logging.getLogger()
+logger.addHandler(logging_handler)
 DEBUG_LEVELS = {DEBUG: 'DEBUG', INFO: 'INFO',
                 WARNING: 'WARNING', ERROR: 'ERROR'}
 
