@@ -399,7 +399,7 @@ class Master(QThread):
         self.channels: dict[str, ChannelData] = channels
         self.last_status: dict[str, bool] = {}
         self.scheduled_streams: dict[str, bool] = {}
-        self.scanner_sleep_sec: int = DEFAULT_SCANNER_SLEEP_SEC * 60
+        self.scanner_sleep_sec: int = DEFAULT_SCANNER_SLEEP_SEC
         self.Slave = Slave()
         self.Slave.s_log[int, str].connect(self.log)
 
