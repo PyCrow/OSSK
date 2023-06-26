@@ -11,7 +11,7 @@ import subprocess
 import tempfile
 
 import yt_dlp
-from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot, QMutex
+from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot, QMutex, Qt
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLineEdit,
     QLabel
@@ -117,16 +117,18 @@ class MainWindow(QWidget):
         self._channels: dict[str, ChannelData] = {}
 
         self._init_ui()
-        self._load_config()
 
         self.Master = Master(self._channels)
         self.Master.s_log[int, str].connect(self.add_log_message)
         self.Master.s_channel_off[str].connect(self._channel_off)
         self.Master.s_channel_live[str].connect(self._channel_live)
+        self.Master.s_next_scan_timer[int].connect(self._update_next_scan)
         self.Master.Slave.s_proc_log[int, str].connect(self.log_tabs.proc_log)
         self.Master.Slave.s_stream_rec[str, int, str].connect(self._stream_rec)
         self.Master.Slave.s_stream_finished[int].connect(self._stream_finished)
         self.Master.Slave.s_stream_fail[int].connect(self._stream_fail)
+
+        self._load_config()
 
     def _load_config(self):
         """ Loading configuration """
@@ -145,15 +147,21 @@ class MainWindow(QWidget):
             )
 
         # (ffmpeg path will be checked on field "textChanged" signal)
-        ffmpeg_value = config.get(KEY_FFMPEG, PATH_TO_FFMPEG)
-        ytdlp_value = config.get(KEY_YTDLP, YTDLP_COMMAND)
+        ffmpeg_path = config.get(KEY_FFMPEG, PATH_TO_FFMPEG)
+        ytdlp_command = config.get(KEY_YTDLP, YTDLP_COMMAND)
         max_downloads = config.get(KEY_MAX_DOWNLOADS, DEFAULT_MAX_DOWNLOADS)
         scanner_sleep = config.get(KEY_SCANNER_SLEEP_SEC,
                                    DEFAULT_SCANNER_SLEEP_SEC)
-        self.settings_window.field_ffmpeg.setText(ffmpeg_value)
-        self.settings_window.field_ytdlp.setText(ytdlp_value)
+        self.settings_window.field_ffmpeg.setText(ffmpeg_path)
+        self.settings_window.field_ytdlp.setText(ytdlp_command)
         self.settings_window.box_max_downloads.setValue(max_downloads)
         self.settings_window.box_scanner_sleep.setValue(scanner_sleep // 60)
+
+        # Update Master and Slave
+        self.Master.scanner_sleep_sec = scanner_sleep
+        self.Master.Slave.path_to_ffmpeg = ffmpeg_path
+        self.Master.Slave.max_downloads = max_downloads
+        self.Master.Slave.ytdlp_command = ytdlp_command
 
     @pyqtSlot()
     def _save_config(self):
@@ -175,10 +183,12 @@ class MainWindow(QWidget):
         if not suc:
             self.add_log_message(ERROR, "Settings saving error!")
 
-        # Edit configuration when scanning and recording in progress
+        # Update Master's and Slave's configurations
+        # when scanning and recording in progress
         THREADS_LOCK.lock()
         self.Master.scanner_sleep_sec = scanner_sleep_sec
         self.Master.Slave.max_downloads = max_downloads
+        self.Master.Slave.path_to_ffmpeg = ffmpeg_path
         self.Master.Slave.ytdlp_command = ytdlp_command
         THREADS_LOCK.unlock()
 
@@ -206,6 +216,8 @@ class MainWindow(QWidget):
         hbox_channels_list_header.addWidget(QLabel("Monitored channels"))
         hbox_channels_list_header.addWidget(button_add_channel)
 
+        self.label_next_scan_timer = QLabel("Next scan timer")
+
         self.widget_channels_tree = ChannelsTree()
         self.widget_channels_tree.on_click_channel_settings.triggered.connect(
             self.open_channel_settings)
@@ -218,6 +230,8 @@ class MainWindow(QWidget):
         left_vbox.addWidget(button_settings)
         left_vbox.addWidget(self._field_add_channels)
         left_vbox.addLayout(hbox_channels_list_header)
+        left_vbox.addWidget(self.label_next_scan_timer,
+                            alignment=Qt.AlignHCenter)
         left_vbox.addWidget(self.widget_channels_tree)
 
         self.log_tabs = LogTabWidget()
@@ -269,8 +283,6 @@ class MainWindow(QWidget):
         global GLOBAL_STOP
         GLOBAL_STOP = False
 
-        self.Master.Slave.ytdlp_command = ytdlp_command
-        self.Master.Slave.path_to_ffmpeg = ffmpeg_path
         self.Master.start()
 
     @pyqtSlot()
@@ -284,6 +296,10 @@ class MainWindow(QWidget):
     def add_log_message(self, level: int, text: str):
         logger.log(level, text)
         self.log_tabs.add_common_message(f"[{DEBUG_LEVELS[level]}] {text}")
+
+    @pyqtSlot(int)
+    def _update_next_scan(self, seconds: int):
+        self.label_next_scan_timer.setText(f"Next scan in: {seconds} seconds")
 
     @pyqtSlot()
     def add_channel(self):
@@ -393,6 +409,7 @@ class Master(QThread):
     s_log = pyqtSignal(int, str)
     s_channel_off = pyqtSignal(str)
     s_channel_live = pyqtSignal(str)
+    s_next_scan_timer = pyqtSignal(int)
 
     def __init__(self, channels: dict[str, ChannelData]):
         super(Master, self).__init__()
@@ -426,9 +443,11 @@ class Master(QThread):
         """ Waiting with a check to stop """
         c = self.scanner_sleep_sec
         while c != 0:
+            self.s_next_scan_timer[int].emit(c)
             sleep(1)
             raise_on_stop_threads()
             c -= 1
+        self.s_next_scan_timer[int].emit(c)
 
     def channel_status_changed(self, channel_name: str, status: bool):
         if (channel_name in self.last_status
