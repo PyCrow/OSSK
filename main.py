@@ -123,7 +123,7 @@ class MainWindow(QWidget):
         self.Master.s_log[int, str].connect(self.add_log_message)
         self.Master.s_channel_off[str].connect(self._channel_off)
         self.Master.s_channel_live[str].connect(self._channel_live)
-        self.Master.Slave.s_proc_log[int, str].connect(self._proc_log)
+        self.Master.Slave.s_proc_log[int, str].connect(self.log_tabs.proc_log)
         self.Master.Slave.s_stream_rec[str, int, str].connect(self._stream_rec)
         self.Master.Slave.s_stream_finished[int].connect(self._stream_finished)
         self.Master.Slave.s_stream_fail[int].connect(self._stream_fail)
@@ -212,7 +212,7 @@ class MainWindow(QWidget):
         self.widget_channels_tree.on_click_delete.triggered.connect(
             self.del_channel)
         self.widget_channels_tree.on_click_stop.triggered.connect(
-            self.stop_process)
+            self.stop_signle_process)
 
         left_vbox = QVBoxLayout()
         left_vbox.addWidget(button_settings)
@@ -252,7 +252,7 @@ class MainWindow(QWidget):
             self.clicked_apply_channel_settings)
         self.channel_settings_window.setStyleSheet(style)
 
-    @pyqtSlot(bool)
+    @pyqtSlot()
     def run_master(self):
         ytdlp_command = self.settings_window.field_ytdlp.text()
         if not is_callable(ytdlp_command):
@@ -274,7 +274,8 @@ class MainWindow(QWidget):
         self.Master.Slave.path_to_ffmpeg = ffmpeg_path
         self.Master.start()
 
-    def stop_process(self):
+    @pyqtSlot()
+    def stop_signle_process(self):
         pid = self.widget_channels_tree.selected_process_id()
         THREADS_LOCK.lock()
         self.Master.Slave.pids_to_stop.append(pid)
@@ -285,7 +286,7 @@ class MainWindow(QWidget):
         logger.log(level, text)
         self.log_tabs.add_common_message(f"[{DEBUG_LEVELS[level]}] {text}")
 
-    @pyqtSlot(bool)
+    @pyqtSlot()
     def add_channel(self):
         """ Add a channel to the scan list """
         channel_name = self._field_add_channels.text()
@@ -301,7 +302,7 @@ class MainWindow(QWidget):
             channel_name, channel_data.alias)
         self._field_add_channels.clear()
 
-    @pyqtSlot(bool)
+    @pyqtSlot()
     def del_channel(self):
         """ Delete a channel from the scan list """
         channel_name = self.widget_channels_tree.selected_channel_name()
@@ -321,7 +322,7 @@ class MainWindow(QWidget):
             else STYLE.LINE_VALID
         self._field_add_channels.setStyleSheet(status)
 
-    @pyqtSlot(bool)
+    @pyqtSlot()
     def open_channel_settings(self):
         channel_name = self.widget_channels_tree.selected_channel_name()
         if channel_name not in self._channels:
@@ -333,17 +334,13 @@ class MainWindow(QWidget):
         )
         self.channel_settings_window.show()
 
-    @pyqtSlot(bool)
+    @pyqtSlot()
     def clicked_apply_channel_settings(self):
         channel_name, alias, svq = self.channel_settings_window.get_data()
         self._channels[channel_name].alias = alias
         self._channels[channel_name].set_svq(svq)
         self._save_config()
         self.widget_channels_tree.set_channel_alias(alias)
-
-    @pyqtSlot(int, str)
-    def _proc_log(self, pid: int, message: str):
-        self.log_tabs.proc_log(pid, message)
 
     @pyqtSlot(str)
     def _channel_off(self, ch_name: str):

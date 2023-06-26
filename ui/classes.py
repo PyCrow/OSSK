@@ -251,6 +251,7 @@ class LogTabWidget(QTabWidget):
         tab_index = self.indexOf(self._map_pid_logwidget[pid])
         self._close_tab(tab_index)
 
+    @pyqtSlot(int, str)
     def proc_log(self, pid: int, message: str):
         """
         Print process message
