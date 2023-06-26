@@ -7,7 +7,7 @@ UNKNOWN = '<UNKNOWN>'
 KEY_FFMPEG = 'ffmpeg'
 KEY_YTDLP = 'ytdlp'
 KEY_MAX_DOWNLOADS = 'max_downloads'
-KEY_SCANNER_SLEEP = 'scanner_sleep'
+KEY_SCANNER_SLEEP_SEC = 'scanner_sleep'
 KEY_CHANNELS = 'channels'
 
 KEY_CHANNEL_NAME = 'name'
@@ -22,7 +22,7 @@ AVAILABLE_STREAM_RECORD_QUALITIES = {
 }
 
 DEFAULT_MAX_DOWNLOADS = 2
-DEFAULT_SCANNER_SLEEP = 300
+DEFAULT_SCANNER_SLEEP_SEC = 300
 
 CURRENT_PATH = Path().resolve()
 LOG_FILE = CURRENT_PATH.joinpath('stream_saver.log')

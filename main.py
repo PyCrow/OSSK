@@ -19,8 +19,9 @@ from PyQt5.QtWidgets import (
 
 from static_vars import (
     LOG_FILE,
-    KEY_FFMPEG, KEY_YTDLP, KEY_CHANNELS, KEY_MAX_DOWNLOADS, KEY_SCANNER_SLEEP,
-    DEFAULT_MAX_DOWNLOADS, DEFAULT_SCANNER_SLEEP,
+    KEY_FFMPEG, KEY_YTDLP, KEY_CHANNELS, KEY_MAX_DOWNLOADS,
+    KEY_SCANNER_SLEEP_SEC,
+    DEFAULT_MAX_DOWNLOADS, DEFAULT_SCANNER_SLEEP_SEC,
     KEY_CHANNEL_NAME, KEY_CHANNEL_SVQ,
     ChannelData, StopThreads, RecordProcess,
     STYLESHEET_PATH, FLAG_LIVE)
@@ -150,7 +151,8 @@ class MainWindow(QWidget):
         ffmpeg_value = config.get(KEY_FFMPEG, PATH_TO_FFMPEG)
         ytdlp_value = config.get(KEY_YTDLP, YTDLP_COMMAND)
         max_downloads = config.get(KEY_MAX_DOWNLOADS, DEFAULT_MAX_DOWNLOADS)
-        scanner_sleep = config.get(KEY_SCANNER_SLEEP, DEFAULT_SCANNER_SLEEP)
+        scanner_sleep = config.get(KEY_SCANNER_SLEEP_SEC,
+                                   DEFAULT_SCANNER_SLEEP_SEC)
         self.settings_window.field_ffmpeg.setText(ffmpeg_value)
         self.settings_window.field_ytdlp.setText(ytdlp_value)
         self.settings_window.box_max_downloads.setValue(max_downloads)
@@ -164,13 +166,13 @@ class MainWindow(QWidget):
         ytdlp_command = (self.settings_window.field_ytdlp.text()
                          or YTDLP_COMMAND)
         max_downloads = self.settings_window.box_max_downloads.value()
-        scanner_sleep = self.settings_window.box_scanner_sleep.value() * 60
+        scanner_sleep_sec = self.settings_window.box_scanner_sleep.value() * 60
 
         suc = save_settings({
             KEY_FFMPEG: ffmpeg_path,
             KEY_YTDLP: ytdlp_command,
             KEY_MAX_DOWNLOADS: max_downloads,
-            KEY_SCANNER_SLEEP: scanner_sleep,
+            KEY_SCANNER_SLEEP_SEC: scanner_sleep_sec,
             KEY_CHANNELS: [i.j_dump() for i in self._channels.values()],
         })
         if not suc:
@@ -178,7 +180,7 @@ class MainWindow(QWidget):
 
         # Edit configuration when scanning and recording in progress
         THREADS_LOCK.lock()
-        self.Master.scanner_sleep = scanner_sleep
+        self.Master.scanner_sleep_sec = scanner_sleep_sec
         self.Master.Slave.max_downloads = max_downloads
         self.Master.Slave.ytdlp_command = ytdlp_command
         THREADS_LOCK.unlock()
@@ -351,20 +353,24 @@ class MainWindow(QWidget):
         ch_index = list(self._channels.keys()).index(ch_name)
         self.widget_channels_tree.set_channel_status(ch_index,
                                                      Status.Channel.OFF)
+
     @pyqtSlot(str)
     def _channel_live(self, ch_name: str):
         ch_index = list(self._channels.keys()).index(ch_name)
         self.widget_channels_tree.set_channel_status(ch_index,
                                                      Status.Channel.LIVE)
+
     @pyqtSlot(str, int, str)
     def _stream_rec(self, ch_name: str, pid: int, stream_name: str):
         self.log_tabs.add_new_process_tab(stream_name, pid)
         self.widget_channels_tree.add_child_process_item(ch_name, pid,
                                                          stream_name)
+
     @pyqtSlot(int)
     def _stream_finished(self, pid: int):
         self.log_tabs.stream_finished(pid)
         self.widget_channels_tree.stream_finished(pid)
+
     @pyqtSlot(int)
     def _stream_fail(self, pid: int):
         self.log_tabs.stream_failed(pid)
@@ -388,7 +394,7 @@ class Master(QThread):
         self.channels: dict[str, ChannelData] = channels
         self.last_status: dict[str, bool] = {}
         self.scheduled_streams: dict[str, bool] = {}
-        self.scanner_sleep: int = DEFAULT_SCANNER_SLEEP * 60
+        self.scanner_sleep_sec: int = DEFAULT_SCANNER_SLEEP_SEC * 60
         self.Slave = Slave()
         self.Slave.s_log[int, str].connect(self.log)
 
@@ -406,13 +412,18 @@ class Master(QThread):
                     self._check_for_stream(channel_name)
                 raise_on_stop_threads()
 
-                # Waiting with a check to stop
-                for sec in range(0, self.scanner_sleep, 5):
-                    sleep(sec)
-                    raise_on_stop_threads()
+                self.wait_and_check()
         except StopThreads:
             pass
         self.log(INFO, "Scanning channels stopped.")
+
+    def wait_and_check(self):
+        """ Waiting with a check to stop """
+        c = int(self.scanner_sleep_sec)
+        while c != 0:
+            sleep(1)
+            raise_on_stop_threads()
+            c -= 1
 
     def channel_status_changed(self, channel_name: str, status: bool):
         if (channel_name in self.last_status
