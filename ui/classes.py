@@ -228,7 +228,7 @@ class LogTabWidget(QTabWidget):
     def _init_ui(self):
         self.setMovable(True)
 
-        # Add closability
+        # Add clos-ability
         self.setTabsClosable(True)
         self.tabCloseRequested[int].connect(self._close_tab)
 

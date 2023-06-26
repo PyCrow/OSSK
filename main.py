@@ -240,7 +240,7 @@ class MainWindow(QWidget):
 
         self.setLayout(main_box)
 
-        # Загрузка стиля
+        # Style loading
         style = STYLESHEET_PATH.read_text()
         self.setStyleSheet(style)
         self.settings_window.setStyleSheet(style)
@@ -576,21 +576,23 @@ class Slave(QThread):
             '-P', channel_dir,
             '-o', file_name,
             '--ffmpeg-location', self.path_to_ffmpeg,
-            # Загружать с самого начала
+            # Downloading from the beginning
             '--live-from-start',
-            # Сразу в один файл
+            # Merge all downloaded parts into two
+            # tracks (video and audio) during download
             '--no-part',
-            # Обновить сокет при падении
+            # Update sockets when failed
             '--socket-timeout', '5',
             '--retries', '10',
             '--retry-sleep', '5',
-            # Без прогресс-бара
+            # No progress bar
             '--no-progress',
-            # Качество записи
+            # Record quality
             *records_quality,
-            # Объединить в один файл mp4 или mkv
+            # Merge into one mp4 or mkv file
             '--merge-output-format', 'mp4/mkv',
-            # Снизить шанс поломки при форсивной остановке
+            # Reducing the chance of file corruption
+            # if download is interrupted
             '--hls-use-mpegts',
         ]
 
