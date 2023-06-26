@@ -402,7 +402,7 @@ class Master(QThread):
         try:
             while True:
                 raise_on_stop_threads()
-                for channel_name in list(self.channels):
+                for channel_name in list(self.channels.keys()):
                     self._check_for_stream(channel_name)
                 raise_on_stop_threads()
 
@@ -413,7 +413,7 @@ class Master(QThread):
 
     def wait_and_check(self):
         """ Waiting with a check to stop """
-        c = int(self.scanner_sleep_sec)
+        c = self.scanner_sleep_sec
         while c != 0:
             sleep(1)
             raise_on_stop_threads()
