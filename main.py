@@ -307,6 +307,17 @@ class MainWindow(QWidget):
         channel_name = self.widget_channels_tree.selected_channel_name()
         if channel_name not in self._channels:
             return
+
+        THREADS_LOCK.lock()
+        active_channels = self.Master.Slave.get_names_of_active_channels()
+        THREADS_LOCK.unlock()
+        if channel_name in active_channels:
+            self.add_log_message(
+                WARNING,
+                f"Cannot delete channel \"{channel_name}\": "
+                "There are active downloads from this channel.")
+            return
+
         del self._channels[channel_name]
         self._save_config()
         THREADS_LOCK.lock()
@@ -521,6 +532,9 @@ class Slave(QThread):
         except StopThreads:
             self.stop_downloads()
         self.log(INFO, "Recorder stopped.")
+
+    def get_names_of_active_channels(self):
+        return [proc.channel for proc in self.running_downloads]
 
     @raise_on_stop_threads
     def check_running_downloads(self):
