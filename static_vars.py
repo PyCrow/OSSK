@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from subprocess import Popen
 
@@ -7,7 +8,7 @@ UNKNOWN = '<UNKNOWN>'
 KEY_FFMPEG = 'ffmpeg'
 KEY_YTDLP = 'ytdlp'
 KEY_MAX_DOWNLOADS = 'max_downloads'
-KEY_SCANNER_SLEEP = 'scanner_sleep'
+KEY_SCANNER_SLEEP_SEC = 'scanner_sleep'
 KEY_CHANNELS = 'channels'
 
 KEY_CHANNEL_NAME = 'name'
@@ -22,7 +23,7 @@ AVAILABLE_STREAM_RECORD_QUALITIES = {
 }
 
 DEFAULT_MAX_DOWNLOADS = 2
-DEFAULT_SCANNER_SLEEP = 300
+DEFAULT_SCANNER_SLEEP_SEC = 300
 
 CURRENT_PATH = Path().resolve()
 LOG_FILE = CURRENT_PATH.joinpath('stream_saver.log')
@@ -32,13 +33,20 @@ STYLESHEET_PATH = CURRENT_PATH.joinpath('ui').joinpath('stylesheet.qss')
 
 FLAG_LIVE = 'live event will begin in '
 
+# Logging config
+logging_handler = logging.FileHandler(LOG_FILE, encoding='utf-8')
+logging_handler.setLevel(logging.DEBUG)
+logging_handler.setFormatter(logging.Formatter(
+    '%(asctime)s [%(levelname)s] %(message)s', "%Y-%m-%d %H:%M:%S"))
 
+
+# Define classes
 class ChannelData:
     """
     Channel data
      - name
      - alias (editable)
-     - svq (stream video quality)
+     - _svq (stream video quality)
     """
     def __init__(self, name: str):
         """
@@ -65,6 +73,7 @@ class ChannelData:
             KEY_CHANNEL_ALIAS: self.alias,
             KEY_CHANNEL_SVQ: self._svq,
         }
+
     @staticmethod
     def j_load(data: dict):
         channel = ChannelData(data.get(KEY_CHANNEL_NAME, UNKNOWN))

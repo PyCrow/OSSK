@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import sys
-import logging as lg
+import logging
 from logging import DEBUG, INFO, WARNING, ERROR
 from queue import Queue
 from signal import SIGINT
@@ -11,20 +11,21 @@ import subprocess
 import tempfile
 
 import yt_dlp
-from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot, QMutex
+from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot, QMutex, Qt
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLineEdit,
     QLabel
 )
 
 from static_vars import (
-    LOG_FILE,
-    KEY_FFMPEG, KEY_YTDLP, KEY_CHANNELS, KEY_MAX_DOWNLOADS, KEY_SCANNER_SLEEP,
-    DEFAULT_MAX_DOWNLOADS, DEFAULT_SCANNER_SLEEP,
+    logging_handler,
+    KEY_FFMPEG, KEY_YTDLP, KEY_CHANNELS, KEY_MAX_DOWNLOADS,
+    KEY_SCANNER_SLEEP_SEC,
+    DEFAULT_MAX_DOWNLOADS, DEFAULT_SCANNER_SLEEP_SEC,
     KEY_CHANNEL_NAME, KEY_CHANNEL_SVQ,
     ChannelData, StopThreads, RecordProcess,
     STYLESHEET_PATH, FLAG_LIVE)
-from ui.classes import ListChannels, LogTabWidget, ChannelStatus, \
+from ui.classes import ChannelsTree, LogTabWidget, Status, \
     SettingsWindow, ChannelSettingsWindow
 from ui.dynamic_style import STYLE
 from utils import (
@@ -36,16 +37,13 @@ from utils import (
 PATH_TO_FFMPEG = ''
 YTDLP_COMMAND = 'python -m yt_dlp'
 
+# Threads management attributes
 GLOBAL_STOP = False
 THREADS_LOCK = QMutex()
 
-handler = lg.FileHandler(LOG_FILE, encoding='utf-8')
-handler.setLevel(lg.INFO)
-handler.setFormatter(lg.Formatter(
-    '%(asctime)s [%(levelname)s] %(message)s', "%Y-%m-%d %H:%M:%S"))
-logger = lg.getLogger()
-logger.setLevel(DEBUG)
-logger.addHandler(handler)
+# Local logging config
+logger = logging.getLogger()
+logger.addHandler(logging_handler)
 DEBUG_LEVELS = {DEBUG: 'DEBUG', INFO: 'INFO',
                 WARNING: 'WARNING', ERROR: 'ERROR'}
 
@@ -119,16 +117,18 @@ class MainWindow(QWidget):
         self._channels: dict[str, ChannelData] = {}
 
         self._init_ui()
-        self._load_config()
 
         self.Master = Master(self._channels)
         self.Master.s_log[int, str].connect(self.add_log_message)
-        self.Master.s_stream_off[str].connect(self._stream_off)
-        self.Master.s_stream_in_queue[str].connect(self._stream_in_queue)
-        self.Master.Slave.s_proc_log[int, str].connect(self._proc_log)
-        self.Master.Slave.s_stream_rec[str, int].connect(self._stream_rec)
-        self.Master.Slave.s_stream_off[str].connect(self._stream_off)
-        self.Master.Slave.s_stream_fail[str].connect(self._stream_fail)
+        self.Master.s_channel_off[str].connect(self._channel_off)
+        self.Master.s_channel_live[str].connect(self._channel_live)
+        self.Master.s_next_scan_timer[int].connect(self._update_next_scan)
+        self.Master.Slave.s_proc_log[int, str].connect(self.log_tabs.proc_log)
+        self.Master.Slave.s_stream_rec[str, int, str].connect(self._stream_rec)
+        self.Master.Slave.s_stream_finished[int].connect(self._stream_finished)
+        self.Master.Slave.s_stream_fail[int].connect(self._stream_fail)
+
+        self._load_config()
 
     def _load_config(self):
         """ Loading configuration """
@@ -141,20 +141,27 @@ class MainWindow(QWidget):
         for channel_data in config.get(KEY_CHANNELS, {}):
             channel_name = channel_data[KEY_CHANNEL_NAME]
             self._channels[channel_name] = ChannelData.j_load(channel_data)
-            self._widget_list_channels.add_channel_item(
+            self.widget_channels_tree.add_channel_item(
                 channel_name,
                 self._channels[channel_name].alias,
             )
 
         # (ffmpeg path will be checked on field "textChanged" signal)
-        ffmpeg_value = config.get(KEY_FFMPEG, PATH_TO_FFMPEG)
-        ytdlp_value = config.get(KEY_YTDLP, YTDLP_COMMAND)
+        ffmpeg_path = config.get(KEY_FFMPEG, PATH_TO_FFMPEG)
+        ytdlp_command = config.get(KEY_YTDLP, YTDLP_COMMAND)
         max_downloads = config.get(KEY_MAX_DOWNLOADS, DEFAULT_MAX_DOWNLOADS)
-        scanner_sleep = config.get(KEY_SCANNER_SLEEP, DEFAULT_SCANNER_SLEEP)
-        self.settings_window.field_ffmpeg.setText(ffmpeg_value)
-        self.settings_window.field_ytdlp.setText(ytdlp_value)
+        scanner_sleep = config.get(KEY_SCANNER_SLEEP_SEC,
+                                   DEFAULT_SCANNER_SLEEP_SEC)
+        self.settings_window.field_ffmpeg.setText(ffmpeg_path)
+        self.settings_window.field_ytdlp.setText(ytdlp_command)
         self.settings_window.box_max_downloads.setValue(max_downloads)
         self.settings_window.box_scanner_sleep.setValue(scanner_sleep // 60)
+
+        # Update Master and Slave
+        self.Master.scanner_sleep_sec = scanner_sleep
+        self.Master.Slave.path_to_ffmpeg = ffmpeg_path
+        self.Master.Slave.max_downloads = max_downloads
+        self.Master.Slave.ytdlp_command = ytdlp_command
 
     @pyqtSlot()
     def _save_config(self):
@@ -164,22 +171,24 @@ class MainWindow(QWidget):
         ytdlp_command = (self.settings_window.field_ytdlp.text()
                          or YTDLP_COMMAND)
         max_downloads = self.settings_window.box_max_downloads.value()
-        scanner_sleep = self.settings_window.box_scanner_sleep.value() * 60
+        scanner_sleep_sec = self.settings_window.box_scanner_sleep.value() * 60
 
         suc = save_settings({
             KEY_FFMPEG: ffmpeg_path,
             KEY_YTDLP: ytdlp_command,
             KEY_MAX_DOWNLOADS: max_downloads,
-            KEY_SCANNER_SLEEP: scanner_sleep,
+            KEY_SCANNER_SLEEP_SEC: scanner_sleep_sec,
             KEY_CHANNELS: [i.j_dump() for i in self._channels.values()],
         })
         if not suc:
             self.add_log_message(ERROR, "Settings saving error!")
 
-        # Edit configuration when scanning and recording in progress
+        # Update Master's and Slave's configurations
+        # when scanning and recording in progress
         THREADS_LOCK.lock()
-        self.Master.scanner_sleep = scanner_sleep
+        self.Master.scanner_sleep_sec = scanner_sleep_sec
         self.Master.Slave.max_downloads = max_downloads
+        self.Master.Slave.path_to_ffmpeg = ffmpeg_path
         self.Master.Slave.ytdlp_command = ytdlp_command
         THREADS_LOCK.unlock()
 
@@ -207,20 +216,29 @@ class MainWindow(QWidget):
         hbox_channels_list_header.addWidget(QLabel("Monitored channels"))
         hbox_channels_list_header.addWidget(button_add_channel)
 
-        self._widget_list_channels = ListChannels()
-        self._widget_list_channels.on_click_settings.triggered.connect(
+        self.label_next_scan_timer = QLabel("Next scan timer")
+
+        self.widget_channels_tree = ChannelsTree()
+        self.widget_channels_tree.on_click_channel_settings.triggered.connect(
             self.open_channel_settings)
-        self._widget_list_channels.on_click_delete.triggered.connect(
+        self.widget_channels_tree.on_click_delete_channel.triggered.connect(
             self.del_channel)
+        self.widget_channels_tree.on_click_stop.triggered.connect(
+            self.stop_single_process)
 
         left_vbox = QVBoxLayout()
         left_vbox.addWidget(button_settings)
         left_vbox.addWidget(self._field_add_channels)
         left_vbox.addLayout(hbox_channels_list_header)
-        left_vbox.addWidget(self._widget_list_channels)
+        left_vbox.addWidget(self.label_next_scan_timer,
+                            alignment=Qt.AlignHCenter)
+        left_vbox.addWidget(self.widget_channels_tree)
 
-        # TODO: add tabs for processes event logs
         self.log_tabs = LogTabWidget()
+        self.widget_channels_tree.s_open_tab_by_pid[int, str].connect(
+            self.log_tabs.open_tab_by_pid)
+        self.widget_channels_tree.s_close_tab_by_pid[int].connect(
+            self.log_tabs.process_hide)
 
         main_hbox = QHBoxLayout()
         main_hbox.addLayout(left_vbox, 1)
@@ -240,7 +258,7 @@ class MainWindow(QWidget):
 
         self.setLayout(main_box)
 
-        # Загрузка стиля
+        # Style loading
         style = STYLESHEET_PATH.read_text()
         self.setStyleSheet(style)
         self.settings_window.setStyleSheet(style)
@@ -251,7 +269,7 @@ class MainWindow(QWidget):
             self.clicked_apply_channel_settings)
         self.channel_settings_window.setStyleSheet(style)
 
-    @pyqtSlot(bool)
+    @pyqtSlot()
     def run_master(self):
         ytdlp_command = self.settings_window.field_ytdlp.text()
         if not is_callable(ytdlp_command):
@@ -263,22 +281,31 @@ class MainWindow(QWidget):
             self.add_log_message(WARNING, "ffmpeg not found.")
             return
 
-        if self.Master.isRunning():
+        if self.Master.isRunning() or self.Master.Slave.isRunning():
             return
 
         global GLOBAL_STOP
         GLOBAL_STOP = False
 
-        self.Master.Slave.ytdlp_command = ytdlp_command
-        self.Master.Slave.path_to_ffmpeg = ffmpeg_path
         self.Master.start()
+
+    @pyqtSlot()
+    def stop_single_process(self):
+        pid = self.widget_channels_tree.selected_process_id()
+        THREADS_LOCK.lock()
+        self.Master.Slave.pids_to_stop.append(pid)
+        THREADS_LOCK.unlock()
 
     @pyqtSlot(int, str)
     def add_log_message(self, level: int, text: str):
         logger.log(level, text)
-        self.log_tabs.common.add_message(f"[{DEBUG_LEVELS[level]}] {text}")
+        self.log_tabs.add_common_message(f"[{DEBUG_LEVELS[level]}] {text}")
 
-    @pyqtSlot(bool)
+    @pyqtSlot(int)
+    def _update_next_scan(self, seconds: int):
+        self.label_next_scan_timer.setText(f"Next scan in: {seconds} seconds")
+
+    @pyqtSlot()
     def add_channel(self):
         """ Add a channel to the scan list """
         channel_name = self._field_add_channels.text()
@@ -290,23 +317,34 @@ class MainWindow(QWidget):
         THREADS_LOCK.lock()
         self.Master.channels[channel_name] = channel_data
         THREADS_LOCK.unlock()
-        self._widget_list_channels.add_channel_item(
+        self.widget_channels_tree.add_channel_item(
             channel_name, channel_data.alias)
         self._field_add_channels.clear()
 
-    @pyqtSlot(bool)
+    @pyqtSlot()
     def del_channel(self):
         """ Delete a channel from the scan list """
-        channel_name = self._widget_list_channels.selected_channel_name()
+        channel_name = self.widget_channels_tree.selected_channel_name()
         if channel_name not in self._channels:
             return
+
+        THREADS_LOCK.lock()
+        active_channels = self.Master.Slave.get_names_of_active_channels()
+        THREADS_LOCK.unlock()
+        if channel_name in active_channels:
+            self.add_log_message(
+                WARNING,
+                f"Cannot delete channel \"{channel_name}\": "
+                "There are active downloads from this channel.")
+            return
+
         del self._channels[channel_name]
         self._save_config()
         THREADS_LOCK.lock()
         if channel_name in self.Master.channels:
             del self.Master.channels[channel_name]
         THREADS_LOCK.unlock()
-        self._widget_list_channels.del_channel_item()
+        self.widget_channels_tree.del_channel_item()
 
     @pyqtSlot(str)
     def highlight_on_exists(self, ch_name: str):
@@ -314,9 +352,9 @@ class MainWindow(QWidget):
             else STYLE.LINE_VALID
         self._field_add_channels.setStyleSheet(status)
 
-    @pyqtSlot(bool)
+    @pyqtSlot()
     def open_channel_settings(self):
-        channel_name = self._widget_list_channels.selected_channel_name()
+        channel_name = self.widget_channels_tree.selected_channel_name()
         if channel_name not in self._channels:
             return
         self.channel_settings_window.update_data(
@@ -326,39 +364,42 @@ class MainWindow(QWidget):
         )
         self.channel_settings_window.show()
 
-    @pyqtSlot(bool)
+    @pyqtSlot()
     def clicked_apply_channel_settings(self):
         channel_name, alias, svq = self.channel_settings_window.get_data()
         self._channels[channel_name].alias = alias
         self._channels[channel_name].set_svq(svq)
         self._save_config()
-        self._widget_list_channels.set_channel_alias(alias)
-
-    @pyqtSlot(int, str)
-    def _proc_log(self, pid: int, message: str):
-        self.log_tabs.proc_log(pid, message)
+        channel_row_text = alias if alias else channel_name
+        self.widget_channels_tree.set_channel_alias(channel_row_text)
 
     @pyqtSlot(str)
-    def _stream_off(self, ch_name: str):
+    def _channel_off(self, ch_name: str):
         ch_index = list(self._channels.keys()).index(ch_name)
-        self._widget_list_channels.set_stream_status(ch_index,
-                                                     ChannelStatus.OFF)
+        self.widget_channels_tree.set_channel_status(ch_index,
+                                                     Status.Channel.OFF)
+
     @pyqtSlot(str)
-    def _stream_in_queue(self, ch_name: str):
+    def _channel_live(self, ch_name: str):
         ch_index = list(self._channels.keys()).index(ch_name)
-        self._widget_list_channels.set_stream_status(ch_index,
-                                                     ChannelStatus.QUEUE)
-    @pyqtSlot(str, int)
-    def _stream_rec(self, ch_name: str, pid: int):
-        self.log_tabs.add_new_process_tab(ch_name, pid)
-        ch_index = list(self._channels.keys()).index(ch_name)
-        self._widget_list_channels.set_stream_status(ch_index,
-                                                     ChannelStatus.REC)
-    @pyqtSlot(str)
-    def _stream_fail(self, ch_name: str):
-        ch_index = list(self._channels.keys()).index(ch_name)
-        self._widget_list_channels.set_stream_status(ch_index,
-                                                     ChannelStatus.FAIL)
+        self.widget_channels_tree.set_channel_status(ch_index,
+                                                     Status.Channel.LIVE)
+
+    @pyqtSlot(str, int, str)
+    def _stream_rec(self, ch_name: str, pid: int, stream_name: str):
+        self.log_tabs.stream_rec(pid)
+        self.widget_channels_tree.add_child_process_item(ch_name, pid,
+                                                         stream_name)
+
+    @pyqtSlot(int)
+    def _stream_finished(self, pid: int):
+        self.log_tabs.stream_finished(pid)
+        self.widget_channels_tree.stream_finished(pid)
+
+    @pyqtSlot(int)
+    def _stream_fail(self, pid: int):
+        self.log_tabs.stream_failed(pid)
+        self.widget_channels_tree.stream_failed(pid)
 
 
 class Master(QThread):
@@ -370,15 +411,16 @@ class Master(QThread):
     """
 
     s_log = pyqtSignal(int, str)
-    s_stream_off = pyqtSignal(str)
-    s_stream_in_queue = pyqtSignal(str)
+    s_channel_off = pyqtSignal(str)
+    s_channel_live = pyqtSignal(str)
+    s_next_scan_timer = pyqtSignal(int)
 
     def __init__(self, channels: dict[str, ChannelData]):
         super(Master, self).__init__()
         self.channels: dict[str, ChannelData] = channels
         self.last_status: dict[str, bool] = {}
         self.scheduled_streams: dict[str, bool] = {}
-        self.scanner_sleep: int = DEFAULT_SCANNER_SLEEP * 60
+        self.scanner_sleep_sec: int = DEFAULT_SCANNER_SLEEP_SEC
         self.Slave = Slave()
         self.Slave.s_log[int, str].connect(self.log)
 
@@ -392,17 +434,24 @@ class Master(QThread):
         try:
             while True:
                 raise_on_stop_threads()
-                for channel_name in list(self.channels):
+                for channel_name in list(self.channels.keys()):
                     self._check_for_stream(channel_name)
                 raise_on_stop_threads()
 
-                # Waiting with a check to stop
-                for sec in range(0, self.scanner_sleep, 5):
-                    sleep(sec)
-                    raise_on_stop_threads()
+                self.wait_and_check()
         except StopThreads:
             pass
         self.log(INFO, "Scanning channels stopped.")
+
+    def wait_and_check(self):
+        """ Waiting with a check to stop """
+        c = self.scanner_sleep_sec
+        while c != 0:
+            self.s_next_scan_timer[int].emit(c)
+            sleep(1)
+            raise_on_stop_threads()
+            c -= 1
+        self.s_next_scan_timer[int].emit(c)
 
     def channel_status_changed(self, channel_name: str, status: bool):
         if (channel_name in self.last_status
@@ -423,7 +472,7 @@ class Master(QThread):
                     url, download=False,
                     extra_info={'quiet': True, 'verbose': False})
             except yt_dlp.utils.UserNotLive:
-                self.s_stream_off[str].emit(channel_name)
+                self.s_channel_off[str].emit(channel_name)
                 return
             except yt_dlp.utils.DownloadError as e:
                 # Check for live flag and last status
@@ -435,18 +484,19 @@ class Master(QThread):
                     self.log(WARNING,
                              f"{channel_name} stream in {leftover}.")
                     self.scheduled_streams[channel_name] = True
-                self.s_stream_off[str].emit(channel_name)
+                self.s_channel_off[str].emit(channel_name)
                 return
             except Exception as e:
                 logger.exception(e)
                 self.log(ERROR, f"<yt-dlp>: {str(e)}")
-                self.s_stream_off[str].emit(channel_name)
+                self.s_channel_off[str].emit(channel_name)
                 return
 
         # Check channel stream is on
         if info_dict.get("is_live"):
             if self.channel_status_changed(channel_name, True):
                 self.log(INFO, f"Channel {channel_name} is online.")
+                self.s_channel_live[str].emit(channel_name)
 
             # Check if Slave is ready
             THREADS_LOCK.lock()
@@ -459,33 +509,33 @@ class Master(QThread):
                 stream_data = {
                     KEY_CHANNEL_NAME: channel_name,
                     KEY_CHANNEL_SVQ: self.channels[channel_name].get_svq(),
-                    'url': info_dict.get('webpage_url')}
+                    'url': info_dict['webpage_url'],
+                    'title': info_dict['title'],
+                }
                 self.Slave.queue.put(stream_data, block=True)
-
                 self.log(INFO, f"Recording {channel_name} added to queue.")
-                self.s_stream_in_queue[str].emit(channel_name)
 
         elif self.channel_status_changed(channel_name, False):
-            self.s_stream_off[str].emit(channel_name)
             self.log(INFO, f"Channel {channel_name} is offline.")
+            self.s_channel_off[str].emit(channel_name)
 
 
 class Slave(QThread):
     # TODO: add memory check
     s_log = pyqtSignal(int, str)
     s_proc_log = pyqtSignal(int, str)
-    s_stream_rec = pyqtSignal(str, int)
-    s_stream_off = pyqtSignal(str)
-    s_stream_fail = pyqtSignal(str)
+    s_stream_rec = pyqtSignal(str, int, str)
+    s_stream_finished = pyqtSignal(int)
+    s_stream_fail = pyqtSignal(int)
 
     def __init__(self):
         super().__init__()
         self.ytdlp_command = YTDLP_COMMAND
         self.path_to_ffmpeg = PATH_TO_FFMPEG
-        self.active_downloading_channels: list[str] = []
         self.queue: Queue[dict[str, str]] = Queue(-1)
         self.max_downloads: int = DEFAULT_MAX_DOWNLOADS
         self.running_downloads: list[RecordProcess] = []
+        self.pids_to_stop: list[int] = []
         self.temp_logs: dict[int, IO] = {}
         self.last_log_byte: dict[int, int] = {}
 
@@ -501,9 +551,13 @@ class Slave(QThread):
                 if self.ready_to_download() and not self.queue.empty():
                     stream_data = self.queue.get()
                     self.record_stream(stream_data)
+                self.check_for_stop()
         except StopThreads:
             self.stop_downloads()
         self.log(INFO, "Recorder stopped.")
+
+    def get_names_of_active_channels(self):
+        return [proc.channel for proc in self.running_downloads]
 
     @raise_on_stop_threads
     def check_running_downloads(self):
@@ -520,14 +574,13 @@ class Slave(QThread):
                 continue
             # Handling finished process
             if ret_code == 0:
-                self.s_stream_off[str].emit(proc.channel)
+                self.s_stream_finished[int].emit(proc.pid)
                 self.log(INFO, f"Recording {proc.channel} finished.")
             else:
-                self.s_stream_fail[str].emit(proc.channel)
+                self.s_stream_fail[int].emit(proc.pid)
                 self.log(ERROR, f"Recording {proc.channel} "
                                 "stopped with an error code!")
             self.handle_process_finished(proc)
-            self.active_downloading_channels.remove(proc.channel)
 
         self.running_downloads = list_running
 
@@ -546,6 +599,7 @@ class Slave(QThread):
         channel_name: str = stream_data[KEY_CHANNEL_NAME]
         stream_url: str = stream_data['url']
         records_quality: tuple = stream_data[KEY_CHANNEL_SVQ]
+        stream_title: str = stream_data['title']
 
         channel_dir = str(get_channel_dir(channel_name))
         file_name = '%(title)s.%(ext)s'
@@ -559,21 +613,23 @@ class Slave(QThread):
             '-P', channel_dir,
             '-o', file_name,
             '--ffmpeg-location', self.path_to_ffmpeg,
-            # Загружать с самого начала
+            # Downloading from the beginning
             '--live-from-start',
-            # Сразу в один файл
+            # Merge all downloaded parts into two
+            # tracks (video and audio) during download
             '--no-part',
-            # Обновить сокет при падении
+            # Update sockets when failed
             '--socket-timeout', '5',
             '--retries', '10',
             '--retry-sleep', '5',
-            # Без прогресс-бара
+            # No progress bar
             '--no-progress',
-            # Качество записи
+            # Record quality
             *records_quality,
-            # Объединить в один файл mp4 или mkv
+            # Merge into one mp4 or mkv file
             '--merge-output-format', 'mp4/mkv',
-            # Снизить шанс поломки при форсивной остановке
+            # Reducing the chance of file corruption
+            # if download is interrupted
             '--hls-use-mpegts',
         ]
 
@@ -581,10 +637,27 @@ class Slave(QThread):
         proc.channel = channel_name
         self.last_log_byte[proc.pid] = 0
         self.temp_logs[proc.pid] = temp_log
-        self.active_downloading_channels.append(channel_name)
         self.running_downloads.append(proc)
 
-        self.s_stream_rec[str, int].emit(channel_name, proc.pid)
+        self.s_stream_rec[str, int, str].emit(
+            channel_name, proc.pid, stream_title)
+
+    def check_for_stop(self):
+        if not self.pids_to_stop:
+            return
+        for proc in self.running_downloads:
+            if proc.pid in self.pids_to_stop:
+                self.pids_to_stop.remove(proc.pid)
+                self.send_process_stop(proc)
+
+    def send_process_stop(self, proc: RecordProcess):
+        self.log(INFO, f"Stopping process {proc.pid}...")
+        try:
+            # Fixme:
+            #  ValueError raises when Windows couldn't indentify SIGINT
+            proc.send_signal(SIGINT)
+        except ValueError:
+            pass
 
     @logger_handler
     def stop_downloads(self):
@@ -592,31 +665,28 @@ class Slave(QThread):
         if not self.running_downloads:
             return
         self.log(INFO, "Stopping records.")
-        # FIXME: refactor iteration
+
+        for proc in self.running_downloads:
+            self.send_process_stop(proc)
+
         for proc in self.running_downloads:
             try:
-                self.log(INFO, f"Stopping process {proc.pid}...")
-                # FIXME: subprocess on Windows cannot identify SIGINT
-                proc.send_signal(SIGINT)
                 ret = proc.wait(12)  # TODO: add value editing to settings
                 if ret == 0:
-                    self.s_stream_off[str].emit(proc.channel)
+                    self.s_stream_finished[int].emit(proc.pid)
                 else:
-                    self.s_stream_fail[str].emit(proc.channel)
+                    self.s_stream_fail[int].emit(proc.pid)
                     self.log(ERROR, "Error while stopping channel {} record :("
                              .format(proc.channel))
-            # Fixme:
-            #  ValueError raises when SIGINT couldn't be handled by Windows
-            except (subprocess.TimeoutExpired, ValueError):
+            except subprocess.TimeoutExpired:
                 proc.kill()
-                self.s_stream_fail[str].emit(proc.channel)
+                self.s_stream_fail[int].emit(proc.pid)
                 self.log(WARNING,
                          "Recording[{}] of channel {} has been killed!".format(
                              proc.pid, proc.channel))
             finally:
                 self.handle_process_finished(proc)
         self.running_downloads = []
-        self.active_downloading_channels = []
 
     def handle_process_output(self, proc: RecordProcess):
         last_byte = self.last_log_byte[proc.pid]
