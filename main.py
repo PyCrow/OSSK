@@ -235,6 +235,10 @@ class MainWindow(QWidget):
         left_vbox.addWidget(self.widget_channels_tree)
 
         self.log_tabs = LogTabWidget()
+        self.widget_channels_tree.s_open_tab_by_pid[int, str].connect(
+            self.log_tabs.open_tab_by_pid)
+        self.widget_channels_tree.s_close_tab_by_pid[int].connect(
+            self.log_tabs.process_hide)
 
         main_hbox = QHBoxLayout()
         main_hbox.addLayout(left_vbox, 1)
@@ -383,7 +387,7 @@ class MainWindow(QWidget):
 
     @pyqtSlot(str, int, str)
     def _stream_rec(self, ch_name: str, pid: int, stream_name: str):
-        self.log_tabs.stream_rec(stream_name, pid)
+        self.log_tabs.stream_rec(pid)
         self.widget_channels_tree.add_child_process_item(ch_name, pid,
                                                          stream_name)
 
