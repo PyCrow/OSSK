@@ -207,12 +207,12 @@ class MainWindow(QWidget):
         hbox_channels_list_header.addWidget(button_add_channel)
 
         self.widget_channels_tree = ChannelsTree()
-        self.widget_channels_tree.on_click_settings.triggered.connect(
+        self.widget_channels_tree.on_click_channel_settings.triggered.connect(
             self.open_channel_settings)
-        self.widget_channels_tree.on_click_delete.triggered.connect(
+        self.widget_channels_tree.on_click_delete_channel.triggered.connect(
             self.del_channel)
         self.widget_channels_tree.on_click_stop.triggered.connect(
-            self.stop_signle_process)
+            self.stop_single_process)
 
         left_vbox = QVBoxLayout()
         left_vbox.addWidget(button_settings)
@@ -221,7 +221,6 @@ class MainWindow(QWidget):
         left_vbox.addWidget(self.widget_channels_tree)
 
         self.log_tabs = LogTabWidget()
-        self.widget_channels_tree.on_click_open_tab.triggered.connect(print)
 
         main_hbox = QHBoxLayout()
         main_hbox.addLayout(left_vbox, 1)
@@ -275,7 +274,7 @@ class MainWindow(QWidget):
         self.Master.start()
 
     @pyqtSlot()
-    def stop_signle_process(self):
+    def stop_single_process(self):
         pid = self.widget_channels_tree.selected_process_id()
         THREADS_LOCK.lock()
         self.Master.Slave.pids_to_stop.append(pid)

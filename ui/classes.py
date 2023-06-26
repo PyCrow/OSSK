@@ -105,13 +105,15 @@ class ChannelsTree(QTreeView):
         self._map_pid_item: dict[int, RecordProcessItem] = {}
 
         self.selected_item_index: QModelIndex | None = None
-        self.on_click_settings = QAction("Channel settings", self)
-        self.on_click_delete = QAction("Delete channel", self)
-        self.on_click_open_tab = QAction("Open tab", self)  # TODO: connect
+        self.on_click_channel_settings = QAction("Channel settings", self)
+        self.on_click_delete_channel = QAction("Delete channel", self)
+        self._on_click_open_tab = QAction("Open tab", self)
+        # self._on_click_open_tab.triggered.connect(self._send_open_tab_by_pid)
         self.on_click_stop = QAction("Stop process", self)
-        self.on_click_hide = QAction("Hide", self)
-        self.on_click_hide.triggered.connect(self._del_finished_process_item)
+        self._on_click_hide = QAction("Hide", self)
+        self._on_click_hide.triggered.connect(self._del_finished_process_item)
 
+    # Channel management
     def add_channel_item(self, channel_name: str, alias: str):
         text = alias if alias else channel_name
         item = ChannelItem(text)
@@ -121,16 +123,24 @@ class ChannelsTree(QTreeView):
         self._model.appendRow(item)
 
     def del_channel_item(self):
-        del self._map_channel_item[self._selected_item().channel]
-        self._model.removeRow(self._selected_item().row())
+        selected_channel_item = self._selected_item()
+        del self._map_channel_item[selected_channel_item.channel]
+        self._model.removeRow(selected_channel_item.row())
 
+    # Selected item functions
     def _selected_item(self) -> ChannelItem | RecordProcessItem:
         return self._model.itemFromIndex(self.selected_item_index)
 
     def selected_channel_name(self) -> str:
+        """
+        Triggering by own on_click_delete_channel through the controller
+        """
         return self._selected_item().channel
 
     def selected_process_id(self) -> int:
+        """
+        Triggering by own on_click_stop through the controller
+        """
         return self._selected_item().pid
 
     @pyqtSlot()
@@ -175,19 +185,19 @@ class ChannelsTree(QTreeView):
 
     def _single_channel_menu(self) -> QMenu:
         menu = QMenu(self)
-        menu.addAction(self.on_click_settings)
+        menu.addAction(self.on_click_channel_settings)
         menu.addSeparator()
-        menu.addAction(self.on_click_delete)
+        menu.addAction(self.on_click_delete_channel)
         return menu
 
     def _single_process_menu(self, process_finished: bool) -> QMenu:
         menu = QMenu(self)
-        menu.addAction(self.on_click_open_tab)
+        menu.addAction(self._on_click_open_tab)
         menu.addSeparator()
         if not process_finished:
             menu.addAction(self.on_click_stop)
         else:
-            menu.addAction(self.on_click_hide)
+            menu.addAction(self._on_click_hide)
         return menu
 
     def set_channel_status(self, ch_index: int, status_id: int):
@@ -454,6 +464,10 @@ class ChannelSettingsWindow(QWidget):
         self.setLayout(vbox)
 
     def update_data(self, channel_name: str, alias: str, svq: str):
+        """
+        Triggering by ChannelsTree.on_click_channel_settings
+        through the controller.
+        """
         self.label_channel.setText(channel_name)
         self.line_alias.setText(alias)
         index_svq = self.box_svq.findText(svq)
