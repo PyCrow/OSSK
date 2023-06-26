@@ -21,6 +21,7 @@ from utils import check_exists_and_callable, is_callable
 
 
 logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
 logger.addHandler(logging_handler)
 
 

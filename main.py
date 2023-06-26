@@ -43,6 +43,7 @@ THREADS_LOCK = QMutex()
 
 # Local logging config
 logger = logging.getLogger()
+logger.setLevel(DEBUG)
 logger.addHandler(logging_handler)
 DEBUG_LEVELS = {DEBUG: 'DEBUG', INFO: 'INFO',
                 WARNING: 'WARNING', ERROR: 'ERROR'}
