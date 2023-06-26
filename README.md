@@ -9,7 +9,12 @@ The event log is stored in the `stream_saver.log` file.
 Channel management:
 - To add a channel, enter its YouTube tag in the box and click "Add channel"
 - To configure a channel, right-click on its line and select "Channel settings"
-- To delete a channel, right-click on its line and select "Delete channel"
+- To delete a channel, right-click on its line and select "Delete channel" (can't delete a channel if it have non-finished download processes)
+
+Process management:
+ - to view the output of a process, open its context menu and select "Open tab"
+ - to stop the process, select "Stop process" in its context menu
+ - in order to hide a completed process, select "Hide process" from its context menu (the downloaded file *will not* be deleted).
 
 Settings (`settings` file):
 - in the _ffmpeg field_, enter the path to the ffmpeg library / .exe file
@@ -34,7 +39,12 @@ Channel settings:
 Управление каналами:
 - для добавления канала введите его YouTube тэг в поле, и нажмите "Добавить канал"
 - для настройки канала щелкните по его строке правой кнопкой и выберите "Настройки канал"
-- для удаления канала щелкните по его строке правой кнопкой и выберите "Удалить канал"
+- для удаления канала щелкните по его строке правой кнопкой и выберите "Удалить канал" (нельзя удалить канал, если у него имеются незавершенные процессы загрузки)
+
+Управление процессами загрузки:
+- для просмотра вывода процесса, откройте контекстное меню процесса и выберите "Открыть вкладку"
+- для остановки процесса, выберите в его контекстном меню "Остановить процесс"
+- для того, чтобы скрыть завершенный процесс, выберите в его контекстном меню "Скрыть процесс" (загруженный файл *не* будет удален).
 
 Настройки (файл `settings`):
 - в поле _ffmpeg_ введите путь до библиотеки / .exe-файла ffmpeg;
