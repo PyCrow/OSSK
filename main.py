@@ -541,7 +541,7 @@ class Slave(QThread):
                 continue
             # Handling finished process
             if ret_code == 0:
-                self.s_stream_finished[int].emit(proc.channel)
+                self.s_stream_finished[int].emit(proc.pid)
                 self.log(INFO, f"Recording {proc.channel} finished.")
             else:
                 self.s_stream_fail[int].emit(proc.pid)
