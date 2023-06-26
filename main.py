@@ -498,7 +498,6 @@ class Slave(QThread):
         super().__init__()
         self.ytdlp_command = YTDLP_COMMAND
         self.path_to_ffmpeg = PATH_TO_FFMPEG
-        self.active_downloading_channels: list[str] = []
         self.queue: Queue[dict[str, str]] = Queue(-1)
         self.max_downloads: int = DEFAULT_MAX_DOWNLOADS
         self.running_downloads: list[RecordProcess] = []
@@ -545,7 +544,6 @@ class Slave(QThread):
                 self.log(ERROR, f"Recording {proc.channel} "
                                 "stopped with an error code!")
             self.handle_process_finished(proc)
-            self.active_downloading_channels.remove(proc.channel)
 
         self.running_downloads = list_running
 
@@ -600,7 +598,6 @@ class Slave(QThread):
         proc.channel = channel_name
         self.last_log_byte[proc.pid] = 0
         self.temp_logs[proc.pid] = temp_log
-        self.active_downloading_channels.append(channel_name)
         self.running_downloads.append(proc)
 
         self.s_stream_rec[str, int, str].emit(
@@ -651,7 +648,6 @@ class Slave(QThread):
             finally:
                 self.handle_process_finished(proc)
         self.running_downloads = []
-        self.active_downloading_channels = []
 
     def handle_process_output(self, proc: RecordProcess):
         last_byte = self.last_log_byte[proc.pid]
