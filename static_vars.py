@@ -39,12 +39,14 @@ logging_handler.setLevel(logging.DEBUG)
 logging_handler.setFormatter(logging.Formatter(
     '%(asctime)s [%(levelname)s] %(message)s', "%Y-%m-%d %H:%M:%S"))
 
+
+# Define classes
 class ChannelData:
     """
     Channel data
      - name
      - alias (editable)
-     - svq (stream video quality)
+     - _svq (stream video quality)
     """
     def __init__(self, name: str):
         """
@@ -71,6 +73,7 @@ class ChannelData:
             KEY_CHANNEL_ALIAS: self.alias,
             KEY_CHANNEL_SVQ: self._svq,
         }
+
     @staticmethod
     def j_load(data: dict):
         channel = ChannelData(data.get(KEY_CHANNEL_NAME, UNKNOWN))
