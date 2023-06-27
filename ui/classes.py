@@ -3,19 +3,16 @@ from __future__ import annotations
 import logging
 from datetime import datetime
 
-from PyQt5.QtCore import pyqtSlot, Qt, QModelIndex, pyqtSignal
-from PyQt5.QtGui import QStandardItemModel, QStandardItem, QLinearGradient, \
-    QColor, QMouseEvent
-from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QPushButton, QLineEdit, QListView, QAbstractItemView,
-    QLabel, QSpinBox, QMenu, QAction, QComboBox, QTabWidget, QTreeView
-)
+from PyQt5.QtCore import pyqtSignal, pyqtSlot, QModelIndex, Qt
+from PyQt5.QtGui import (QColor, QLinearGradient, QMouseEvent,
+                         QStandardItem, QStandardItemModel)
+from PyQt5.QtWidgets import (QAbstractItemView, QAction, QComboBox,
+                             QHBoxLayout, QLabel, QLineEdit, QListView, QMenu,
+                             QPushButton, QSpinBox, QTabWidget, QTreeView,
+                             QVBoxLayout, QWidget)
 
-from static_vars import (
-    AVAILABLE_STREAM_RECORD_QUALITIES,
-    logging_handler,
-    RecordProcess,
-)
+from static_vars import (AVAILABLE_STREAM_RECORD_QUALITIES, logging_handler,
+                         RecordProcess, STYLESHEET_PATH)
 from ui.dynamic_style import STYLE
 from utils import check_exists_and_callable, is_callable
 
@@ -72,6 +69,77 @@ class RecordProcessItem(QStandardItem):
         self.pid: int | None = None
         self.finished: bool = False
         super(RecordProcessItem, self).__init__(*args, **kwargs)
+
+
+class MainWindow(QWidget):
+    def __init__(self):
+        super(MainWindow, self).__init__()
+        self._init_ui()
+
+    def _init_ui(self):
+        self.setWindowTitle("StreamSaver")
+        self.resize(980, 600)
+
+        # Settings window
+        self.settings_window = SettingsWindow()
+        button_settings = QPushButton('Settings')
+        button_settings.clicked.connect(self.settings_window.show)
+
+        self.field_add_channels = QLineEdit()
+        self.field_add_channels.setPlaceholderText("Enter channel name")
+
+        self.button_add_channel = QPushButton("Add")
+
+        hbox_channels_tree_header = QHBoxLayout()
+        hbox_channels_tree_header.addWidget(QLabel("Monitored channels"))
+        hbox_channels_tree_header.addWidget(self.button_add_channel)
+
+        self.label_next_scan_timer = QLabel("Next scan timer")
+
+        self.widget_channels_tree = ChannelsTree()
+
+        left_vbox = QVBoxLayout()
+        left_vbox.addWidget(button_settings)
+        left_vbox.addWidget(self.field_add_channels)
+        left_vbox.addLayout(hbox_channels_tree_header)
+        left_vbox.addWidget(self.label_next_scan_timer,
+                            alignment=Qt.AlignHCenter)
+        left_vbox.addWidget(self.widget_channels_tree)
+
+        self.log_tabs = LogTabWidget()
+        self.widget_channels_tree.s_open_tab_by_pid[int, str].connect(
+            self.log_tabs.open_tab_by_pid)
+        self.widget_channels_tree.s_close_tab_by_pid[int].connect(
+            self.log_tabs.process_hide)
+
+        main_hbox = QHBoxLayout()
+        main_hbox.addLayout(left_vbox, 1)
+        main_hbox.addWidget(self.log_tabs, 2)
+
+        self.start_button = QPushButton("Start")
+        self.stop_button = QPushButton("Stop all")
+        hbox_master_buttons = QHBoxLayout()
+        hbox_master_buttons.addWidget(self.start_button)
+        hbox_master_buttons.addWidget(self.stop_button)
+
+        main_box = QVBoxLayout()
+        main_box.addLayout(main_hbox)
+        main_box.addLayout(hbox_master_buttons)
+
+        self.setLayout(main_box)
+
+        # Style loading
+        style = STYLESHEET_PATH.read_text()
+        self.setStyleSheet(style)
+        self.settings_window.setStyleSheet(style)
+
+        # Channel settings window
+        self.channel_settings_window = ChannelSettingsWindow()
+        self.channel_settings_window.setStyleSheet(style)
+
+    @pyqtSlot(int)
+    def update_next_scan(self, seconds: int):
+        self.label_next_scan_timer.setText(f"Next scan in: {seconds} seconds")
 
 
 class ListView(QListView):

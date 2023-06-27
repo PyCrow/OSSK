@@ -11,11 +11,8 @@ import subprocess
 import tempfile
 
 import yt_dlp
-from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot, QMutex, Qt
-from PyQt5.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLineEdit,
-    QLabel
-)
+from PyQt5.QtCore import QObject, QMutex, QThread, pyqtSignal, pyqtSlot
+from PyQt5.QtWidgets import QApplication
 
 from static_vars import (
     logging_handler,
@@ -24,9 +21,8 @@ from static_vars import (
     DEFAULT_MAX_DOWNLOADS, DEFAULT_SCANNER_SLEEP_SEC,
     KEY_CHANNEL_NAME, KEY_CHANNEL_SVQ,
     ChannelData, StopThreads, RecordProcess,
-    STYLESHEET_PATH, FLAG_LIVE)
-from ui.classes import ChannelsTree, LogTabWidget, Status, \
-    SettingsWindow, ChannelSettingsWindow
+    FLAG_LIVE)
+from ui.classes import MainWindow, Status
 from ui.dynamic_style import STYLE
 from utils import (
     get_settings, save_settings,
@@ -112,24 +108,65 @@ def raise_on_stop_threads(func=None):
     return _wrapper
 
 
-class MainWindow(QWidget):
+class Controller(QObject):
     def __init__(self):
-        super(MainWindow, self).__init__()
+        super(Controller, self).__init__()
         self._channels: dict[str, ChannelData] = {}
 
-        self._init_ui()
-
+        self.Window = MainWindow()
         self.Master = Master(self._channels)
+
+        self._connect_ui_signals()
+        self._connect_model_signals()
+
+        self._load_config()
+
+        self.Window.show()
+
+    def _connect_ui_signals(self):
+        # Settings
+        self.Window.settings_window.button_apply.clicked.connect(
+            self._save_config)
+
+        # Channel management
+        self.Window.field_add_channels.textChanged[str].connect(
+            self.highlight_on_exists)
+        self.Window.button_add_channel.clicked.connect(self.add_channel)
+
+        # Management buttons
+        self.Window.start_button.clicked.connect(self.run_master)
+        self.Window.stop_button.clicked.connect(set_stop_threads)
+
+        # Channel tree
+        self.Window.widget_channels_tree.on_click_channel_settings.triggered. \
+            connect(self.open_channel_settings)
+        self.Window.widget_channels_tree.on_click_delete_channel.triggered. \
+            connect(self.del_channel)
+        self.Window.widget_channels_tree.on_click_stop.triggered. \
+            connect(self.stop_single_process)
+
+        # Channel settings
+        self.Window.channel_settings_window.button_apply.clicked.connect(
+            self.clicked_apply_channel_settings)
+
+    def _connect_model_signals(self):
+        # New message signals
         self.Master.s_log[int, str].connect(self.add_log_message)
+        self.Master.Slave.s_proc_log[int, str].connect(
+            self.Window.log_tabs.proc_log)
+
+        # Channel status signals
         self.Master.s_channel_off[str].connect(self._channel_off)
         self.Master.s_channel_live[str].connect(self._channel_live)
-        self.Master.s_next_scan_timer[int].connect(self._update_next_scan)
-        self.Master.Slave.s_proc_log[int, str].connect(self.log_tabs.proc_log)
+
+        # Next scan timer signal
+        self.Master.s_next_scan_timer[int].connect(
+            self.Window.update_next_scan)
+
+        # Stream status signals
         self.Master.Slave.s_stream_rec[str, int, str].connect(self._stream_rec)
         self.Master.Slave.s_stream_finished[int].connect(self._stream_finished)
         self.Master.Slave.s_stream_fail[int].connect(self._stream_fail)
-
-        self._load_config()
 
     def _load_config(self):
         """ Loading configuration """
@@ -142,7 +179,7 @@ class MainWindow(QWidget):
         for channel_data in config.get(KEY_CHANNELS, {}):
             channel_name = channel_data[KEY_CHANNEL_NAME]
             self._channels[channel_name] = ChannelData.j_load(channel_data)
-            self.widget_channels_tree.add_channel_item(
+            self.Window.widget_channels_tree.add_channel_item(
                 channel_name,
                 self._channels[channel_name].alias,
             )
@@ -153,10 +190,12 @@ class MainWindow(QWidget):
         max_downloads = config.get(KEY_MAX_DOWNLOADS, DEFAULT_MAX_DOWNLOADS)
         scanner_sleep = config.get(KEY_SCANNER_SLEEP_SEC,
                                    DEFAULT_SCANNER_SLEEP_SEC)
-        self.settings_window.field_ffmpeg.setText(ffmpeg_path)
-        self.settings_window.field_ytdlp.setText(ytdlp_command)
-        self.settings_window.box_max_downloads.setValue(max_downloads)
-        self.settings_window.box_scanner_sleep.setValue(scanner_sleep // 60)
+        self.Window.settings_window.field_ffmpeg.setText(ffmpeg_path)
+        self.Window.settings_window.field_ytdlp.setText(ytdlp_command)
+        self.Window.settings_window.\
+            box_max_downloads.setValue(max_downloads)
+        self.Window.settings_window.\
+            box_scanner_sleep.setValue(scanner_sleep // 60)
 
         # Update Master and Slave
         self.Master.scanner_sleep_sec = scanner_sleep
@@ -167,12 +206,14 @@ class MainWindow(QWidget):
     @pyqtSlot()
     def _save_config(self):
         """ Saving configuration """
-        ffmpeg_path = (self.settings_window.field_ffmpeg.text()
+        ffmpeg_path = (self.Window.settings_window.field_ffmpeg.text()
                        or PATH_TO_FFMPEG)
-        ytdlp_command = (self.settings_window.field_ytdlp.text()
+        ytdlp_command = (self.Window.settings_window.field_ytdlp.text()
                          or YTDLP_COMMAND)
-        max_downloads = self.settings_window.box_max_downloads.value()
-        scanner_sleep_sec = self.settings_window.box_scanner_sleep.value() * 60
+        max_downloads = self.Window.settings_window.\
+            box_max_downloads.value()
+        scanner_sleep_sec = self.Window.settings_window.\
+            box_scanner_sleep.value() * 60
 
         suc = save_settings({
             KEY_FFMPEG: ffmpeg_path,
@@ -195,89 +236,14 @@ class MainWindow(QWidget):
 
         self.add_log_message(INFO, "Threads settings updated.")
 
-    def _init_ui(self):
-        self.setWindowTitle("StreamSaver")
-        self.resize(980, 600)
-
-        # Settings window
-        self.settings_window = SettingsWindow()
-        self.settings_window.button_apply.clicked.connect(self._save_config)
-        button_settings = QPushButton('Settings')
-        button_settings.clicked[bool].connect(self.settings_window.show)
-
-        self._field_add_channels = QLineEdit()
-        self._field_add_channels.setPlaceholderText("Enter channel name")
-        self._field_add_channels.textChanged[str].connect(
-            self.highlight_on_exists)
-
-        button_add_channel = QPushButton("Add")
-        button_add_channel.clicked[bool].connect(self.add_channel)
-
-        hbox_channels_list_header = QHBoxLayout()
-        hbox_channels_list_header.addWidget(QLabel("Monitored channels"))
-        hbox_channels_list_header.addWidget(button_add_channel)
-
-        self.label_next_scan_timer = QLabel("Next scan timer")
-
-        self.widget_channels_tree = ChannelsTree()
-        self.widget_channels_tree.on_click_channel_settings.triggered.connect(
-            self.open_channel_settings)
-        self.widget_channels_tree.on_click_delete_channel.triggered.connect(
-            self.del_channel)
-        self.widget_channels_tree.on_click_stop.triggered.connect(
-            self.stop_single_process)
-
-        left_vbox = QVBoxLayout()
-        left_vbox.addWidget(button_settings)
-        left_vbox.addWidget(self._field_add_channels)
-        left_vbox.addLayout(hbox_channels_list_header)
-        left_vbox.addWidget(self.label_next_scan_timer,
-                            alignment=Qt.AlignHCenter)
-        left_vbox.addWidget(self.widget_channels_tree)
-
-        self.log_tabs = LogTabWidget()
-        self.widget_channels_tree.s_open_tab_by_pid[int, str].connect(
-            self.log_tabs.open_tab_by_pid)
-        self.widget_channels_tree.s_close_tab_by_pid[int].connect(
-            self.log_tabs.process_hide)
-
-        main_hbox = QHBoxLayout()
-        main_hbox.addLayout(left_vbox, 1)
-        main_hbox.addWidget(self.log_tabs, 2)
-
-        self.start_button = QPushButton("Start")
-        self.start_button.clicked[bool].connect(self.run_master)
-        self.stop_button = QPushButton("Stop all")
-        self.stop_button.clicked[bool].connect(set_stop_threads)
-        hbox_master_buttons = QHBoxLayout()
-        hbox_master_buttons.addWidget(self.start_button)
-        hbox_master_buttons.addWidget(self.stop_button)
-
-        main_box = QVBoxLayout()
-        main_box.addLayout(main_hbox)
-        main_box.addLayout(hbox_master_buttons)
-
-        self.setLayout(main_box)
-
-        # Style loading
-        style = STYLESHEET_PATH.read_text()
-        self.setStyleSheet(style)
-        self.settings_window.setStyleSheet(style)
-
-        # Channel settings window
-        self.channel_settings_window = ChannelSettingsWindow()
-        self.channel_settings_window.button_apply.clicked.connect(
-            self.clicked_apply_channel_settings)
-        self.channel_settings_window.setStyleSheet(style)
-
     @pyqtSlot()
     def run_master(self):
-        ytdlp_command = self.settings_window.field_ytdlp.text()
+        ytdlp_command = self.Window.settings_window.field_ytdlp.text()
         if not is_callable(ytdlp_command):
             self.add_log_message(WARNING, "yt-dlp not found.")
             return
 
-        ffmpeg_path = self.settings_window.field_ffmpeg.text()
+        ffmpeg_path = self.Window.settings_window.field_ffmpeg.text()
         if not check_exists_and_callable(ffmpeg_path):
             self.add_log_message(WARNING, "ffmpeg not found.")
             return
@@ -292,7 +258,7 @@ class MainWindow(QWidget):
 
     @pyqtSlot()
     def stop_single_process(self):
-        pid = self.widget_channels_tree.selected_process_id()
+        pid = self.Window.widget_channels_tree.selected_process_id()
         THREADS_LOCK.lock()
         self.Master.Slave.pids_to_stop.append(pid)
         THREADS_LOCK.unlock()
@@ -300,16 +266,13 @@ class MainWindow(QWidget):
     @pyqtSlot(int, str)
     def add_log_message(self, level: int, text: str):
         logger.log(level, text)
-        self.log_tabs.add_common_message(f"[{DEBUG_LEVELS[level]}] {text}")
-
-    @pyqtSlot(int)
-    def _update_next_scan(self, seconds: int):
-        self.label_next_scan_timer.setText(f"Next scan in: {seconds} seconds")
+        message = f"[{DEBUG_LEVELS[level]}] {text}"
+        self.Window.log_tabs.add_common_message(message)
 
     @pyqtSlot()
     def add_channel(self):
         """ Add a channel to the scan list """
-        channel_name = self._field_add_channels.text()
+        channel_name = self.Window.field_add_channels.text()
         if not channel_name or channel_name in self._channels:
             return
         channel_data = ChannelData(channel_name)
@@ -318,14 +281,14 @@ class MainWindow(QWidget):
         THREADS_LOCK.lock()
         self.Master.channels[channel_name] = channel_data
         THREADS_LOCK.unlock()
-        self.widget_channels_tree.add_channel_item(
+        self.Window.widget_channels_tree.add_channel_item(
             channel_name, channel_data.alias)
-        self._field_add_channels.clear()
+        self.Window.field_add_channels.clear()
 
     @pyqtSlot()
     def del_channel(self):
         """ Delete a channel from the scan list """
-        channel_name = self.widget_channels_tree.selected_channel_name()
+        channel_name = self.Window.widget_channels_tree.selected_channel_name()
         if channel_name not in self._channels:
             return
 
@@ -345,62 +308,62 @@ class MainWindow(QWidget):
         if channel_name in self.Master.channels:
             del self.Master.channels[channel_name]
         THREADS_LOCK.unlock()
-        self.widget_channels_tree.del_channel_item()
+        self.Window.widget_channels_tree.del_channel_item()
 
     @pyqtSlot(str)
     def highlight_on_exists(self, ch_name: str):
         status = STYLE.LINE_INVALID if ch_name in self._channels \
             else STYLE.LINE_VALID
-        self._field_add_channels.setStyleSheet(status)
+        self.Window.field_add_channels.setStyleSheet(status)
 
     @pyqtSlot()
     def open_channel_settings(self):
-        channel_name = self.widget_channels_tree.selected_channel_name()
+        channel_name = self.Window.widget_channels_tree.selected_channel_name()
         if channel_name not in self._channels:
             return
-        self.channel_settings_window.update_data(
+        self.Window.channel_settings_window.update_data(
             channel_name,
             self._channels[channel_name].alias,
             self._channels[channel_name].clean_svq()
         )
-        self.channel_settings_window.show()
+        self.Window.channel_settings_window.show()
 
     @pyqtSlot()
     def clicked_apply_channel_settings(self):
-        channel_name, alias, svq = self.channel_settings_window.get_data()
-        self._channels[channel_name].alias = alias
-        self._channels[channel_name].set_svq(svq)
+        ch_name, alias, svq = self.Window.channel_settings_window.get_data()
+        self._channels[ch_name].alias = alias
+        self._channels[ch_name].set_svq(svq)
         self._save_config()
-        channel_row_text = alias if alias else channel_name
-        self.widget_channels_tree.set_channel_alias(channel_row_text)
+        channel_row_text = alias if alias else ch_name
+        self.Window.widget_channels_tree.set_channel_alias(channel_row_text)
 
     @pyqtSlot(str)
     def _channel_off(self, ch_name: str):
         ch_index = list(self._channels.keys()).index(ch_name)
-        self.widget_channels_tree.set_channel_status(ch_index,
-                                                     Status.Channel.OFF)
+        self.Window.widget_channels_tree.set_channel_status(
+            ch_index, Status.Channel.OFF)
 
     @pyqtSlot(str)
     def _channel_live(self, ch_name: str):
         ch_index = list(self._channels.keys()).index(ch_name)
-        self.widget_channels_tree.set_channel_status(ch_index,
-                                                     Status.Channel.LIVE)
+        self.Window.widget_channels_tree.set_channel_status(
+            ch_index, Status.Channel.LIVE)
 
     @pyqtSlot(str, int, str)
     def _stream_rec(self, ch_name: str, pid: int, stream_name: str):
-        self.log_tabs.stream_rec(pid)
-        self.widget_channels_tree.add_child_process_item(ch_name, pid,
-                                                         stream_name)
+        self.Window.log_tabs.stream_rec(pid)
+        self.Window.widget_channels_tree.add_child_process_item(
+            ch_name, pid, stream_name)
 
     @pyqtSlot(int)
     def _stream_finished(self, pid: int):
-        self.log_tabs.stream_finished(pid)
-        self.widget_channels_tree.stream_finished(pid)
+        self.Window.log_tabs.stream_finished(pid)
+        self.Window.widget_channels_tree.stream_finished(pid)
 
     @pyqtSlot(int)
     def _stream_fail(self, pid: int):
-        self.log_tabs.stream_failed(pid)
-        self.widget_channels_tree.stream_failed(pid)
+        self.Window.log_tabs.stream_failed(pid)
+        self.Window.widget_channels_tree.stream_failed(pid)
 
 
 class Master(QThread):
@@ -708,8 +671,7 @@ class Slave(QThread):
 if __name__ == '__main__':
     try:
         app = QApplication(sys.argv)
-        window = MainWindow()
-        window.show()
+        controller = Controller()
 
         sys.exit(app.exec_())
     except Exception as e_:
