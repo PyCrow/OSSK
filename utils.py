@@ -46,7 +46,7 @@ def get_settings() -> tuple[bool, dict | None]:
 def save_settings(config: dict) -> bool:
     try:
         with open(SETTINGS_FILE, 'w') as conf_file:
-            json.dump(config, conf_file)
+            json.dump(config, conf_file, indent=4)
         return True
     except Exception as e:
         logger.error(e, exc_info=True)
