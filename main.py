@@ -119,14 +119,14 @@ class Controller(QObject):
         self._connect_ui_signals()
         self._connect_model_signals()
 
-        self._load_config()
+        self._load_settings()
 
         self.Window.show()
 
     def _connect_ui_signals(self):
         # Settings
         self.Window.settings_window.button_apply.clicked.connect(
-            self._save_config)
+            self._save_settings)
 
         # Channel management
         self.Window.field_add_channels.textChanged[str].connect(
@@ -161,14 +161,14 @@ class Controller(QObject):
 
         # Next scan timer signal
         self.Master.s_next_scan_timer[int].connect(
-            self.Window.update_next_scan)
+            self.Window.update_next_scan_timer)
 
         # Stream status signals
         self.Master.Slave.s_stream_rec[str, int, str].connect(self._stream_rec)
         self.Master.Slave.s_stream_finished[int].connect(self._stream_finished)
         self.Master.Slave.s_stream_fail[int].connect(self._stream_fail)
 
-    def _load_config(self):
+    def _load_settings(self):
         """ Loading configuration """
         succ, config = get_settings()
         if not succ:
@@ -184,28 +184,30 @@ class Controller(QObject):
                 self._channels[channel_name].alias,
             )
 
-        # (ffmpeg path will be checked on field "textChanged" signal)
         ffmpeg_path = config.get(KEY_FFMPEG, PATH_TO_FFMPEG)
         ytdlp_command = config.get(KEY_YTDLP, YTDLP_COMMAND)
         max_downloads = config.get(KEY_MAX_DOWNLOADS, DEFAULT_MAX_DOWNLOADS)
-        scanner_sleep = config.get(KEY_SCANNER_SLEEP_SEC,
-                                   DEFAULT_SCANNER_SLEEP_SEC)
-        self.Window.settings_window.field_ffmpeg.setText(ffmpeg_path)
-        self.Window.settings_window.field_ytdlp.setText(ytdlp_command)
-        self.Window.settings_window.\
-            box_max_downloads.setValue(max_downloads)
-        self.Window.settings_window.\
-            box_scanner_sleep.setValue(scanner_sleep // 60)
+        scanner_sleep_sec = config.get(KEY_SCANNER_SLEEP_SEC,
+                                       DEFAULT_SCANNER_SLEEP_SEC)
+        # Convert seconds to minutes
+        scanner_sleep_sec = scanner_sleep_sec // 60
+
+        # Update settings view
+        self.Window.set_common_settings_values(
+            scanner_sleep_sec, max_downloads, ffmpeg_path, ytdlp_command)
 
         # Update Master and Slave
-        self.Master.scanner_sleep_sec = scanner_sleep
-        self.Master.Slave.path_to_ffmpeg = ffmpeg_path
-        self.Master.Slave.max_downloads = max_downloads
-        self.Master.Slave.ytdlp_command = ytdlp_command
+        self._update_threads(scanner_sleep_sec, max_downloads,
+                             ffmpeg_path, ytdlp_command)
 
     @pyqtSlot()
-    def _save_config(self):
-        """ Saving configuration """
+    def _save_settings(self):
+        """
+        Saving configuration
+        1. Collecting settings from UI
+        2. Preparing settings data to save
+        3. Saving settings
+        """
         # Collecting common settings values
         ffmpeg_path, ytdlp_command, max_downloads, scanner_sleep_sec = \
             self.Window.get_common_settings_values()
@@ -228,16 +230,24 @@ class Controller(QObject):
         if not suc:
             self.add_log_message(ERROR, "Settings saving error!")
 
-        # Update Master's and Slave's configurations
-        # when scanning and recording in progress
+        # Update Master and Slave while scanning and recording in progress
+        self._update_threads(scanner_sleep_sec, max_downloads,
+                             ffmpeg_path, ytdlp_command)
+
+        self.add_log_message(INFO, "Threads settings updated.")
+
+    @pyqtSlot()
+    def _update_threads(self,
+                        scanner_sleep_sec: int,
+                        max_downloads: int,
+                        ffmpeg_path: str,
+                        ytdlp_command: str):
         THREADS_LOCK.lock()
         self.Master.scanner_sleep_sec = scanner_sleep_sec
         self.Master.Slave.max_downloads = max_downloads
         self.Master.Slave.path_to_ffmpeg = ffmpeg_path
         self.Master.Slave.ytdlp_command = ytdlp_command
         THREADS_LOCK.unlock()
-
-        self.add_log_message(INFO, "Threads settings updated.")
 
     @pyqtSlot()
     def run_master(self):
@@ -280,7 +290,7 @@ class Controller(QObject):
             return
         channel_data = ChannelData(channel_name)
         self._channels[channel_name] = channel_data
-        self._save_config()
+        self._save_settings()
         THREADS_LOCK.lock()
         self.Master.channels[channel_name] = channel_data
         THREADS_LOCK.unlock()
@@ -306,7 +316,7 @@ class Controller(QObject):
             return
 
         del self._channels[channel_name]
-        self._save_config()
+        self._save_settings()
         THREADS_LOCK.lock()
         if channel_name in self.Master.channels:
             del self.Master.channels[channel_name]
@@ -336,7 +346,7 @@ class Controller(QObject):
         ch_name, alias, svq = self.Window.channel_settings_window.get_data()
         self._channels[ch_name].alias = alias
         self._channels[ch_name].set_svq(svq)
-        self._save_config()
+        self._save_settings()
         channel_row_text = alias if alias else ch_name
         self.Window.widget_channels_tree.set_channel_alias(channel_row_text)
 

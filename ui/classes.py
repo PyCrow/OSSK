@@ -144,8 +144,15 @@ class MainWindow(QWidget):
         scanner_sleep_sec = self.settings_window.box_scanner_sleep.value()
         return ffmpeg_path, ytdlp_command, max_downloads, scanner_sleep_sec
 
+    def set_common_settings_values(self, scanner_sleep_sec, max_downloads,
+                                   ffmpeg_path, ytdlp_command):
+        self.settings_window.field_ffmpeg.setText(ffmpeg_path)
+        self.settings_window.field_ytdlp.setText(ytdlp_command)
+        self.settings_window.box_max_downloads.setValue(max_downloads)
+        self.settings_window.box_scanner_sleep.setValue(scanner_sleep_sec)
+
     @pyqtSlot(int)
-    def update_next_scan(self, seconds: int):
+    def update_next_scan_timer(self, seconds: int):
         self.label_next_scan_timer.setText(f"Next scan in: {seconds} seconds")
 
 
