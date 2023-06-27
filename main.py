@@ -261,7 +261,8 @@ class Controller(QObject):
             self.add_log_message(WARNING, "ffmpeg not found.")
             return
 
-        if self.Master.isRunning() or self.Master.Slave.isRunning():
+        if self.Master.isRunning() and self.Master.Slave.isRunning():
+            self.Master.set_start_force_scan()
             return
 
         global GLOBAL_STOP
@@ -394,6 +395,7 @@ class Master(QThread):
 
     def __init__(self, channels: dict[str, ChannelData]):
         super(Master, self).__init__()
+        self._start_force_scan = False
         self.channels: dict[str, ChannelData] = channels
         self.last_status: dict[str, bool] = {}
         self.scheduled_streams: dict[str, bool] = {}
@@ -403,6 +405,9 @@ class Master(QThread):
 
     def log(self, level: int, text: str):
         self.s_log[int, str].emit(level, text)
+
+    def set_start_force_scan(self):
+        self._start_force_scan = True
 
     def run(self) -> None:
         self.log(INFO, "Scanning channels started.")
@@ -423,7 +428,7 @@ class Master(QThread):
     def wait_and_check(self):
         """ Waiting with a check to stop """
         c = self.scanner_sleep_sec
-        while c != 0:
+        while c != 0 and not self._start_force_scan:
             self.s_next_scan_timer[int].emit(c)
             sleep(1)
             raise_on_stop_threads()
@@ -495,6 +500,8 @@ class Master(QThread):
         elif self.channel_status_changed(channel_name, False):
             self.log(INFO, f"Channel {channel_name} is offline.")
             self.s_channel_off[str].emit(channel_name)
+
+        self._start_force_scan = False
 
 
 class Slave(QThread):
