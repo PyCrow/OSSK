@@ -137,6 +137,13 @@ class MainWindow(QWidget):
         self.channel_settings_window = ChannelSettingsWindow()
         self.channel_settings_window.setStyleSheet(style)
 
+    def get_common_settings_values(self) -> tuple[str, str, int, int]:
+        ffmpeg_path = self.settings_window.field_ffmpeg.text()
+        ytdlp_command = self.settings_window.field_ytdlp.text()
+        max_downloads = self.settings_window.box_max_downloads.value()
+        scanner_sleep_sec = self.settings_window.box_scanner_sleep.value()
+        return ffmpeg_path, ytdlp_command, max_downloads, scanner_sleep_sec
+
     @pyqtSlot(int)
     def update_next_scan(self, seconds: int):
         self.label_next_scan_timer.setText(f"Next scan in: {seconds} seconds")

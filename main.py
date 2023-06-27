@@ -206,21 +206,24 @@ class Controller(QObject):
     @pyqtSlot()
     def _save_config(self):
         """ Saving configuration """
-        ffmpeg_path = (self.Window.settings_window.field_ffmpeg.text()
-                       or PATH_TO_FFMPEG)
-        ytdlp_command = (self.Window.settings_window.field_ytdlp.text()
-                         or YTDLP_COMMAND)
-        max_downloads = self.Window.settings_window.\
-            box_max_downloads.value()
-        scanner_sleep_sec = self.Window.settings_window.\
-            box_scanner_sleep.value() * 60
+        # Collecting common settings values
+        ffmpeg_path, ytdlp_command, max_downloads, scanner_sleep_sec = \
+            self.Window.get_common_settings_values()
+        # Set static ffmpeg path if field is empty
+        ffmpeg_path = ffmpeg_path or PATH_TO_FFMPEG
+        # Set static ytdlp run command if field is empty
+        ytdlp_command = ytdlp_command or YTDLP_COMMAND
+        # Convert minutes to seconds
+        scanner_sleep_sec = scanner_sleep_sec * 60
+        # Channels classes to list of dicts
+        list_channels = [i.j_dump() for i in self._channels.values()]
 
         suc = save_settings({
             KEY_FFMPEG: ffmpeg_path,
             KEY_YTDLP: ytdlp_command,
             KEY_MAX_DOWNLOADS: max_downloads,
             KEY_SCANNER_SLEEP_SEC: scanner_sleep_sec,
-            KEY_CHANNELS: [i.j_dump() for i in self._channels.values()],
+            KEY_CHANNELS: list_channels,
         })
         if not suc:
             self.add_log_message(ERROR, "Settings saving error!")
