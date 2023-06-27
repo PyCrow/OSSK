@@ -419,6 +419,7 @@ class Master(QThread):
                 raise_on_stop_threads()
                 for channel_name in list(self.channels.keys()):
                     self._check_for_stream(channel_name)
+                self._start_force_scan = False
                 raise_on_stop_threads()
 
                 self.wait_and_check()
@@ -501,8 +502,6 @@ class Master(QThread):
         elif self.channel_status_changed(channel_name, False):
             self.log(INFO, f"Channel {channel_name} is offline.")
             self.s_channel_off[str].emit(channel_name)
-
-        self._start_force_scan = False
 
 
 class Slave(QThread):
