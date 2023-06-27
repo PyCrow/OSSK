@@ -189,12 +189,13 @@ class Controller(QObject):
         max_downloads = config.get(KEY_MAX_DOWNLOADS, DEFAULT_MAX_DOWNLOADS)
         scanner_sleep_sec = config.get(KEY_SCANNER_SLEEP_SEC,
                                        DEFAULT_SCANNER_SLEEP_SEC)
-        # Convert seconds to minutes
-        scanner_sleep_sec = scanner_sleep_sec // 60
 
         # Update settings view
         self.Window.set_common_settings_values(
-            scanner_sleep_sec, max_downloads, ffmpeg_path, ytdlp_command)
+            scanner_sleep_sec // 60,  # Convert seconds to minutes
+            max_downloads,
+            ffmpeg_path,
+            ytdlp_command)
 
         # Update Master and Slave
         self._update_threads(scanner_sleep_sec, max_downloads,
