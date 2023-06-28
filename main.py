@@ -16,10 +16,7 @@ from PyQt5.QtWidgets import QApplication
 
 from static_vars import (
     logging_handler,
-    KEY_FFMPEG, KEY_YTDLP, KEY_CHANNELS, KEY_MAX_DOWNLOADS,
-    KEY_SCANNER_SLEEP_SEC, KEY_PROC_TERM_TIMOUT,
-    DEFAULT_MAX_DOWNLOADS, DEFAULT_SCANNER_SLEEP_SEC, DEFAULT_PROC_TERM_TIMOUT,
-    KEY_CHANNEL_NAME, KEY_CHANNEL_SVQ,
+    KEYS, DEFAULT,
     ChannelData, StopThreads, RecordProcess,
     FLAG_LIVE)
 from ui.view import MainWindow, Status
@@ -176,21 +173,21 @@ class Controller(QObject):
             return
 
         # Getting channels from config, saving them and adding to GUI
-        for channel_data in config.get(KEY_CHANNELS, {}):
-            channel_name = channel_data[KEY_CHANNEL_NAME]
+        for channel_data in config.get(KEYS.CHANNELS, {}):
+            channel_name = channel_data[KEYS.CHANNEL_NAME]
             self._channels[channel_name] = ChannelData.j_load(channel_data)
             self.Window.widget_channels_tree.add_channel_item(
                 channel_name,
                 self._channels[channel_name].alias,
             )
 
-        ffmpeg_path = config.get(KEY_FFMPEG, PATH_TO_FFMPEG)
-        ytdlp_command = config.get(KEY_YTDLP, YTDLP_COMMAND)
-        max_downloads = config.get(KEY_MAX_DOWNLOADS, DEFAULT_MAX_DOWNLOADS)
-        scanner_sleep_sec = config.get(KEY_SCANNER_SLEEP_SEC,
-                                       DEFAULT_SCANNER_SLEEP_SEC)
-        proc_term_timeout = config.get(KEY_PROC_TERM_TIMOUT,
-                                       DEFAULT_PROC_TERM_TIMOUT)
+        ffmpeg_path = config.get(KEYS.FFMPEG, PATH_TO_FFMPEG)
+        ytdlp_command = config.get(KEYS.YTDLP, YTDLP_COMMAND)
+        max_downloads = config.get(KEYS.MAX_DOWNLOADS, DEFAULT.MAX_DOWNLOADS)
+        scanner_sleep_sec = config.get(KEYS.SCANNER_SLEEP_SEC,
+                                       DEFAULT.SCANNER_SLEEP_SEC)
+        proc_term_timeout = config.get(KEYS.PROC_TERM_TIMOUT,
+                                       DEFAULT.PROC_TERM_TIMOUT)
 
         # Update settings view
         self.Window.set_common_settings_values(
@@ -227,12 +224,12 @@ class Controller(QObject):
         list_channels = [i.j_dump() for i in self._channels.values()]
 
         suc = save_settings({
-            KEY_FFMPEG: ffmpeg_path,
-            KEY_YTDLP: ytdlp_command,
-            KEY_MAX_DOWNLOADS: max_downloads,
-            KEY_SCANNER_SLEEP_SEC: scanner_sleep_sec,
-            KEY_PROC_TERM_TIMOUT: proc_term_timeout,
-            KEY_CHANNELS: list_channels,
+            KEYS.FFMPEG: ffmpeg_path,
+            KEYS.YTDLP: ytdlp_command,
+            KEYS.MAX_DOWNLOADS: max_downloads,
+            KEYS.SCANNER_SLEEP_SEC: scanner_sleep_sec,
+            KEYS.PROC_TERM_TIMOUT: proc_term_timeout,
+            KEYS.CHANNELS: list_channels,
         })
         if not suc:
             self.add_log_message(ERROR, "Settings saving error!")
@@ -410,7 +407,7 @@ class Master(QThread):
         self.channels: dict[str, ChannelData] = channels
         self.last_status: dict[str, bool] = {}
         self.scheduled_streams: dict[str, bool] = {}
-        self.scanner_sleep_sec: int = DEFAULT_SCANNER_SLEEP_SEC
+        self.scanner_sleep_sec: int = DEFAULT.SCANNER_SLEEP_SEC
         self.Slave = Slave()
         self.Slave.s_log[int, str].connect(self.log)
 
@@ -501,8 +498,8 @@ class Master(QThread):
             # TODO: make sending data more thread-safe
             if channel_name not in running_downloads:
                 stream_data = {
-                    KEY_CHANNEL_NAME: channel_name,
-                    KEY_CHANNEL_SVQ: self.channels[channel_name].get_svq(),
+                    KEYS.CHANNEL_NAME: channel_name,
+                    KEYS.CHANNEL_SVQ: self.channels[channel_name].get_svq(),
                     'url': info_dict['webpage_url'],
                     'title': info_dict['title'],
                 }
@@ -532,8 +529,8 @@ class Slave(QThread):
 
         self.path_to_ffmpeg: str = PATH_TO_FFMPEG
         self.ytdlp_command: str = YTDLP_COMMAND
-        self.max_downloads: int = DEFAULT_MAX_DOWNLOADS
-        self.proc_term_timeout: int = DEFAULT_PROC_TERM_TIMOUT
+        self.max_downloads: int = DEFAULT.MAX_DOWNLOADS
+        self.proc_term_timeout: int = DEFAULT.PROC_TERM_TIMOUT
 
     def log(self, level: int, text: str):
         self.s_log[int, str].emit(level, text)
@@ -592,9 +589,9 @@ class Slave(QThread):
     def record_stream(self, stream_data: dict[str, str | tuple]):
         """ Starts stream recording """
 
-        channel_name: str = stream_data[KEY_CHANNEL_NAME]
+        channel_name: str = stream_data[KEYS.CHANNEL_NAME]
         stream_url: str = stream_data['url']
-        records_quality: tuple = stream_data[KEY_CHANNEL_SVQ]
+        records_quality: tuple = stream_data[KEYS.CHANNEL_SVQ]
         stream_title: str = stream_data['title']
 
         channel_dir = str(get_channel_dir(channel_name))

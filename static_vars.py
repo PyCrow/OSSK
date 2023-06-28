@@ -5,28 +5,6 @@ from subprocess import Popen
 
 UNKNOWN = '<UNKNOWN>'
 
-KEY_FFMPEG = 'ffmpeg'
-KEY_YTDLP = 'ytdlp'
-KEY_MAX_DOWNLOADS = 'max_downloads'
-KEY_SCANNER_SLEEP_SEC = 'scanner_sleep'
-KEY_PROC_TERM_TIMOUT = 'proc_term_timeout'
-KEY_CHANNELS = 'channels'
-
-DEFAULT_MAX_DOWNLOADS = 2
-DEFAULT_SCANNER_SLEEP_SEC = 300
-DEFAULT_PROC_TERM_TIMOUT = 600
-
-KEY_CHANNEL_NAME = 'name'
-KEY_CHANNEL_ALIAS, DEFAULT_CHANNEL_ALIAS = 'alias', ''
-KEY_CHANNEL_SVQ, DEFAULT_CHANNEL_SVQ = '_svq', '1080'
-
-AVAILABLE_STREAM_RECORD_QUALITIES = {
-    'best': ('-f', 'bestvideo*+bestaudio/best'),
-    '1080': ('-S', 'res:1080'),
-    '720': ('-S', 'res:720'),
-    '480': ('-S', 'res:480'),
-}
-
 CURRENT_PATH = Path().resolve()
 LOG_FILE = CURRENT_PATH.joinpath('stream_saver.log')
 SETTINGS_FILE = CURRENT_PATH.joinpath('settings')
@@ -40,6 +18,35 @@ logging_handler = logging.FileHandler(LOG_FILE, encoding='utf-8')
 logging_handler.setLevel(logging.DEBUG)
 logging_handler.setFormatter(logging.Formatter(
     '%(asctime)s [%(levelname)s] %(message)s', "%Y-%m-%d %H:%M:%S"))
+
+
+class KEYS:
+    FFMPEG = 'ffmpeg'
+    YTDLP = 'ytdlp'
+    MAX_DOWNLOADS = 'max_downloads'
+    SCANNER_SLEEP_SEC = 'scanner_sleep'
+    PROC_TERM_TIMOUT = 'proc_term_timeout'
+    CHANNELS = 'channels'
+
+    CHANNEL_NAME = 'name'
+    CHANNEL_ALIAS = 'alias'
+    CHANNEL_SVQ = '_svq'
+
+
+class DEFAULT:
+    CHANNEL_ALIAS = ''
+    CHANNEL_SVQ = '1080'
+    MAX_DOWNLOADS = 2
+    SCANNER_SLEEP_SEC = 300
+    PROC_TERM_TIMOUT = 600
+
+
+AVAILABLE_STREAM_RECORD_QUALITIES = {
+    'best': ('-f', 'bestvideo*+bestaudio/best'),
+    '1080': ('-S', 'res:1080'),
+    '720': ('-S', 'res:720'),
+    '480': ('-S', 'res:480'),
+}
 
 
 # Define classes
@@ -57,7 +64,7 @@ class ChannelData:
         Channel GUI alias can be changed in channel settings.
         """
         self.name: str = name
-        self.alias: str = DEFAULT_CHANNEL_ALIAS
+        self.alias: str = DEFAULT.CHANNEL_ALIAS
         self._svq: str = "1080"
 
     def set_svq(self, svq: str):
@@ -71,16 +78,16 @@ class ChannelData:
 
     def j_dump(self) -> dict:
         return {
-            KEY_CHANNEL_NAME: self.name,
-            KEY_CHANNEL_ALIAS: self.alias,
-            KEY_CHANNEL_SVQ: self._svq,
+            KEYS.CHANNEL_NAME: self.name,
+            KEYS.CHANNEL_ALIAS: self.alias,
+            KEYS.CHANNEL_SVQ: self._svq,
         }
 
     @staticmethod
     def j_load(data: dict):
-        channel = ChannelData(data.get(KEY_CHANNEL_NAME, UNKNOWN))
-        channel.alias = data.get(KEY_CHANNEL_ALIAS, DEFAULT_CHANNEL_ALIAS)
-        channel._svq = data.get(KEY_CHANNEL_SVQ, DEFAULT_CHANNEL_SVQ)
+        channel = ChannelData(data.get(KEYS.CHANNEL_NAME, UNKNOWN))
+        channel.alias = data.get(KEYS.CHANNEL_ALIAS, DEFAULT.CHANNEL_ALIAS)
+        channel._svq = data.get(KEYS.CHANNEL_SVQ, DEFAULT.CHANNEL_SVQ)
         return channel
 
 

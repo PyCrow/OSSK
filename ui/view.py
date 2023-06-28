@@ -11,7 +11,7 @@ from PyQt5.QtWidgets import (QAbstractItemView, QAction, QComboBox,
                              QPushButton, QSpinBox, QTabWidget, QTreeView,
                              QVBoxLayout, QWidget)
 
-from static_vars import (AVAILABLE_STREAM_RECORD_QUALITIES, logging_handler,
+from static_vars import (logging_handler, AVAILABLE_STREAM_RECORD_QUALITIES,
                          RecordProcess, STYLESHEET_PATH)
 from ui.dynamic_style import STYLE
 from utils import check_exists_and_callable, is_callable
