@@ -480,10 +480,8 @@ class SettingsWindow(QWidget):
         self.setWindowTitle("StreamSaver | Settings")
         self.setWindowModality(Qt.ApplicationModal)
 
-        self.setMinimumWidth(400)
-        self.setMaximumWidth(750)
-        self.setMinimumHeight(300)
-        self.setMaximumHeight(500)
+        self.setMinimumSize(500, 360)
+        self.setMaximumSize(550, 460)
         self.resize(500, 360)
 
         # Field: Path to ffmpeg
@@ -531,7 +529,8 @@ class SettingsWindow(QWidget):
             "0 - no restrictions.")
         hbox_max_downloads = QHBoxLayout()
         hbox_max_downloads.addWidget(label_max_downloads)
-        hbox_max_downloads.addWidget(self.box_max_downloads)
+        hbox_max_downloads.addWidget(self.box_max_downloads,
+                                     alignment=Qt.AlignRight)
 
         # Field: Time between scans
         label_scanner_sleep = QLabel("Time between scans (minutes)")
@@ -546,7 +545,8 @@ class SettingsWindow(QWidget):
             " that YouTube does not consider the scan as a DoS attack.")
         hbox_scanner_sleep = QHBoxLayout()
         hbox_scanner_sleep.addWidget(label_scanner_sleep)
-        hbox_scanner_sleep.addWidget(self.box_scanner_sleep)
+        hbox_scanner_sleep.addWidget(self.box_scanner_sleep,
+                                     alignment=Qt.AlignRight)
 
         # Field: Process termination timeout
         label_proc_term_timeout = QLabel("Process termination timeout")
@@ -564,8 +564,10 @@ class SettingsWindow(QWidget):
             " tracks of long recordings.")
         hbox_proc_term_timeout = QHBoxLayout()
         hbox_proc_term_timeout.addWidget(label_proc_term_timeout)
-        hbox_proc_term_timeout.addWidget(self.box_proc_term_timeout)
+        hbox_proc_term_timeout.addWidget(self.box_proc_term_timeout,
+                                         alignment=Qt.AlignRight)
 
+        # Field: Hide successfully finished processes
         label_hide_suc_fin_proc = QLabel("Hide successfully "
                                          "finished processes")
         self.box_hide_suc_fin_proc = QCheckBox()
@@ -573,7 +575,8 @@ class SettingsWindow(QWidget):
             "Successfully finished processes will be hidden.")
         hbox_hide_suc_fin_proc = QHBoxLayout()
         hbox_hide_suc_fin_proc.addWidget(label_hide_suc_fin_proc)
-        hbox_hide_suc_fin_proc.addWidget(self.box_hide_suc_fin_proc)
+        hbox_hide_suc_fin_proc.addWidget(self.box_hide_suc_fin_proc,
+                                         alignment=Qt.AlignRight)
 
         self.button_apply = QPushButton("Accept", self)
 
