@@ -708,6 +708,6 @@ if __name__ == '__main__':
 
         sys.exit(app.exec_())
     except Exception as e_:
-        logger.exception(e_)
+        logger.critical(e_, exc_info=True)
     finally:
         GLOBAL_STOP = True
