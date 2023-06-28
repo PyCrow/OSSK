@@ -1,4 +1,4 @@
-# Основные цвета
+# Primary colors
 _DEFAULT_BLACK = "#191919"
 _BLACK = "#000"
 _RED = "#f00"
@@ -6,7 +6,7 @@ _ORANGE = "#f90"
 _YELLOW = "#ff0"
 _GREEN = "#0f0"
 
-# Подсветка элементов
+# Elements highlight
 _DIRECT_LIGHT = "#0a0"
 
 _LINE = (
