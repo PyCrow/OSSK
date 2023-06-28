@@ -179,25 +179,19 @@ class Controller(QObject):
                 self._channels[channel_name].alias,
             )
 
-        ffmpeg_path = config.get(KEYS.FFMPEG, DEFAULT.FFMPEG)
-        ytdlp_command = config.get(KEYS.YTDLP, DEFAULT.YTDLP)
-        max_downloads = config.get(KEYS.MAX_DOWNLOADS, DEFAULT.MAX_DOWNLOADS)
-        scanner_sleep_sec = config.get(KEYS.SCANNER_SLEEP,
-                                       DEFAULT.SCANNER_SLEEP)
-        proc_term_timeout = config.get(KEYS.PROC_TERM_TIMOUT,
-                                       DEFAULT.PROC_TERM_TIMOUT)
+        config[KEYS.FFMPEG] = config.get(KEYS.FFMPEG, DEFAULT.FFMPEG)
+        config[KEYS.YTDLP] = config.get(KEYS.YTDLP, DEFAULT.YTDLP)
+        config[KEYS.MAX_DOWNLOADS] = config.get(KEYS.MAX_DOWNLOADS,
+                                                DEFAULT.MAX_DOWNLOADS)
+        config[KEYS.SCANNER_SLEEP] = config.get(KEYS.SCANNER_SLEEP,
+                                                DEFAULT.SCANNER_SLEEP)
+        config[KEYS.PROC_TERM_TIMOUT] = config.get(KEYS.PROC_TERM_TIMOUT,
+                                                   DEFAULT.PROC_TERM_TIMOUT)
+        config[KEYS.HIDE_SUC_FIN_PROC] = config.get(KEYS.HIDE_SUC_FIN_PROC,
+                                                    DEFAULT.HIDE_SUC_FIN_PROC)
 
-        # Update settings view
-        self.Window.set_common_settings_values({
-            KEYS.FFMPEG: ffmpeg_path,
-            KEYS.YTDLP: ytdlp_command,
-            KEYS.MAX_DOWNLOADS: max_downloads,
-            KEYS.SCANNER_SLEEP: scanner_sleep_sec // 60,  # Convert to min
-            KEYS.PROC_TERM_TIMOUT: proc_term_timeout,
-        })
-
-        # Update Master and Slave
-        self._update_threads(config)
+        # Update Master, Slave and views
+        self._update_settings_everywhere(config)
 
     @pyqtSlot()
     def _save_settings(self):
@@ -222,13 +216,22 @@ class Controller(QObject):
         if not suc:
             self.add_log_message(ERROR, "Settings saving error!")
 
-        # Update Master and Slave while scanning and recording in progress
-        self._update_threads(settings)
+        # Update Master, Slave and views
+        self._update_settings_everywhere(settings)
 
         self.add_log_message(DEBUG, "Settings updated.")
 
-    @pyqtSlot()
-    def _update_threads(self, settings: dict[str, str | int | list[dict]]):
+    def _update_settings_everywhere(
+            self,
+            settings: dict[str, str | int | list[dict] | bool]
+    ):
+        self._update_threads(settings)
+        self._update_views(settings)
+
+    def _update_threads(
+            self,
+            settings: dict[str, str | int | list[dict] | bool]
+    ):
         THREADS_LOCK.lock()
         self.Master.scanner_sleep_sec = settings[KEYS.SCANNER_SLEEP]
         self.Master.Slave.max_downloads = settings[KEYS.MAX_DOWNLOADS]
@@ -236,6 +239,12 @@ class Controller(QObject):
         self.Master.Slave.ytdlp_command = settings[KEYS.YTDLP]
         self.Master.Slave.proc_term_timeout = settings[KEYS.PROC_TERM_TIMOUT]
         THREADS_LOCK.unlock()
+
+    def _update_views(
+            self,
+            settings: dict[str, str | int | list[dict] | bool]
+    ):
+        self.Window.set_common_settings_values(settings)
 
     @pyqtSlot()
     def run_master(self):

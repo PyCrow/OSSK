@@ -6,7 +6,7 @@ from datetime import datetime
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, QModelIndex, Qt
 from PyQt5.QtGui import (QColor, QLinearGradient, QMouseEvent,
                          QStandardItem, QStandardItemModel)
-from PyQt5.QtWidgets import (QAbstractItemView, QAction, QComboBox,
+from PyQt5.QtWidgets import (QAbstractItemView, QAction, QCheckBox, QComboBox,
                              QHBoxLayout, QLabel, QLineEdit, QListView, QMenu,
                              QPushButton, QSpinBox, QTabWidget, QTreeView,
                              QVBoxLayout, QWidget)
@@ -158,15 +158,19 @@ class MainWindow(QWidget):
         max_downloads = self.settings_window.box_max_downloads.value()
         scanner_sleep_sec = self.settings_window.box_scanner_sleep.value()
         proc_term_timeout = self.settings_window.box_proc_term_timeout.value()
+        hide_suc_fin_proc = self.settings_window.box_hide_suc_fin_proc\
+            .isChecked()
         return {
             KEYS.FFMPEG: ffmpeg_path,
             KEYS.YTDLP: ytdlp_command,
             KEYS.MAX_DOWNLOADS: max_downloads,
             KEYS.SCANNER_SLEEP: scanner_sleep_sec,
             KEYS.PROC_TERM_TIMOUT: proc_term_timeout,
+            KEYS.HIDE_SUC_FIN_PROC: hide_suc_fin_proc,
         }
 
-    def set_common_settings_values(self, settings: dict[str, str | int]):
+    def set_common_settings_values(self,
+                                   settings: dict[str, str | int | bool]):
         self.settings_window.field_ffmpeg.setText(settings[KEYS.FFMPEG])
         self.settings_window.field_ytdlp.setText(settings[KEYS.YTDLP])
         self.settings_window.box_max_downloads.setValue(
@@ -175,6 +179,10 @@ class MainWindow(QWidget):
             settings[KEYS.SCANNER_SLEEP])
         self.settings_window.box_proc_term_timeout.setValue(
             settings[KEYS.PROC_TERM_TIMOUT])
+        self.settings_window.box_hide_suc_fin_proc.setChecked(
+            settings[KEYS.HIDE_SUC_FIN_PROC])
+        self.widget_channels_tree.hide_suc_fin_proc = \
+            settings[KEYS.HIDE_SUC_FIN_PROC]
 
     @pyqtSlot(int)
     def update_next_scan_timer(self, seconds: int):
@@ -197,6 +205,11 @@ class ChannelsTree(QTreeView):
 
     def __init__(self):
         super(ChannelsTree, self).__init__()
+        self.hide_suc_fin_proc = False
+        self.selected_item_index: QModelIndex | None = None
+        self._init_ui()
+
+    def _init_ui(self):
         self.setMinimumWidth(250)
         self.setMinimumHeight(135)
 
@@ -209,7 +222,6 @@ class ChannelsTree(QTreeView):
         self._map_channel_item: dict[str, ChannelItem] = {}
         self._map_pid_item: dict[int, RecordProcessItem] = {}
 
-        self.selected_item_index: QModelIndex | None = None
         self.on_click_channel_settings = QAction("Channel settings", self)
         self.on_click_delete_channel = QAction("Delete channel", self)
         self._on_click_open_tab = QAction("Open tab", self)
@@ -321,9 +333,16 @@ class ChannelsTree(QTreeView):
         self.s_close_tab_by_pid[int].emit(process_item.pid)
 
     def stream_finished(self, pid: int):
-        self._map_pid_item[pid].finished = True
-        color = Status.Stream.foreground(Status.Stream.OFF)
-        self._map_pid_item[pid].setForeground(color)
+        process_item = self._map_pid_item[pid]
+
+        if self.hide_suc_fin_proc:
+            channel_item = process_item.parent()
+            channel_item.removeRow(process_item.row())
+            del self._map_pid_item[process_item.pid]
+        else:
+            process_item.finished = True
+            color = Status.Stream.foreground(Status.Stream.OFF)
+            process_item.setForeground(color)
 
     def stream_failed(self, pid: int):
         self._map_pid_item[pid].finished = True
@@ -547,6 +566,15 @@ class SettingsWindow(QWidget):
         hbox_proc_term_timeout.addWidget(label_proc_term_timeout)
         hbox_proc_term_timeout.addWidget(self.box_proc_term_timeout)
 
+        label_hide_suc_fin_proc = QLabel("Hide successfully "
+                                         "finished processes")
+        self.box_hide_suc_fin_proc = QCheckBox()
+        self.box_hide_suc_fin_proc.setToolTip(
+            "Successfully finished processes will be hidden.")
+        hbox_hide_suc_fin_proc = QHBoxLayout()
+        hbox_hide_suc_fin_proc.addWidget(label_hide_suc_fin_proc)
+        hbox_hide_suc_fin_proc.addWidget(self.box_hide_suc_fin_proc)
+
         self.button_apply = QPushButton("Accept", self)
 
         vbox = QVBoxLayout()
@@ -559,6 +587,8 @@ class SettingsWindow(QWidget):
         vbox.addLayout(hbox_scanner_sleep)
         vbox.addStretch(1)
         vbox.addLayout(hbox_proc_term_timeout)
+        vbox.addStretch(1)
+        vbox.addLayout(hbox_hide_suc_fin_proc)
         vbox.addStretch(2)
         vbox.addWidget(self.button_apply)
 
