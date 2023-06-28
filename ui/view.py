@@ -28,26 +28,41 @@ class Status:
         OFF = 0
         LIVE = 1
 
-        color_map = {OFF: QColor(50, 50, 50),
-                     LIVE: QColor(0, 180, 0)}
+        _color_map = {OFF: QColor(50, 50, 50),
+                      LIVE: QColor(0, 180, 0)}
+
+        @staticmethod
+        def gradient(status_id: int) -> QLinearGradient:
+            color = Status.Channel._color_map[status_id]
+            return Status._smooth_gradient(color)
 
     class Stream:
         OFF = 0
         REC = 1
         FAIL = 2
 
-        color_map = {OFF: QColor(50, 50, 50),
-                     REC: QColor(0, 180, 0),
-                     FAIL: QColor(180, 0, 0)}
+        _color_map = {OFF: QColor(50, 50, 50),
+                      REC: QColor(0, 180, 0),
+                      FAIL: QColor(180, 0, 0)}
 
-    @staticmethod
-    def get_channel_status_gradient(status_id) -> QLinearGradient:
-        color = Status.Channel.color_map[status_id]
-        return Status._smooth_gradient(color)
+        @staticmethod
+        def foreground(status_id: int) -> QColor:
+            return Status.Stream._color_map[status_id]
 
-    @staticmethod
-    def get_stream_status_foreground(status_id) -> QColor:
-        return Status.Stream.color_map[status_id]
+    class Message:
+        DEBUG = 10
+        INFO = 20
+        WARNING = 30
+        ERROR = 40
+
+        _color_map = {DEBUG: QColor(120, 120, 120),
+                      INFO: QColor(0, 255, 0),
+                      WARNING: QColor(255, 255, 0),
+                      ERROR: QColor(255, 0, 0)}
+
+        @staticmethod
+        def foreground(level: int) -> QColor:
+            return Status.Message._color_map[level]
 
     @staticmethod
     def _smooth_gradient(qcolor: QColor):
@@ -172,11 +187,6 @@ class ListView(QListView):
         self.setWordWrap(True)
         self.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
 
-    def add_str_item(self, text: str):
-        item = QStandardItem(text)
-        item.setEditable(False)
-        self._model.appendRow(item)
-
 
 class ChannelsTree(QTreeView):
     s_open_tab_by_pid = pyqtSignal(int, str)
@@ -243,7 +253,7 @@ class ChannelsTree(QTreeView):
     def set_channel_status(self, ch_index: int, status_id: int):
         """ Sets channel's row color """
         # TODO: make it with a dynamic_style or any other way
-        color = Status.get_channel_status_gradient(status_id)
+        color = Status.Channel.gradient(status_id)
         self._model.item(ch_index).setBackground(color)
 
     # Context menus
@@ -309,12 +319,12 @@ class ChannelsTree(QTreeView):
 
     def stream_finished(self, pid: int):
         self._map_pid_item[pid].finished = True
-        color = Status.get_stream_status_foreground(Status.Stream.OFF)
+        color = Status.Stream.foreground(Status.Stream.OFF)
         self._map_pid_item[pid].setForeground(color)
 
     def stream_failed(self, pid: int):
         self._map_pid_item[pid].finished = True
-        color = Status.get_stream_status_foreground(Status.Stream.FAIL)
+        color = Status.Stream.foreground(Status.Stream.FAIL)
         self._map_pid_item[pid].setForeground(color)
 
 
@@ -334,13 +344,14 @@ class LogTabWidget(QTabWidget):
         self._common_tab = LogWidget()
         self.addTab(self._common_tab, "Common")
 
-    def add_common_message(self, text: str):
+    def add_common_message(self, text: str, level: int):
         """
         Print message to tab "Common"
 
         :param text: Message text
+        :param level: Message level (to set font color)
         """
-        self._common_tab.add_message(text)
+        self._common_tab.add_message(text, level)
 
     def open_tab_by_pid(self, pid: int, stream_title: str):
         tab_index = self.addTab(self._map_pid_logwidget[pid], stream_title)
@@ -424,11 +435,17 @@ class LogWidget(ListView):
         self.setMinimumHeight(200)
         self.process = process
 
-    def add_message(self, text):
+    def add_message(self, text: str, level: int | None = None):
         message = f"{self.time} {text}"
-        self.add_str_item(message)
+        item = QStandardItem(message)
+        item.setEditable(False)
+        if level is not None:
+            item.setForeground(Status.Message.foreground(level))
+
+        self._model.appendRow(item)
         if self._model.rowCount() > self._items_limit:
             self._model.removeRow(0)
+
         self.scrollToBottom()
 
 

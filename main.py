@@ -241,7 +241,7 @@ class Controller(QObject):
         self._update_threads(scanner_sleep_sec, max_downloads,
                              ffmpeg_path, ytdlp_command, proc_term_timeout)
 
-        self.add_log_message(INFO, "Threads settings updated.")
+        self.add_log_message(DEBUG, "Settings updated.")
 
     @pyqtSlot()
     def _update_threads(
@@ -292,7 +292,7 @@ class Controller(QObject):
     def add_log_message(self, level: int, text: str):
         logger.log(level, text)
         message = f"[{DEBUG_LEVELS[level]}] {text}"
-        self.Window.log_tabs.add_common_message(message)
+        self.Window.log_tabs.add_common_message(message, level)
 
     @pyqtSlot()
     def add_channel(self):
@@ -677,7 +677,7 @@ class Slave(QThread):
             except subprocess.TimeoutExpired:
                 proc.kill()
                 self.s_stream_fail[int].emit(proc.pid)
-                self.log(WARNING,
+                self.log(ERROR,
                          "Recording[{}] of channel {} has been killed!".format(
                              proc.pid, proc.channel))
             finally:
