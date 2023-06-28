@@ -447,6 +447,8 @@ class SettingsWindow(QWidget):
         self.setMaximumHeight(500)
         self.resize(500, 360)
 
+        # Field: Path to ffmpeg
+        label_ffmpeg = QLabel("Path to ffmpeg")
         self.field_ffmpeg = QLineEdit(parent=self)
         self.field_ffmpeg.setPlaceholderText(
             "Enter path to ffmpeg")
@@ -455,10 +457,14 @@ class SettingsWindow(QWidget):
             "Checks:\n"
             "1. Is the specified path available as a file.\n"
             "2. Is the specified file can be called.\n"
-            "The field is highlighted in red if the path file is"
-            " not available."
-        )
+            "The field is highlighted in red if the path file is\n"
+            " not available.")
+        hbox_ffmpeg = QVBoxLayout()
+        hbox_ffmpeg.addWidget(label_ffmpeg)
+        hbox_ffmpeg.addWidget(self.field_ffmpeg)
 
+        # Field: Command or path to yt-dlp
+        label_ytdlp = QLabel("Command or path to yt-dlp")
         self.field_ytdlp = QLineEdit(parent=self)
         self.field_ytdlp.setPlaceholderText(
             "Enter command or path to yt-dlp")
@@ -468,31 +474,43 @@ class SettingsWindow(QWidget):
             "1. Is called as a command.\n"
             "2. Is the specified path available as a file.\n"
             "3. Is the specified file can be called.\n"
-            "The field is highlighted in red if the path file is"
-            " not available."
-        )
+            "The field is highlighted in red if the path file is\n"
+            " not available.")
+        hbox_ytdlp = QVBoxLayout()
+        hbox_ytdlp.addWidget(label_ytdlp)
+        hbox_ytdlp.addWidget(self.field_ytdlp)
 
+        # Field: Max downloads
+        label_max_downloads = QLabel("Maximum number of synchronous downloads")
         self.box_max_downloads = QSpinBox(self)
-        self.box_max_downloads.setToolTip(
-            "Range from 1 to 50.\n"
-            "It is not recommended to set a value greater than 12 or 0.\n"
-            "0 - no restrictions."
-        )
         self.box_max_downloads.setRange(0, 50)
         self.box_max_downloads.valueChanged[int].connect(
             self._check_max_downloads)
+        self.box_max_downloads.setToolTip(
+            "Range from 1 to 50.\n"
+            "It is not recommended to set a value greater than 12 or 0.\n"
+            "0 - no restrictions.")
+        hbox_max_downloads = QHBoxLayout()
+        hbox_max_downloads.addWidget(label_max_downloads)
+        hbox_max_downloads.addWidget(self.box_max_downloads)
 
+        # Field: Time between scans
+        label_scanner_sleep = QLabel("Time between scans (minutes)")
         self.box_scanner_sleep = QSpinBox(self)
+        self.box_scanner_sleep.setRange(1, 60)
+        self.box_scanner_sleep.valueChanged[int].connect(
+            self._check_scanner_sleep)
         self.box_scanner_sleep.setToolTip(
             "Waiting time between channel scans (minutes).\n"
             "Range from 1 to 60.\n"
             "It is not recommended to set it to less than 5 minutes, so\n"
-            " that YouTube does not consider the scan as a DoS attack."
-        )
-        self.box_scanner_sleep.setRange(1, 60)
-        self.box_scanner_sleep.valueChanged[int].connect(
-            self._check_scanner_sleep)
+            " that YouTube does not consider the scan as a DoS attack.")
+        hbox_scanner_sleep = QHBoxLayout()
+        hbox_scanner_sleep.addWidget(label_scanner_sleep)
+        hbox_scanner_sleep.addWidget(self.box_scanner_sleep)
 
+        # Field: Process termination timeout
+        label_proc_term_timeout = QLabel("Process termination timeout")
         self.box_proc_term_timeout = QSpinBox(self)
         self.box_proc_term_timeout.setRange(0, 3600)
         self.box_proc_term_timeout.valueChanged[int].connect(
@@ -504,26 +522,23 @@ class SettingsWindow(QWidget):
             "When the time runs out, the process will be killed.\n"
             "It is not recommended to set it to less than 20 seconds,\n"
             " since it can take a long time to merge video and audio\n"
-            " tracks of long recordings."
-        )
+            " tracks of long recordings.")
+        hbox_proc_term_timeout = QHBoxLayout()
+        hbox_proc_term_timeout.addWidget(label_proc_term_timeout)
+        hbox_proc_term_timeout.addWidget(self.box_proc_term_timeout)
 
         self.button_apply = QPushButton("Accept", self)
 
         vbox = QVBoxLayout()
-        vbox.addWidget(QLabel("Path to ffmpeg"))
-        vbox.addWidget(self.field_ffmpeg)
+        vbox.addLayout(hbox_ffmpeg)
         vbox.addStretch(1)
-        vbox.addWidget(QLabel("Command or path to yt-dlp"))
-        vbox.addWidget(self.field_ytdlp)
+        vbox.addLayout(hbox_ytdlp)
         vbox.addStretch(1)
-        vbox.addWidget(QLabel("Maximum number of synchronous downloads"))
-        vbox.addWidget(self.box_max_downloads)
+        vbox.addLayout(hbox_max_downloads)
         vbox.addStretch(1)
-        vbox.addWidget(QLabel("Time between scans (minutes)"))
-        vbox.addWidget(self.box_scanner_sleep)
+        vbox.addLayout(hbox_scanner_sleep)
         vbox.addStretch(1)
-        vbox.addWidget(QLabel("Process termination timeout"))
-        vbox.addWidget(self.box_proc_term_timeout)
+        vbox.addLayout(hbox_proc_term_timeout)
         vbox.addStretch(2)
         vbox.addWidget(self.button_apply)
 
