@@ -22,7 +22,7 @@ from static_vars import (
     KEY_CHANNEL_NAME, KEY_CHANNEL_SVQ,
     ChannelData, StopThreads, RecordProcess,
     FLAG_LIVE)
-from ui.classes import MainWindow, Status
+from ui.view import MainWindow, Status
 from ui.dynamic_style import STYLE
 from utils import (
     get_settings, save_settings,
