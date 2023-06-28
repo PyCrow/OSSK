@@ -575,7 +575,7 @@ class Slave(QThread):
             else:
                 self.s_stream_fail[int].emit(proc.pid)
                 self.log(ERROR, f"Recording {proc.channel} "
-                                "stopped with an error code!")
+                                f"stopped with an error code: {ret_code}!")
             self.handle_process_finished(proc)
 
         self.running_downloads = list_running
