@@ -655,7 +655,7 @@ class Slave(QThread):
 
         for proc in self.running_downloads:
             try:
-                ret = proc.wait(12)  # TODO: add value editing to settings
+                ret = proc.wait(600)  # TODO: add value editing to settings
                 if ret == 0:
                     self.s_stream_finished[int].emit(proc.pid)
                 else:
