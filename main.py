@@ -679,7 +679,8 @@ class Slave(QThread):
         if line == b'':
             return
         self.last_log_byte[proc.pid] = last_byte + len(line)
-        self.s_proc_log[int, str].emit(proc.pid, line.decode('utf-8'))
+        self.s_proc_log[int, str].emit(proc.pid,
+                                       line.decode('utf-8', errors='ignore'))
 
     def handle_process_finished(self, proc: RecordProcess):
         self.handle_process_output(proc)
