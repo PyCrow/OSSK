@@ -3,16 +3,17 @@ from __future__ import annotations
 import logging
 from datetime import datetime
 
-from PyQt5.QtCore import pyqtSignal, pyqtSlot, QModelIndex, Qt
+from PyQt5.QtCore import (pyqtSignal, pyqtSlot, QCoreApplication,
+                          QModelIndex, Qt, QTranslator)
 from PyQt5.QtGui import (QColor, QLinearGradient, QMouseEvent,
                          QStandardItem, QStandardItemModel)
 from PyQt5.QtWidgets import (QAbstractItemView, QAction, QCheckBox, QComboBox,
                              QHBoxLayout, QLabel, QLineEdit, QListView, QMenu,
                              QPushButton, QSpinBox, QTabWidget, QTreeView,
-                             QVBoxLayout, QWidget)
+                             QVBoxLayout, QWidget, QApplication)
 
 from static_vars import (logging_handler, AVAILABLE_STREAM_RECORD_QUALITIES,
-                         KEYS, RecordProcess, STYLESHEET_PATH)
+                         KEYS, RecordProcess, STYLESHEET_PATH, LANGS_DIRECTORY)
 from ui.dynamic_style import STYLE
 from utils import check_exists_and_callable, is_callable
 
@@ -90,31 +91,61 @@ class MainWindow(QWidget):
     def __init__(self):
         super(MainWindow, self).__init__()
         self._init_ui()
+        self.trans = QTranslator()
+        self._tr: dict[str, str] = {}
+
+    def translate(self, lang: str):
+        # Preparing
+        self.trans.load(lang, directory=str(LANGS_DIRECTORY))
+        _app = QApplication.instance()
+        _app.installTranslator(self.trans)
+        _translate = QCoreApplication.translate
+
+        # Translating
+        self._button_settings.setText(
+            _translate('MainWindow', "Settings"))
+        self.field_add_channels.setPlaceholderText(
+            _translate('MainWindow', "Enter channel name"))
+        self.button_add_channel.setText(
+            _translate('MainWindow', "Add"))
+        self._label_monitored_channels.setText(
+            _translate('MainWindow', "Monitored channels"))
+        self.label_next_scan_timer.setText(
+            _translate('MainWindow', "Next scan timer"))
+        self.start_button.setText(
+            _translate('MainWindow', "Start"))
+        self.stop_button.setText(
+            _translate('MainWindow', "Stop all"))
+        self._tr[KEYS.SCANNER_SLEEP] = \
+            _translate('MainWindow', "Next scan in: {} seconds")
+
+        self.widget_channels_tree.translate()
 
     def _init_ui(self):
+        self.setObjectName('MainWindow')
         self.setWindowTitle("StreamSaver")
         self.resize(980, 600)
 
         # Settings window
         self.settings_window = SettingsWindow()
-        button_settings = QPushButton('Settings')
-        button_settings.clicked.connect(self.settings_window.show)
+        self._button_settings = QPushButton()
+        self._button_settings.clicked.connect(self.settings_window.show)
 
         self.field_add_channels = QLineEdit()
-        self.field_add_channels.setPlaceholderText("Enter channel name")
 
-        self.button_add_channel = QPushButton("Add")
+        self._label_monitored_channels = QLabel()
+        self.button_add_channel = QPushButton()
 
         hbox_channels_tree_header = QHBoxLayout()
-        hbox_channels_tree_header.addWidget(QLabel("Monitored channels"))
+        hbox_channels_tree_header.addWidget(self._label_monitored_channels)
         hbox_channels_tree_header.addWidget(self.button_add_channel)
 
-        self.label_next_scan_timer = QLabel("Next scan timer")
+        self.label_next_scan_timer = QLabel()
 
         self.widget_channels_tree = ChannelsTree()
 
         left_vbox = QVBoxLayout()
-        left_vbox.addWidget(button_settings)
+        left_vbox.addWidget(self._button_settings)
         left_vbox.addWidget(self.field_add_channels)
         left_vbox.addLayout(hbox_channels_tree_header)
         left_vbox.addWidget(self.label_next_scan_timer,
@@ -131,8 +162,8 @@ class MainWindow(QWidget):
         main_hbox.addLayout(left_vbox, 1)
         main_hbox.addWidget(self.log_tabs, 2)
 
-        self.start_button = QPushButton("Start")
-        self.stop_button = QPushButton("Stop all")
+        self.start_button = QPushButton()
+        self.stop_button = QPushButton()
         hbox_master_buttons = QHBoxLayout()
         hbox_master_buttons.addWidget(self.start_button)
         hbox_master_buttons.addWidget(self.stop_button)
@@ -186,7 +217,8 @@ class MainWindow(QWidget):
 
     @pyqtSlot(int)
     def update_next_scan_timer(self, seconds: int):
-        self.label_next_scan_timer.setText(f"Next scan in: {seconds} seconds")
+        self.label_next_scan_timer.setText(
+            self._tr[KEYS.SCANNER_SLEEP].format(seconds))
 
 
 class ListView(QListView):
@@ -222,14 +254,27 @@ class ChannelsTree(QTreeView):
         self._map_channel_item: dict[str, ChannelItem] = {}
         self._map_pid_item: dict[int, RecordProcessItem] = {}
 
-        self.on_click_channel_settings = QAction("Channel settings", self)
-        self.on_click_delete_channel = QAction("Delete channel", self)
-        self._on_click_open_tab = QAction("Open tab", self)
+        self.on_click_channel_settings = QAction(self)
+        self.on_click_delete_channel = QAction(self)
+        self._on_click_open_tab = QAction(self)
         self._on_click_open_tab.triggered.connect(self._send_open_tab_by_pid)
-        self.on_click_stop = QAction("Stop process", self)
-        self._on_click_hide_process = QAction("Hide", self)
+        self.on_click_stop = QAction(self)
+        self._on_click_hide_process = QAction(self)
         self._on_click_hide_process.triggered.connect(
             self._del_finished_process_item)
+
+    def translate(self):
+        _translate = QCoreApplication.translate
+        self.on_click_channel_settings.setText(
+            _translate('ChannelTree', "Channel settings"))
+        self.on_click_delete_channel.setText(
+            _translate('ChannelTree', "Delete channel"))
+        self._on_click_open_tab.setText(
+            _translate('ChannelTree', "Open tab"))
+        self.on_click_stop.setText(
+            _translate('ChannelTree', "Stop process"))
+        self._on_click_hide_process.setText(
+            _translate('ChannelTree', "Hide"))
 
     def mousePressEvent(self, e: QMouseEvent):
         self.clearSelection()
@@ -365,6 +410,10 @@ class LogTabWidget(QTabWidget):
 
         self._common_tab = LogWidget()
         self.addTab(self._common_tab, "Common")
+
+    def translate(self):
+        _translate = QCoreApplication.translate
+        self.setTabText()
 
     def add_common_message(self, text: str, level: int):
         """

@@ -108,13 +108,16 @@ class Controller(QObject):
         super(Controller, self).__init__()
         self._channels: dict[str, ChannelData] = {}
 
+        settings = self._load_settings(update=False)
+
+        # Initiate UI and services
         self.Window = MainWindow()
         self.Master = Master(self._channels)
 
         self._connect_ui_signals()
         self._connect_model_signals()
 
-        self._load_settings()
+        self._update_settings_everywhere(settings)
 
         self.Window.show()
 
@@ -163,7 +166,7 @@ class Controller(QObject):
         self.Master.Slave.s_stream_finished[int].connect(self._stream_finished)
         self.Master.Slave.s_stream_fail[int].connect(self._stream_fail)
 
-    def _load_settings(self):
+    def _load_settings(self, update: bool = True):
         """ Loading configuration """
         succ, config = get_settings()
         if not succ:
@@ -179,6 +182,7 @@ class Controller(QObject):
                 self._channels[channel_name].alias,
             )
 
+        config[KEYS.LANG] = config.get(KEYS.LANG, DEFAULT.LANG)
         config[KEYS.FFMPEG] = config.get(KEYS.FFMPEG, DEFAULT.FFMPEG)
         config[KEYS.YTDLP] = config.get(KEYS.YTDLP, DEFAULT.YTDLP)
         config[KEYS.MAX_DOWNLOADS] = config.get(KEYS.MAX_DOWNLOADS,
@@ -191,7 +195,10 @@ class Controller(QObject):
                                                     DEFAULT.HIDE_SUC_FIN_PROC)
 
         # Update Master, Slave and views
-        self._update_settings_everywhere(config)
+        if update:
+            self._update_settings_everywhere(config)
+        else:
+            return config
 
     @pyqtSlot()
     def _save_settings(self):
@@ -244,6 +251,7 @@ class Controller(QObject):
             self,
             settings: dict[str, str | int | list[dict] | bool]
     ):
+        self.Window.translate(settings[KEYS.LANG])
         self.Window.set_common_settings_values(settings)
 
     @pyqtSlot()

@@ -9,7 +9,9 @@ CURRENT_PATH = Path().resolve()
 LOG_FILE = CURRENT_PATH.joinpath('stream_saver.log')
 SETTINGS_FILE = CURRENT_PATH.joinpath('settings')
 RECORDS_PATH = CURRENT_PATH.joinpath('records')
-STYLESHEET_PATH = CURRENT_PATH.joinpath('ui').joinpath('stylesheet.qss')
+_UI_PATH = CURRENT_PATH.joinpath('ui')
+STYLESHEET_PATH = _UI_PATH.joinpath('stylesheet.qss')
+LANGS_DIRECTORY = _UI_PATH.joinpath('translations')
 
 FLAG_LIVE = 'live event will begin in '
 
@@ -21,6 +23,7 @@ logging_handler.setFormatter(logging.Formatter(
 
 
 class KEYS:
+    LANG = 'language'
     FFMPEG = 'ffmpeg'
     YTDLP = 'ytdlp'
     MAX_DOWNLOADS = 'max_downloads'
@@ -35,6 +38,7 @@ class KEYS:
 
 
 class DEFAULT:
+    LANG = 'EN'
     FFMPEG = ''
     YTDLP = 'python -m yt_dlp'
     MAX_DOWNLOADS = 2
