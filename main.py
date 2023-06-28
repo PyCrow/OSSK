@@ -27,8 +27,6 @@ from utils import (
     get_channel_dir,
 )
 
-PATH_TO_FFMPEG = ''
-YTDLP_COMMAND = 'python -m yt_dlp'
 
 # Threads management attributes
 GLOBAL_STOP = False
@@ -181,26 +179,25 @@ class Controller(QObject):
                 self._channels[channel_name].alias,
             )
 
-        ffmpeg_path = config.get(KEYS.FFMPEG, PATH_TO_FFMPEG)
-        ytdlp_command = config.get(KEYS.YTDLP, YTDLP_COMMAND)
+        ffmpeg_path = config.get(KEYS.FFMPEG, DEFAULT.FFMPEG)
+        ytdlp_command = config.get(KEYS.YTDLP, DEFAULT.YTDLP)
         max_downloads = config.get(KEYS.MAX_DOWNLOADS, DEFAULT.MAX_DOWNLOADS)
-        scanner_sleep_sec = config.get(KEYS.SCANNER_SLEEP_SEC,
-                                       DEFAULT.SCANNER_SLEEP_SEC)
+        scanner_sleep_sec = config.get(KEYS.SCANNER_SLEEP,
+                                       DEFAULT.SCANNER_SLEEP)
         proc_term_timeout = config.get(KEYS.PROC_TERM_TIMOUT,
                                        DEFAULT.PROC_TERM_TIMOUT)
 
         # Update settings view
-        self.Window.set_common_settings_values(
-            scanner_sleep_sec // 60,  # Convert seconds to minutes
-            max_downloads,
-            ffmpeg_path,
-            ytdlp_command,
-            proc_term_timeout,
-        )
+        self.Window.set_common_settings_values({
+            KEYS.FFMPEG: ffmpeg_path,
+            KEYS.YTDLP: ytdlp_command,
+            KEYS.MAX_DOWNLOADS: max_downloads,
+            KEYS.SCANNER_SLEEP: scanner_sleep_sec // 60,  # Convert to min
+            KEYS.PROC_TERM_TIMOUT: proc_term_timeout,
+        })
 
         # Update Master and Slave
-        self._update_threads(scanner_sleep_sec, max_downloads,
-                             ffmpeg_path, ytdlp_command, proc_term_timeout)
+        self._update_threads(config)
 
     @pyqtSlot()
     def _save_settings(self):
@@ -211,50 +208,33 @@ class Controller(QObject):
         3. Saving settings
         """
         # Collecting common settings values
-        ffmpeg_path, ytdlp_command, max_downloads,\
-            scanner_sleep_sec, proc_term_timeout = \
-            self.Window.get_common_settings_values()
+        settings = self.Window.get_common_settings_values()
         # Set static ffmpeg path if field is empty
-        ffmpeg_path = ffmpeg_path or PATH_TO_FFMPEG
+        settings[KEYS.FFMPEG] = settings[KEYS.FFMPEG] or DEFAULT.FFMPEG
         # Set static ytdlp run command if field is empty
-        ytdlp_command = ytdlp_command or YTDLP_COMMAND
+        settings[KEYS.YTDLP] = settings[KEYS.YTDLP] or DEFAULT.YTDLP
         # Convert minutes to seconds
-        scanner_sleep_sec = scanner_sleep_sec * 60
+        settings[KEYS.SCANNER_SLEEP] = settings[KEYS.SCANNER_SLEEP] * 60
         # Channels classes to list of dicts
-        list_channels = [i.j_dump() for i in self._channels.values()]
+        settings[KEYS.CHANNELS] = [i.j_dump() for i in self._channels.values()]
 
-        suc = save_settings({
-            KEYS.FFMPEG: ffmpeg_path,
-            KEYS.YTDLP: ytdlp_command,
-            KEYS.MAX_DOWNLOADS: max_downloads,
-            KEYS.SCANNER_SLEEP_SEC: scanner_sleep_sec,
-            KEYS.PROC_TERM_TIMOUT: proc_term_timeout,
-            KEYS.CHANNELS: list_channels,
-        })
+        suc = save_settings(settings)
         if not suc:
             self.add_log_message(ERROR, "Settings saving error!")
 
         # Update Master and Slave while scanning and recording in progress
-        self._update_threads(scanner_sleep_sec, max_downloads,
-                             ffmpeg_path, ytdlp_command, proc_term_timeout)
+        self._update_threads(settings)
 
         self.add_log_message(DEBUG, "Settings updated.")
 
     @pyqtSlot()
-    def _update_threads(
-            self,
-            scanner_sleep_sec: int,
-            max_downloads: int,
-            ffmpeg_path: str,
-            ytdlp_command: str,
-            proc_term_timeout: int
-    ):
+    def _update_threads(self, settings: dict[str, str | int | list[dict]]):
         THREADS_LOCK.lock()
-        self.Master.scanner_sleep_sec = scanner_sleep_sec
-        self.Master.Slave.max_downloads = max_downloads
-        self.Master.Slave.path_to_ffmpeg = ffmpeg_path
-        self.Master.Slave.ytdlp_command = ytdlp_command
-        self.Master.Slave.proc_term_timeout = proc_term_timeout
+        self.Master.scanner_sleep_sec = settings[KEYS.SCANNER_SLEEP]
+        self.Master.Slave.max_downloads = settings[KEYS.MAX_DOWNLOADS]
+        self.Master.Slave.path_to_ffmpeg = settings[KEYS.FFMPEG]
+        self.Master.Slave.ytdlp_command = settings[KEYS.YTDLP]
+        self.Master.Slave.proc_term_timeout = settings[KEYS.PROC_TERM_TIMOUT]
         THREADS_LOCK.unlock()
 
     @pyqtSlot()
@@ -407,7 +387,7 @@ class Master(QThread):
         self.channels: dict[str, ChannelData] = channels
         self.last_status: dict[str, bool] = {}
         self.scheduled_streams: dict[str, bool] = {}
-        self.scanner_sleep_sec: int = DEFAULT.SCANNER_SLEEP_SEC
+        self.scanner_sleep_sec: int = DEFAULT.SCANNER_SLEEP
         self.Slave = Slave()
         self.Slave.s_log[int, str].connect(self.log)
 
@@ -527,8 +507,8 @@ class Slave(QThread):
         self.temp_logs: dict[int, IO] = {}
         self.last_log_byte: dict[int, int] = {}
 
-        self.path_to_ffmpeg: str = PATH_TO_FFMPEG
-        self.ytdlp_command: str = YTDLP_COMMAND
+        self.path_to_ffmpeg: str = DEFAULT.FFMPEG
+        self.ytdlp_command: str = DEFAULT.YTDLP
         self.max_downloads: int = DEFAULT.MAX_DOWNLOADS
         self.proc_term_timeout: int = DEFAULT.PROC_TERM_TIMOUT
 

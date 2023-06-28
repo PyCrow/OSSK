@@ -12,7 +12,7 @@ from PyQt5.QtWidgets import (QAbstractItemView, QAction, QComboBox,
                              QVBoxLayout, QWidget)
 
 from static_vars import (logging_handler, AVAILABLE_STREAM_RECORD_QUALITIES,
-                         RecordProcess, STYLESHEET_PATH)
+                         KEYS, RecordProcess, STYLESHEET_PATH)
 from ui.dynamic_style import STYLE
 from utils import check_exists_and_callable, is_callable
 
@@ -152,26 +152,29 @@ class MainWindow(QWidget):
         self.channel_settings_window = ChannelSettingsWindow()
         self.channel_settings_window.setStyleSheet(style)
 
-    def get_common_settings_values(self) -> tuple[str, str, int, int, int]:
+    def get_common_settings_values(self) -> dict[str, str | int | list[dict]]:
         ffmpeg_path = self.settings_window.field_ffmpeg.text()
         ytdlp_command = self.settings_window.field_ytdlp.text()
         max_downloads = self.settings_window.box_max_downloads.value()
         scanner_sleep_sec = self.settings_window.box_scanner_sleep.value()
-        wait_for_finished = self.settings_window.box_proc_term_timeout.value()
-        return (ffmpeg_path, ytdlp_command,
-                max_downloads, scanner_sleep_sec, wait_for_finished)
+        proc_term_timeout = self.settings_window.box_proc_term_timeout.value()
+        return {
+            KEYS.FFMPEG: ffmpeg_path,
+            KEYS.YTDLP: ytdlp_command,
+            KEYS.MAX_DOWNLOADS: max_downloads,
+            KEYS.SCANNER_SLEEP: scanner_sleep_sec,
+            KEYS.PROC_TERM_TIMOUT: proc_term_timeout,
+        }
 
-    def set_common_settings_values(self,
-                                   scanner_sleep_sec: int,
-                                   max_downloads: int,
-                                   ffmpeg_path: str,
-                                   ytdlp_command: str,
-                                   wait_for_finished: int):
-        self.settings_window.field_ffmpeg.setText(ffmpeg_path)
-        self.settings_window.field_ytdlp.setText(ytdlp_command)
-        self.settings_window.box_max_downloads.setValue(max_downloads)
-        self.settings_window.box_scanner_sleep.setValue(scanner_sleep_sec)
-        self.settings_window.box_proc_term_timeout.setValue(wait_for_finished)
+    def set_common_settings_values(self, settings: dict[str, str | int]):
+        self.settings_window.field_ffmpeg.setText(settings[KEYS.FFMPEG])
+        self.settings_window.field_ytdlp.setText(settings[KEYS.YTDLP])
+        self.settings_window.box_max_downloads.setValue(
+            settings[KEYS.MAX_DOWNLOADS])
+        self.settings_window.box_scanner_sleep.setValue(
+            settings[KEYS.SCANNER_SLEEP])
+        self.settings_window.box_proc_term_timeout.setValue(
+            settings[KEYS.PROC_TERM_TIMOUT])
 
     @pyqtSlot(int)
     def update_next_scan_timer(self, seconds: int):

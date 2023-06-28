@@ -24,7 +24,7 @@ class KEYS:
     FFMPEG = 'ffmpeg'
     YTDLP = 'ytdlp'
     MAX_DOWNLOADS = 'max_downloads'
-    SCANNER_SLEEP_SEC = 'scanner_sleep'
+    SCANNER_SLEEP = 'scanner_sleep'
     PROC_TERM_TIMOUT = 'proc_term_timeout'
     CHANNELS = 'channels'
 
@@ -34,11 +34,14 @@ class KEYS:
 
 
 class DEFAULT:
+    FFMPEG = ''
+    YTDLP = 'python -m yt_dlp'
+    MAX_DOWNLOADS = 2
+    SCANNER_SLEEP = 300
+    PROC_TERM_TIMOUT = 600
+
     CHANNEL_ALIAS = ''
     CHANNEL_SVQ = '1080'
-    MAX_DOWNLOADS = 2
-    SCANNER_SLEEP_SEC = 300
-    PROC_TERM_TIMOUT = 600
 
 
 AVAILABLE_STREAM_RECORD_QUALITIES = {
