@@ -9,7 +9,12 @@ KEY_FFMPEG = 'ffmpeg'
 KEY_YTDLP = 'ytdlp'
 KEY_MAX_DOWNLOADS = 'max_downloads'
 KEY_SCANNER_SLEEP_SEC = 'scanner_sleep'
+KEY_PROC_TERM_TIMOUT = 'proc_term_timeout'
 KEY_CHANNELS = 'channels'
+
+DEFAULT_MAX_DOWNLOADS = 2
+DEFAULT_SCANNER_SLEEP_SEC = 300
+DEFAULT_PROC_TERM_TIMOUT = 600
 
 KEY_CHANNEL_NAME = 'name'
 KEY_CHANNEL_ALIAS, DEFAULT_CHANNEL_ALIAS = 'alias', ''
@@ -21,9 +26,6 @@ AVAILABLE_STREAM_RECORD_QUALITIES = {
     '720': ('-S', 'res:720'),
     '480': ('-S', 'res:480'),
 }
-
-DEFAULT_MAX_DOWNLOADS = 2
-DEFAULT_SCANNER_SLEEP_SEC = 300
 
 CURRENT_PATH = Path().resolve()
 LOG_FILE = CURRENT_PATH.joinpath('stream_saver.log')

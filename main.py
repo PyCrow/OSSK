@@ -17,8 +17,8 @@ from PyQt5.QtWidgets import QApplication
 from static_vars import (
     logging_handler,
     KEY_FFMPEG, KEY_YTDLP, KEY_CHANNELS, KEY_MAX_DOWNLOADS,
-    KEY_SCANNER_SLEEP_SEC,
-    DEFAULT_MAX_DOWNLOADS, DEFAULT_SCANNER_SLEEP_SEC,
+    KEY_SCANNER_SLEEP_SEC, KEY_PROC_TERM_TIMOUT,
+    DEFAULT_MAX_DOWNLOADS, DEFAULT_SCANNER_SLEEP_SEC, DEFAULT_PROC_TERM_TIMOUT,
     KEY_CHANNEL_NAME, KEY_CHANNEL_SVQ,
     ChannelData, StopThreads, RecordProcess,
     FLAG_LIVE)
@@ -189,17 +189,21 @@ class Controller(QObject):
         max_downloads = config.get(KEY_MAX_DOWNLOADS, DEFAULT_MAX_DOWNLOADS)
         scanner_sleep_sec = config.get(KEY_SCANNER_SLEEP_SEC,
                                        DEFAULT_SCANNER_SLEEP_SEC)
+        proc_term_timeout = config.get(KEY_PROC_TERM_TIMOUT,
+                                       DEFAULT_PROC_TERM_TIMOUT)
 
         # Update settings view
         self.Window.set_common_settings_values(
             scanner_sleep_sec // 60,  # Convert seconds to minutes
             max_downloads,
             ffmpeg_path,
-            ytdlp_command)
+            ytdlp_command,
+            proc_term_timeout,
+        )
 
         # Update Master and Slave
         self._update_threads(scanner_sleep_sec, max_downloads,
-                             ffmpeg_path, ytdlp_command)
+                             ffmpeg_path, ytdlp_command, proc_term_timeout)
 
     @pyqtSlot()
     def _save_settings(self):
@@ -210,7 +214,8 @@ class Controller(QObject):
         3. Saving settings
         """
         # Collecting common settings values
-        ffmpeg_path, ytdlp_command, max_downloads, scanner_sleep_sec = \
+        ffmpeg_path, ytdlp_command, max_downloads,\
+            scanner_sleep_sec, proc_term_timeout = \
             self.Window.get_common_settings_values()
         # Set static ffmpeg path if field is empty
         ffmpeg_path = ffmpeg_path or PATH_TO_FFMPEG
@@ -226,6 +231,7 @@ class Controller(QObject):
             KEY_YTDLP: ytdlp_command,
             KEY_MAX_DOWNLOADS: max_downloads,
             KEY_SCANNER_SLEEP_SEC: scanner_sleep_sec,
+            KEY_PROC_TERM_TIMOUT: proc_term_timeout,
             KEY_CHANNELS: list_channels,
         })
         if not suc:
@@ -233,21 +239,25 @@ class Controller(QObject):
 
         # Update Master and Slave while scanning and recording in progress
         self._update_threads(scanner_sleep_sec, max_downloads,
-                             ffmpeg_path, ytdlp_command)
+                             ffmpeg_path, ytdlp_command, proc_term_timeout)
 
         self.add_log_message(INFO, "Threads settings updated.")
 
     @pyqtSlot()
-    def _update_threads(self,
-                        scanner_sleep_sec: int,
-                        max_downloads: int,
-                        ffmpeg_path: str,
-                        ytdlp_command: str):
+    def _update_threads(
+            self,
+            scanner_sleep_sec: int,
+            max_downloads: int,
+            ffmpeg_path: str,
+            ytdlp_command: str,
+            proc_term_timeout: int
+    ):
         THREADS_LOCK.lock()
         self.Master.scanner_sleep_sec = scanner_sleep_sec
         self.Master.Slave.max_downloads = max_downloads
         self.Master.Slave.path_to_ffmpeg = ffmpeg_path
         self.Master.Slave.ytdlp_command = ytdlp_command
+        self.Master.Slave.proc_term_timeout = proc_term_timeout
         THREADS_LOCK.unlock()
 
     @pyqtSlot()
@@ -514,14 +524,16 @@ class Slave(QThread):
 
     def __init__(self):
         super().__init__()
-        self.ytdlp_command = YTDLP_COMMAND
-        self.path_to_ffmpeg = PATH_TO_FFMPEG
         self.queue: Queue[dict[str, str]] = Queue(-1)
-        self.max_downloads: int = DEFAULT_MAX_DOWNLOADS
         self.running_downloads: list[RecordProcess] = []
         self.pids_to_stop: list[int] = []
         self.temp_logs: dict[int, IO] = {}
         self.last_log_byte: dict[int, int] = {}
+
+        self.path_to_ffmpeg: str = PATH_TO_FFMPEG
+        self.ytdlp_command: str = YTDLP_COMMAND
+        self.max_downloads: int = DEFAULT_MAX_DOWNLOADS
+        self.proc_term_timeout: int = DEFAULT_PROC_TERM_TIMOUT
 
     def log(self, level: int, text: str):
         self.s_log[int, str].emit(level, text)
@@ -655,7 +667,7 @@ class Slave(QThread):
 
         for proc in self.running_downloads:
             try:
-                ret = proc.wait(600)  # TODO: add value editing to settings
+                ret = proc.wait(self.proc_term_timeout)
                 if ret == 0:
                     self.s_stream_finished[int].emit(proc.pid)
                 else:

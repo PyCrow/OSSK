@@ -137,19 +137,26 @@ class MainWindow(QWidget):
         self.channel_settings_window = ChannelSettingsWindow()
         self.channel_settings_window.setStyleSheet(style)
 
-    def get_common_settings_values(self) -> tuple[str, str, int, int]:
+    def get_common_settings_values(self) -> tuple[str, str, int, int, int]:
         ffmpeg_path = self.settings_window.field_ffmpeg.text()
         ytdlp_command = self.settings_window.field_ytdlp.text()
         max_downloads = self.settings_window.box_max_downloads.value()
         scanner_sleep_sec = self.settings_window.box_scanner_sleep.value()
-        return ffmpeg_path, ytdlp_command, max_downloads, scanner_sleep_sec
+        wait_for_finished = self.settings_window.box_proc_term_timeout.value()
+        return (ffmpeg_path, ytdlp_command,
+                max_downloads, scanner_sleep_sec, wait_for_finished)
 
-    def set_common_settings_values(self, scanner_sleep_sec, max_downloads,
-                                   ffmpeg_path, ytdlp_command):
+    def set_common_settings_values(self,
+                                   scanner_sleep_sec: int,
+                                   max_downloads: int,
+                                   ffmpeg_path: str,
+                                   ytdlp_command: str,
+                                   wait_for_finished: int):
         self.settings_window.field_ffmpeg.setText(ffmpeg_path)
         self.settings_window.field_ytdlp.setText(ytdlp_command)
         self.settings_window.box_max_downloads.setValue(max_downloads)
         self.settings_window.box_scanner_sleep.setValue(scanner_sleep_sec)
+        self.settings_window.box_proc_term_timeout.setValue(wait_for_finished)
 
     @pyqtSlot(int)
     def update_next_scan_timer(self, seconds: int):
@@ -486,6 +493,20 @@ class SettingsWindow(QWidget):
         self.box_scanner_sleep.valueChanged[int].connect(
             self._check_scanner_sleep)
 
+        self.box_proc_term_timeout = QSpinBox(self)
+        self.box_proc_term_timeout.setRange(0, 3600)
+        self.box_proc_term_timeout.valueChanged[int].connect(
+            self._check_proc_term_timeout)
+        self.box_proc_term_timeout.setToolTip(
+            "Waiting time for process finished (seconds).\n"
+            "Range from 0 (don't wait) to 3600 (hour).\n"
+            "Default value - 600.\n"
+            "When the time runs out, the process will be killed.\n"
+            "It is not recommended to set it to less than 20 seconds,\n"
+            " since it can take a long time to merge video and audio\n"
+            " tracks of long recordings."
+        )
+
         self.button_apply = QPushButton("Accept", self)
 
         vbox = QVBoxLayout()
@@ -500,6 +521,9 @@ class SettingsWindow(QWidget):
         vbox.addStretch(1)
         vbox.addWidget(QLabel("Time between scans (minutes)"))
         vbox.addWidget(self.box_scanner_sleep)
+        vbox.addStretch(1)
+        vbox.addWidget(QLabel("Process termination timeout"))
+        vbox.addWidget(self.box_proc_term_timeout)
         vbox.addStretch(2)
         vbox.addWidget(self.button_apply)
 
@@ -527,6 +551,11 @@ class SettingsWindow(QWidget):
     def _check_scanner_sleep(self, value: int):
         status = STYLE.SPIN_WARNING if value < 5 else STYLE.SPIN_VALID
         self.box_scanner_sleep.setStyleSheet(status)
+
+    @pyqtSlot(int)
+    def _check_proc_term_timeout(self, value: int):
+        status = STYLE.SPIN_WARNING if value < 20 else STYLE.SPIN_VALID
+        self.box_proc_term_timeout.setStyleSheet(status)
 
 
 class ChannelSettingsWindow(QWidget):
