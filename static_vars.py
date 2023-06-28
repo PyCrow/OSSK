@@ -26,6 +26,7 @@ class KEYS:
     MAX_DOWNLOADS = 'max_downloads'
     SCANNER_SLEEP = 'scanner_sleep'
     PROC_TERM_TIMOUT = 'proc_term_timeout'
+    HIDE_SUC_FIN_PROC = 'hide_suc_fin_proc'
     CHANNELS = 'channels'
 
     CHANNEL_NAME = 'name'
@@ -39,6 +40,7 @@ class DEFAULT:
     MAX_DOWNLOADS = 2
     SCANNER_SLEEP = 300
     PROC_TERM_TIMOUT = 600
+    HIDE_SUC_FIN_PROC = False
 
     CHANNEL_ALIAS = ''
     CHANNEL_SVQ = '1080'
