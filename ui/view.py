@@ -12,7 +12,8 @@ from PyQt5.QtWidgets import (QAbstractItemView, QAction, QCheckBox, QComboBox,
                              QVBoxLayout, QWidget)
 
 from static_vars import (logging_handler, AVAILABLE_STREAM_RECORD_QUALITIES,
-                         KEYS, RecordProcess, STYLESHEET_PATH)
+                         KEYS, RecordProcess, STYLESHEET_PATH,
+                         SettingsType, RawChannelsListType)
 from ui.dynamic_style import STYLE
 from utils import check_exists_and_callable, is_callable
 
@@ -87,9 +88,10 @@ class RecordProcessItem(QStandardItem):
 
 
 class MainWindow(QWidget):
-    def __init__(self):
+    def __init__(self, settings: SettingsType):
         super(MainWindow, self).__init__()
         self._init_ui()
+        self._init_settings(settings)
 
     def _init_ui(self):
         self.setWindowTitle("StreamSaver")
@@ -152,7 +154,18 @@ class MainWindow(QWidget):
         self.channel_settings_window = ChannelSettingsWindow()
         self.channel_settings_window.setStyleSheet(style)
 
-    def get_common_settings_values(self) -> dict[str, str | int | list[dict]]:
+    def _init_settings(self, settings: SettingsType):
+        self._set_channels(settings[KEYS.CHANNELS])
+        self.set_common_settings_values(settings)
+
+    def _set_channels(self, channels: RawChannelsListType):
+        for channel_data in channels:
+            self.widget_channels_tree.add_channel_item(
+                channel_data[KEYS.CHANNEL_NAME],
+                channel_data[KEYS.CHANNEL_ALIAS],
+            )
+
+    def get_common_settings_values(self) -> SettingsType:
         ffmpeg_path = self.settings_window.field_ffmpeg.text()
         ytdlp_command = self.settings_window.field_ytdlp.text()
         max_downloads = self.settings_window.box_max_downloads.value()
@@ -169,8 +182,7 @@ class MainWindow(QWidget):
             KEYS.HIDE_SUC_FIN_PROC: hide_suc_fin_proc,
         }
 
-    def set_common_settings_values(self,
-                                   settings: dict[str, str | int | bool]):
+    def set_common_settings_values(self, settings: SettingsType):
         self.settings_window.field_ffmpeg.setText(settings[KEYS.FFMPEG])
         self.settings_window.field_ytdlp.setText(settings[KEYS.YTDLP])
         self.settings_window.box_max_downloads.setValue(

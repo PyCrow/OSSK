@@ -108,13 +108,16 @@ class Controller(QObject):
         super(Controller, self).__init__()
         self._channels: dict[str, ChannelData] = {}
 
-        self.Window = MainWindow()
+        settings = self._load_settings(update=False)
+
+        # Initiate UI and services, update views settings
+        self.Window = MainWindow(settings)
         self.Master = Master(self._channels)
 
         self._connect_ui_signals()
         self._connect_model_signals()
 
-        self._load_settings()
+        self._update_threads_settings(settings)
 
         self.Window.show()
 
@@ -163,35 +166,34 @@ class Controller(QObject):
         self.Master.Slave.s_stream_finished[int].connect(self._stream_finished)
         self.Master.Slave.s_stream_fail[int].connect(self._stream_fail)
 
-    def _load_settings(self):
+    def _load_settings(self, update: bool = True):
         """ Loading configuration """
-        succ, config = get_settings()
-        if not succ:
+        suc, settings = get_settings()
+        if not suc:
             self.add_log_message(ERROR, "Settings loading error!")
             return
 
         # Getting channels from config, saving them and adding to GUI
-        for channel_data in config.get(KEYS.CHANNELS, {}):
-            channel_name = channel_data[KEYS.CHANNEL_NAME]
-            self._channels[channel_name] = ChannelData.j_load(channel_data)
-            self.Window.widget_channels_tree.add_channel_item(
-                channel_name,
-                self._channels[channel_name].alias,
-            )
+        self._channels = \
+            {channel_data[KEYS.CHANNEL_NAME]: ChannelData.j_load(channel_data)
+             for channel_data in settings.get(KEYS.CHANNELS, {})}
 
-        config[KEYS.FFMPEG] = config.get(KEYS.FFMPEG, DEFAULT.FFMPEG)
-        config[KEYS.YTDLP] = config.get(KEYS.YTDLP, DEFAULT.YTDLP)
-        config[KEYS.MAX_DOWNLOADS] = config.get(KEYS.MAX_DOWNLOADS,
-                                                DEFAULT.MAX_DOWNLOADS)
-        config[KEYS.SCANNER_SLEEP] = config.get(KEYS.SCANNER_SLEEP,
-                                                DEFAULT.SCANNER_SLEEP)
-        config[KEYS.PROC_TERM_TIMOUT] = config.get(KEYS.PROC_TERM_TIMOUT,
-                                                   DEFAULT.PROC_TERM_TIMOUT)
-        config[KEYS.HIDE_SUC_FIN_PROC] = config.get(KEYS.HIDE_SUC_FIN_PROC,
-                                                    DEFAULT.HIDE_SUC_FIN_PROC)
+        settings[KEYS.FFMPEG] = settings.get(KEYS.FFMPEG, DEFAULT.FFMPEG)
+        settings[KEYS.YTDLP] = settings.get(KEYS.YTDLP, DEFAULT.YTDLP)
+        settings[KEYS.MAX_DOWNLOADS] = settings.get(
+            KEYS.MAX_DOWNLOADS, DEFAULT.MAX_DOWNLOADS)
+        settings[KEYS.SCANNER_SLEEP] = settings.get(
+            KEYS.SCANNER_SLEEP, DEFAULT.SCANNER_SLEEP)
+        settings[KEYS.PROC_TERM_TIMOUT] = settings.get(
+            KEYS.PROC_TERM_TIMOUT, DEFAULT.PROC_TERM_TIMOUT)
+        settings[KEYS.HIDE_SUC_FIN_PROC] = settings.get(
+            KEYS.HIDE_SUC_FIN_PROC, DEFAULT.HIDE_SUC_FIN_PROC)
 
         # Update Master, Slave and views
-        self._update_settings_everywhere(config)
+        if update:
+            self._update_settings_everywhere(settings)
+        else:
+            return settings
 
     @pyqtSlot()
     def _save_settings(self):
@@ -225,10 +227,10 @@ class Controller(QObject):
             self,
             settings: dict[str, str | int | list[dict] | bool]
     ):
-        self._update_threads(settings)
-        self._update_views(settings)
+        self._update_threads_settings(settings)
+        self._update_views_settings(settings)
 
-    def _update_threads(
+    def _update_threads_settings(
             self,
             settings: dict[str, str | int | list[dict] | bool]
     ):
@@ -240,7 +242,7 @@ class Controller(QObject):
         self.Master.Slave.proc_term_timeout = settings[KEYS.PROC_TERM_TIMOUT]
         THREADS_LOCK.unlock()
 
-    def _update_views(
+    def _update_views_settings(
             self,
             settings: dict[str, str | int | list[dict] | bool]
     ):

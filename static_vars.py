@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 from subprocess import Popen
-
+from typing import Union
 
 UNKNOWN = '<UNKNOWN>'
 
@@ -44,6 +44,11 @@ class DEFAULT:
 
     CHANNEL_ALIAS = ''
     CHANNEL_SVQ = '1080'
+
+
+RawChannelType = dict[str, str]
+RawChannelsListType = list[RawChannelType]
+SettingsType = dict[str, Union[bool, int, str, RawChannelsListType]]
 
 
 AVAILABLE_STREAM_RECORD_QUALITIES = {

@@ -5,8 +5,7 @@ import logging
 from pathlib import Path
 from subprocess import run, DEVNULL
 
-from static_vars import SETTINGS_FILE, RECORDS_PATH
-
+from static_vars import SETTINGS_FILE, RECORDS_PATH, SettingsType
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -30,27 +29,29 @@ def check_exists_and_callable(_path: str) -> bool:
     return False
 
 
-def get_settings() -> tuple[bool, dict | None]:
-    succ = False
-    config = None
+def get_settings() -> tuple[bool, SettingsType | None]:
+    suc = False
+    settings = None
     try:
         with open(SETTINGS_FILE, 'r') as conf_file:
-            config = json.load(conf_file)
-        succ = True
+            settings = json.load(conf_file)
+        suc = True
     except Exception as e:
         logger.error(e, exc_info=True)
     finally:
-        return succ, config
+        return suc, settings
 
 
-def save_settings(config: dict) -> bool:
+def save_settings(settings: SettingsType) -> bool:
+    suc = False
     try:
         with open(SETTINGS_FILE, 'w') as conf_file:
-            json.dump(config, conf_file, indent=4)
-        return True
+            json.dump(settings, conf_file, indent=4)
+        suc = True
     except Exception as e:
         logger.error(e, exc_info=True)
-        return False
+    finally:
+        return suc
 
 
 def get_channel_dir(channel_name: str) -> Path:
