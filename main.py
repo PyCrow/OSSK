@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import sys
 import logging
+import subprocess
+import tempfile
+from copy import deepcopy
 from logging import DEBUG, INFO, WARNING, ERROR
 from queue import Queue
 from signal import SIGINT
 from time import sleep
 from typing import IO
-import subprocess
-import tempfile
 
 import yt_dlp
 from PyQt5.QtCore import QObject, QMutex, QThread, pyqtSignal, pyqtSlot
@@ -16,16 +17,14 @@ from PyQt5.QtWidgets import QApplication
 
 from static_vars import (
     logging_handler,
-    KEYS, DEFAULT,
-    ChannelData, StopThreads, RecordProcess,
-    FLAG_LIVE)
+    KEYS, DEFAULT, FLAG_LIVE,
+    ChannelData, StopThreads, RecordProcess, SettingsType)
 from ui.view import MainWindow, Status
 from ui.dynamic_style import STYLE
 from utils import (
     get_settings, save_settings,
     is_callable, check_exists_and_callable,
-    get_channel_dir,
-)
+    get_channel_dir)
 
 
 # Threads management attributes
@@ -112,7 +111,7 @@ class Controller(QObject):
 
         # Initiate UI and services, update views settings
         self.Window = MainWindow(settings)
-        self.Master = Master(self._channels)
+        self.Master = Master(deepcopy(self._channels))
 
         self._connect_ui_signals()
         self._connect_model_signals()
@@ -173,7 +172,7 @@ class Controller(QObject):
             self.add_log_message(ERROR, "Settings loading error!")
             return
 
-        # Getting channels from config, saving them and adding to GUI
+        # Getting channels from settings and saving them
         self._channels = \
             {channel_data[KEYS.CHANNEL_NAME]: ChannelData.j_load(channel_data)
              for channel_data in settings.get(KEYS.CHANNELS, {})}
@@ -209,8 +208,6 @@ class Controller(QObject):
         settings[KEYS.FFMPEG] = settings[KEYS.FFMPEG] or DEFAULT.FFMPEG
         # Set static ytdlp run command if field is empty
         settings[KEYS.YTDLP] = settings[KEYS.YTDLP] or DEFAULT.YTDLP
-        # Convert minutes to seconds
-        settings[KEYS.SCANNER_SLEEP] = settings[KEYS.SCANNER_SLEEP] * 60
         # Channels classes to list of dicts
         settings[KEYS.CHANNELS] = [i.j_dump() for i in self._channels.values()]
 
@@ -223,33 +220,25 @@ class Controller(QObject):
 
         self.add_log_message(DEBUG, "Settings updated.")
 
-    def _update_settings_everywhere(
-            self,
-            settings: dict[str, str | int | list[dict] | bool]
-    ):
+    def _update_settings_everywhere(self, settings: SettingsType):
         self._update_threads_settings(settings)
         self._update_views_settings(settings)
 
-    def _update_threads_settings(
-            self,
-            settings: dict[str, str | int | list[dict] | bool]
-    ):
+    def _update_threads_settings(self, settings: SettingsType):
         THREADS_LOCK.lock()
-        self.Master.scanner_sleep_sec = settings[KEYS.SCANNER_SLEEP]
+        self.Master.scanner_sleep_min = settings[KEYS.SCANNER_SLEEP]
         self.Master.Slave.max_downloads = settings[KEYS.MAX_DOWNLOADS]
         self.Master.Slave.path_to_ffmpeg = settings[KEYS.FFMPEG]
         self.Master.Slave.ytdlp_command = settings[KEYS.YTDLP]
         self.Master.Slave.proc_term_timeout = settings[KEYS.PROC_TERM_TIMOUT]
         THREADS_LOCK.unlock()
 
-    def _update_views_settings(
-            self,
-            settings: dict[str, str | int | list[dict] | bool]
-    ):
+    def _update_views_settings(self, settings: SettingsType):
         self.Window.set_common_settings_values(settings)
 
     @pyqtSlot()
     def run_master(self):
+        # TODO: run_master should call Thread
         ytdlp_command = self.Window.settings_window.field_ytdlp.text()
         if not is_callable(ytdlp_command):
             self.add_log_message(WARNING, "yt-dlp not found.")
@@ -290,10 +279,16 @@ class Controller(QObject):
             return
         channel_data = ChannelData(channel_name)
         self._channels[channel_name] = channel_data
+
+        # Saving settings
         self._save_settings()
+
+        # Update Master
         THREADS_LOCK.lock()
-        self.Master.channels[channel_name] = channel_data
+        self.Master.channels[channel_name] = deepcopy(channel_data)
         THREADS_LOCK.unlock()
+
+        # Update UI
         self.Window.widget_channels_tree.add_channel_item(
             channel_name, channel_data.alias)
         self.Window.field_add_channels.clear()
@@ -317,10 +312,14 @@ class Controller(QObject):
 
         del self._channels[channel_name]
         self._save_settings()
+
+        # Update Master channel dict
         THREADS_LOCK.lock()
         if channel_name in self.Master.channels:
             del self.Master.channels[channel_name]
         THREADS_LOCK.unlock()
+
+        # Update UI
         self.Window.widget_channels_tree.del_channel_item()
 
     @pyqtSlot(str)
@@ -394,11 +393,11 @@ class Master(QThread):
 
     def __init__(self, channels: dict[str, ChannelData]):
         super(Master, self).__init__()
-        self._start_force_scan = False
+        self.__start_force_scan = False
         self.channels: dict[str, ChannelData] = channels
-        self.last_status: dict[str, bool] = {}
-        self.scheduled_streams: dict[str, bool] = {}
-        self.scanner_sleep_sec: int = DEFAULT.SCANNER_SLEEP
+        self.__last_status: dict[str, bool] = {}
+        self.__scheduled_streams: dict[str, bool] = {}
+        self.scanner_sleep_min: int = DEFAULT.SCANNER_SLEEP
         self.Slave = Slave()
         self.Slave.s_log[int, str].connect(self.log)
 
@@ -406,7 +405,7 @@ class Master(QThread):
         self.s_log[int, str].emit(level, text)
 
     def set_start_force_scan(self):
-        self._start_force_scan = True
+        self.__start_force_scan = True
 
     def run(self) -> None:
         self.log(INFO, "Scanning channels started.")
@@ -417,7 +416,7 @@ class Master(QThread):
                 raise_on_stop_threads()
                 for channel_name in list(self.channels.keys()):
                     self._check_for_stream(channel_name)
-                self._start_force_scan = False
+                self.__start_force_scan = False
                 raise_on_stop_threads()
 
                 self.wait_and_check()
@@ -427,8 +426,9 @@ class Master(QThread):
 
     def wait_and_check(self):
         """ Waiting with a check to stop """
-        c = self.scanner_sleep_sec
-        while c != 0 and not self._start_force_scan:
+        # Convert minutes to seconds
+        c = self.scanner_sleep_min * 60
+        while c != 0 and not self.__start_force_scan:
             self.s_next_scan_timer[int].emit(c)
             sleep(1)
             raise_on_stop_threads()
@@ -436,10 +436,10 @@ class Master(QThread):
         self.s_next_scan_timer[int].emit(c)
 
     def channel_status_changed(self, channel_name: str, status: bool):
-        if (channel_name in self.last_status
-                and self.last_status[channel_name] == status):
+        if (channel_name in self.__last_status
+                and self.__last_status[channel_name] == status):
             return False
-        self.last_status[channel_name] = status
+        self.__last_status[channel_name] = status
         return True
 
     @raise_on_stop_threads
@@ -458,14 +458,16 @@ class Master(QThread):
                 return
             except yt_dlp.utils.DownloadError as e:
                 # Check for live flag and last status
-                if (FLAG_LIVE in str(e)
-                        and self.scheduled_streams.get(channel_name,
-                                                       False) is False):
+                if (
+                        FLAG_LIVE in str(e)
+                        and self.__scheduled_streams.get(
+                            channel_name, False) is False
+                ):
                     warn = str(e)
                     leftover = warn[warn.find(FLAG_LIVE) + len(FLAG_LIVE):]
                     self.log(WARNING,
                              f"{channel_name} stream in {leftover}.")
-                    self.scheduled_streams[channel_name] = True
+                    self.__scheduled_streams[channel_name] = True
                 self.s_channel_off[str].emit(channel_name)
                 return
             except Exception as e:

@@ -13,7 +13,7 @@ from PyQt5.QtWidgets import (QAbstractItemView, QAction, QCheckBox, QComboBox,
 
 from static_vars import (logging_handler, AVAILABLE_STREAM_RECORD_QUALITIES,
                          KEYS, RecordProcess, STYLESHEET_PATH,
-                         SettingsType, RawChannelsListType)
+                         SettingsType, RawChannelDataType)
 from ui.dynamic_style import STYLE
 from utils import check_exists_and_callable, is_callable
 
@@ -158,7 +158,7 @@ class MainWindow(QWidget):
         self._set_channels(settings[KEYS.CHANNELS])
         self.set_common_settings_values(settings)
 
-    def _set_channels(self, channels: RawChannelsListType):
+    def _set_channels(self, channels: list[RawChannelDataType]):
         for channel_data in channels:
             self.widget_channels_tree.add_channel_item(
                 channel_data[KEYS.CHANNEL_NAME],
@@ -169,7 +169,7 @@ class MainWindow(QWidget):
         ffmpeg_path = self.settings_window.field_ffmpeg.text()
         ytdlp_command = self.settings_window.field_ytdlp.text()
         max_downloads = self.settings_window.box_max_downloads.value()
-        scanner_sleep_sec = self.settings_window.box_scanner_sleep.value()
+        scanner_sleep_min = self.settings_window.box_scanner_sleep.value()
         proc_term_timeout = self.settings_window.box_proc_term_timeout.value()
         hide_suc_fin_proc = self.settings_window.box_hide_suc_fin_proc\
             .isChecked()
@@ -177,7 +177,7 @@ class MainWindow(QWidget):
             KEYS.FFMPEG: ffmpeg_path,
             KEYS.YTDLP: ytdlp_command,
             KEYS.MAX_DOWNLOADS: max_downloads,
-            KEYS.SCANNER_SLEEP: scanner_sleep_sec,
+            KEYS.SCANNER_SLEEP: scanner_sleep_min,
             KEYS.PROC_TERM_TIMOUT: proc_term_timeout,
             KEYS.HIDE_SUC_FIN_PROC: hide_suc_fin_proc,
         }

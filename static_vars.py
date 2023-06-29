@@ -38,7 +38,7 @@ class DEFAULT:
     FFMPEG = ''
     YTDLP = 'python -m yt_dlp'
     MAX_DOWNLOADS = 2
-    SCANNER_SLEEP = 300
+    SCANNER_SLEEP = 5
     PROC_TERM_TIMOUT = 600
     HIDE_SUC_FIN_PROC = False
 
@@ -46,9 +46,8 @@ class DEFAULT:
     CHANNEL_SVQ = '1080'
 
 
-RawChannelType = dict[str, str]
-RawChannelsListType = list[RawChannelType]
-SettingsType = dict[str, Union[bool, int, str, RawChannelsListType]]
+RawChannelDataType = dict[str, str]
+SettingsType = dict[str, Union[bool, int, str, list[RawChannelDataType]]]
 
 
 AVAILABLE_STREAM_RECORD_QUALITIES = {
