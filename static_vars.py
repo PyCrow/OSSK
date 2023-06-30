@@ -31,7 +31,7 @@ class KEYS:
 
     CHANNEL_NAME = 'name'
     CHANNEL_ALIAS = 'alias'
-    CHANNEL_SVQ = '_svq'
+    CHANNEL_SVQ = 'svq'
 
 
 class DEFAULT:
@@ -43,7 +43,7 @@ class DEFAULT:
     HIDE_SUC_FIN_PROC = False
 
     CHANNEL_ALIAS = ''
-    CHANNEL_SVQ = '1080'
+    CHANNEL_SVQ = 'best'
 
 
 RawChannelDataType = dict[str, str]
@@ -64,7 +64,7 @@ class ChannelData:
     Channel data
      - name
      - alias (editable)
-     - _svq (stream video quality)
+     - svq (stream video quality)
     """
     def __init__(self, name: str):
         """
@@ -74,29 +74,31 @@ class ChannelData:
         """
         self.name: str = name
         self.alias: str = DEFAULT.CHANNEL_ALIAS
-        self._svq: str = "1080"
+        self.__svq: str = DEFAULT.CHANNEL_SVQ
 
-    def set_svq(self, svq: str):
-        self._svq = svq
+    @property
+    def svq(self):
+        return AVAILABLE_STREAM_RECORD_QUALITIES[self.__svq]
 
-    def get_svq(self) -> tuple[str, str]:
-        return AVAILABLE_STREAM_RECORD_QUALITIES[self._svq]
+    @svq.setter
+    def svq(self, svq: str):
+        self.__svq = svq
 
-    def clean_svq(self):
-        return str(self._svq)
+    def svq_view(self):
+        return str(self.__svq)
 
     def j_dump(self) -> dict:
         return {
             KEYS.CHANNEL_NAME: self.name,
             KEYS.CHANNEL_ALIAS: self.alias,
-            KEYS.CHANNEL_SVQ: self._svq,
+            KEYS.CHANNEL_SVQ: self.__svq,
         }
 
     @staticmethod
     def j_load(data: dict):
         channel = ChannelData(data.get(KEYS.CHANNEL_NAME, UNKNOWN))
         channel.alias = data.get(KEYS.CHANNEL_ALIAS, DEFAULT.CHANNEL_ALIAS)
-        channel._svq = data.get(KEYS.CHANNEL_SVQ, DEFAULT.CHANNEL_SVQ)
+        channel.svq = data.get(KEYS.CHANNEL_SVQ, DEFAULT.CHANNEL_SVQ)
         return channel
 
 

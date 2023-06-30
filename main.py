@@ -349,7 +349,7 @@ class Controller(QObject):
         self.Window.channel_settings_window.update_data(
             channel_name,
             self._channels[channel_name].alias,
-            self._channels[channel_name].clean_svq()
+            self._channels[channel_name].svq_view()
         )
         self.Window.channel_settings_window.show()
 
@@ -357,7 +357,7 @@ class Controller(QObject):
     def clicked_apply_channel_settings(self):
         ch_name, alias, svq = self.Window.channel_settings_window.get_data()
         self._channels[ch_name].alias = alias
-        self._channels[ch_name].set_svq(svq)
+        self._channels[ch_name].svq = svq
         self._save_settings()
         channel_row_text = alias if alias else ch_name
         self.Window.widget_channels_tree.set_channel_alias(channel_row_text)
@@ -505,7 +505,7 @@ class Master(QThread):
             if channel_name not in running_downloads:
                 stream_data = {
                     KEYS.CHANNEL_NAME: channel_name,
-                    KEYS.CHANNEL_SVQ: self.channels[channel_name].get_svq(),
+                    KEYS.CHANNEL_SVQ: self.channels[channel_name].svq,
                     'url': info_dict['webpage_url'],
                     'title': info_dict['title'],
                 }
