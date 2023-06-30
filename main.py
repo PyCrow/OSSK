@@ -23,7 +23,7 @@ from ui.view import MainWindow, Status
 from ui.dynamic_style import STYLE
 from utils import (
     get_settings, save_settings,
-    is_callable, check_exists_and_callable,
+    ServiceController,
     get_channel_dir)
 
 
@@ -238,16 +238,25 @@ class Controller(QObject):
 
     @pyqtSlot()
     def run_master(self):
-        # TODO: run_master should call Thread
-        ytdlp_command = self.Window.settings_window.field_ytdlp.text()
-        if not is_callable(ytdlp_command):
-            self.add_log_message(WARNING, "yt-dlp not found.")
-            return
-
         ffmpeg_path = self.Window.settings_window.field_ffmpeg.text()
-        if not check_exists_and_callable(ffmpeg_path):
-            self.add_log_message(WARNING, "ffmpeg not found.")
-            return
+        ytdlp_command = self.Window.settings_window.field_ytdlp.text()
+
+        self._thread = QThread()
+        self._controller = ServiceController(ffmpeg_path, ytdlp_command)
+        self._controller.moveToThread(self._thread)
+
+        self._thread.started.connect(self._controller.run)
+        self._controller.finished[bool, str].connect(self._real_run_master)
+        self._controller.finished.connect(self._thread.quit)
+        self._controller.finished.connect(self._controller.deleteLater)
+        self._thread.finished.connect(self._thread.deleteLater)
+
+        self._thread.start()
+
+    @pyqtSlot(bool, str)
+    def _real_run_master(self, suc: bool, message: str):
+        if not suc:
+            self.add_log_message(WARNING, message)
 
         if self.Master.isRunning() and self.Master.Slave.isRunning():
             self.Master.set_start_force_scan()
