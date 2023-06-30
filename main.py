@@ -112,6 +112,8 @@ class Controller(QObject):
         # Initiate UI and services, update views settings
         self.Window = MainWindow(settings)
         self.Master = Master(deepcopy(self._channels))
+        self._srv_thread: QThread | None = None
+        self._srv_controller: ServiceController | None = None
 
         self._connect_ui_signals()
         self._connect_model_signals()
@@ -241,17 +243,19 @@ class Controller(QObject):
         ffmpeg_path = self.Window.settings_window.field_ffmpeg.text()
         ytdlp_command = self.Window.settings_window.field_ytdlp.text()
 
-        self._thread = QThread()
-        self._controller = ServiceController(ffmpeg_path, ytdlp_command)
-        self._controller.moveToThread(self._thread)
+        # Initialize
+        self._srv_thread = QThread()
+        self._srv_controller = ServiceController(ffmpeg_path, ytdlp_command)
+        self._srv_controller.moveToThread(self._srv_thread)
 
-        self._thread.started.connect(self._controller.run)
-        self._controller.finished[bool, str].connect(self._real_run_master)
-        self._controller.finished.connect(self._thread.quit)
-        self._controller.finished.connect(self._controller.deleteLater)
-        self._thread.finished.connect(self._thread.deleteLater)
+        # Connect signals
+        self._srv_thread.started.connect(self._srv_controller.run)
+        self._srv_controller.finished[bool, str].connect(self._real_run_master)
+        self._srv_controller.finished.connect(self._srv_thread.quit)
+        self._srv_controller.finished.connect(self._srv_controller.deleteLater)
+        self._srv_thread.finished.connect(self._srv_thread.deleteLater)
 
-        self._thread.start()
+        self._srv_thread.start()
 
     @pyqtSlot(bool, str)
     def _real_run_master(self, suc: bool, message: str):
