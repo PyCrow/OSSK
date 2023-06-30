@@ -5,6 +5,8 @@ import logging
 from pathlib import Path
 from subprocess import run, DEVNULL
 
+from PyQt5.QtCore import QObject, pyqtSignal
+
 from static_vars import SETTINGS_FILE, RECORDS_PATH, SettingsType
 
 logger = logging.getLogger(__name__)
@@ -60,3 +62,26 @@ def get_channel_dir(channel_name: str) -> Path:
     if not channel_dir.exists():
         channel_dir.mkdir(parents=True, exist_ok=True)
     return channel_dir
+
+
+class ServiceController(QObject):
+    finished = pyqtSignal(bool, str)
+
+    def __init__(self, ffmpeg_path: str = None, ytdlp_command: str = None):
+        if ffmpeg_path is None and ytdlp_command is None:
+            raise AttributeError("ffmpeg path and ytdlp command "
+                                 "are not specified!")
+        self.ffmpeg_path = ffmpeg_path
+        self.ytdlp_command = ytdlp_command
+        super(ServiceController, self).__init__()
+
+    def run(self):
+        if self.ytdlp_command is not None \
+                and not is_callable(self.ytdlp_command):
+            self.finished[bool, str].emit(False, "yt-dlp not found!")
+
+        if self.ffmpeg_path is not None \
+                and not check_exists_and_callable(self.ffmpeg_path):
+            self.finished[bool, str].emit(False, "ffmpeg not found!")
+
+        self.finished[bool, str].emit(True, "")
