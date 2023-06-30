@@ -51,12 +51,20 @@ QListView::item,
 QTreeView::item {
     height: 22px; }
 QListView::item:hover,
-QTreeView::item:hover {
+QTreeView::item:hover,
+QTreeView::branch:hover {
     background-color: black; }
-QListView::item:selected,
+QListView::item:selected {
+    background-color: black;
+    border: 1px solid #0f0; }
+QTreeView::branch:selected {
+    background-color: black;
+    border-top: 1px solid #0f0;
+    border-bottom: 1px solid #0f0; }
 QTreeView::item:selected {
-    background-color: #0f0;
-    color: black; }
+    background-color: black;
+    border-top: 1px solid #0f0;
+    border-bottom: 1px solid #0f0; }
 QListView::item:disabled,
 QTreeView::item:disabled,
 QLineEdit:disabled {
