@@ -18,7 +18,8 @@ from PyQt5.QtWidgets import QApplication
 from static_vars import (
     logging_handler,
     KEYS, DEFAULT, FLAG_LIVE,
-    ChannelData, StopThreads, RecordProcess, SettingsType)
+    SoftStoppableThread, StopThreads,
+    ChannelData, RecordProcess, SettingsType)
 from ui.view import MainWindow, Status
 from ui.dynamic_style import STYLE
 from utils import (
@@ -39,31 +40,6 @@ DEBUG_LEVELS = {DEBUG: 'DEBUG', INFO: 'INFO',
                 WARNING: 'WARNING', ERROR: 'ERROR'}
 
 
-class ThreadSafeList(list):
-    def __contains__(self, _obj) -> bool:
-        THREADS_LOCK.lock()
-        ret = super(ThreadSafeList, self).__contains__(_obj)
-        THREADS_LOCK.unlock()
-        return ret
-
-    def __len__(self) -> int:
-        THREADS_LOCK.lock()
-        ret = super(ThreadSafeList, self).__len__()
-        THREADS_LOCK.unlock()
-        return ret
-
-    def append(self, _obj) -> None:
-        THREADS_LOCK.lock()
-        super(ThreadSafeList, self).append(_obj)
-        THREADS_LOCK.unlock()
-
-    def pop(self, _index: int = ...):
-        THREADS_LOCK.lock()
-        ret = super(ThreadSafeList, self).pop(_index)
-        THREADS_LOCK.unlock()
-        return ret
-
-
 def logger_handler(func):
     def _wrapper(*args, **kwargs):
         try:
@@ -74,30 +50,6 @@ def logger_handler(func):
                                  .format(func_name=func.__name__, err=e),
                                  stack_info=True)
             raise e
-
-    return _wrapper
-
-
-def set_stop_threads():
-    global GLOBAL_STOP
-    GLOBAL_STOP = True
-
-
-def raise_on_stop_threads(func=None):
-    def _check():
-        global GLOBAL_STOP
-        if GLOBAL_STOP:
-            raise StopThreads
-
-    if func is None:
-        _check()
-        return
-
-    def _wrapper(*args, **kwargs):
-        _check()
-        ret = func(*args, **kwargs)
-        _check()
-        return ret
 
     return _wrapper
 
@@ -134,7 +86,7 @@ class Controller(QObject):
 
         # Management buttons
         self.Window.start_button.clicked.connect(self.run_master)
-        self.Window.stop_button.clicked.connect(set_stop_threads)
+        self.Window.stop_button.clicked.connect(self.set_stop_services)
 
         # Channel tree
         self.Window.widget_channels_tree.on_click_channel_settings.triggered. \
@@ -272,6 +224,13 @@ class Controller(QObject):
         self.Master.start()
 
     @pyqtSlot()
+    def set_stop_services(self):
+        THREADS_LOCK.lock()
+        self.Master.soft_stop()
+        self.Master.Slave.soft_stop()
+        THREADS_LOCK.unlock()
+
+    @pyqtSlot()
     def stop_single_process(self):
         pid = self.Window.widget_channels_tree.selected_process_id()
         THREADS_LOCK.lock()
@@ -349,7 +308,7 @@ class Controller(QObject):
         self.Window.channel_settings_window.update_data(
             channel_name,
             self._channels[channel_name].alias,
-            self._channels[channel_name].clean_svq()
+            self._channels[channel_name].svq_view()
         )
         self.Window.channel_settings_window.show()
 
@@ -357,7 +316,7 @@ class Controller(QObject):
     def clicked_apply_channel_settings(self):
         ch_name, alias, svq = self.Window.channel_settings_window.get_data()
         self._channels[ch_name].alias = alias
-        self._channels[ch_name].set_svq(svq)
+        self._channels[ch_name].svq = svq
         self._save_settings()
         channel_row_text = alias if alias else ch_name
         self.Window.widget_channels_tree.set_channel_alias(channel_row_text)
@@ -391,7 +350,7 @@ class Controller(QObject):
         self.Window.widget_channels_tree.stream_failed(pid)
 
 
-class Master(QThread):
+class Master(SoftStoppableThread):
     """
     Master:
      - run Slave
@@ -421,16 +380,17 @@ class Master(QThread):
         self.__start_force_scan = True
 
     def run(self) -> None:
+        super(Master, self).run()
         self.log(INFO, "Scanning channels started.")
         self.Slave.start()
 
         try:
             while True:
-                raise_on_stop_threads()
                 for channel_name in list(self.channels.keys()):
                     self._check_for_stream(channel_name)
+                    self._raise_on_stop()
                 self.__start_force_scan = False
-                raise_on_stop_threads()
+                self._raise_on_stop()
 
                 self.wait_and_check()
         except StopThreads:
@@ -444,7 +404,7 @@ class Master(QThread):
         while c != 0 and not self.__start_force_scan:
             self.s_next_scan_timer[int].emit(c)
             sleep(1)
-            raise_on_stop_threads()
+            self._raise_on_stop()
             c -= 1
         self.s_next_scan_timer[int].emit(c)
 
@@ -455,7 +415,6 @@ class Master(QThread):
         self.__last_status[channel_name] = status
         return True
 
-    @raise_on_stop_threads
     @logger_handler
     def _check_for_stream(self, channel_name: str):
         url = f'https://www.youtube.com/@{channel_name}/live'
@@ -505,7 +464,7 @@ class Master(QThread):
             if channel_name not in running_downloads:
                 stream_data = {
                     KEYS.CHANNEL_NAME: channel_name,
-                    KEYS.CHANNEL_SVQ: self.channels[channel_name].get_svq(),
+                    KEYS.CHANNEL_SVQ: self.channels[channel_name].svq,
                     'url': info_dict['webpage_url'],
                     'title': info_dict['title'],
                 }
@@ -517,7 +476,7 @@ class Master(QThread):
             self.s_channel_off[str].emit(channel_name)
 
 
-class Slave(QThread):
+class Slave(SoftStoppableThread):
     # TODO: add memory check
     s_log = pyqtSignal(int, str)
     s_proc_log = pyqtSignal(int, str)
@@ -542,15 +501,18 @@ class Slave(QThread):
         self.s_log[int, str].emit(level, text)
 
     def run(self):
+        super(Slave, self).run()
         self.log(INFO, "Recorder started.")
 
         try:
             while True:
                 self.check_running_downloads()
-                if self.ready_to_download() and not self.queue.empty():
+                self._raise_on_stop()
+                while self.ready_to_download() and not self.queue.empty():
                     stream_data = self.queue.get()
                     self.record_stream(stream_data)
-                self.check_for_stop()
+                self.check_pids_to_stop()
+                self._raise_on_stop()
         except StopThreads:
             self.stop_downloads()
         self.log(INFO, "Recorder stopped.")
@@ -558,7 +520,6 @@ class Slave(QThread):
     def get_names_of_active_channels(self):
         return [proc.channel for proc in self.running_downloads]
 
-    @raise_on_stop_threads
     def check_running_downloads(self):
 
         list_running = []
@@ -590,7 +551,6 @@ class Slave(QThread):
             return True
         return False
 
-    @raise_on_stop_threads
     @logger_handler
     def record_stream(self, stream_data: dict[str, str | tuple]):
         """ Starts stream recording """
@@ -641,7 +601,7 @@ class Slave(QThread):
         self.s_stream_rec[str, int, str].emit(
             channel_name, proc.pid, stream_title)
 
-    def check_for_stop(self):
+    def check_pids_to_stop(self):
         if not self.pids_to_stop:
             return
         for proc in self.running_downloads:
