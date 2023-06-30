@@ -68,7 +68,7 @@ class Controller(QObject):
         self._srv_controller: ServiceController | None = None
 
         self._connect_ui_signals()
-        self._connect_model_signals()
+        self._connect_services_signals()
 
         self._update_threads_settings(settings)
 
@@ -100,7 +100,7 @@ class Controller(QObject):
         self.Window.channel_settings_window.button_apply.clicked.connect(
             self.clicked_apply_channel_settings)
 
-    def _connect_model_signals(self):
+    def _connect_services_signals(self):
         # New message signals
         self.Master.s_log[int, str].connect(self.add_log_message)
         self.Master.Slave.s_proc_log[int, str].connect(
