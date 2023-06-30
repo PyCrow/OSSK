@@ -3,6 +3,8 @@ from pathlib import Path
 from subprocess import Popen
 from typing import Union
 
+from PyQt5.QtCore import QThread
+
 UNKNOWN = '<UNKNOWN>'
 
 CURRENT_PATH = Path().resolve()
@@ -104,6 +106,33 @@ class ChannelData:
 
 class StopThreads(Exception):
     pass
+
+
+class SoftStoppableThread(QThread):
+    """
+    Has:
+     1. Variable 'stop' for management
+     2. Function 'raise_on_stop' to raise StopThreads
+    """
+    def __init__(self):
+        self.__stop = False
+        super().__init__()
+
+    def run(self) -> None:
+        self.__stop = False
+
+    def soft_stop(self):
+        """
+        Set 'stop' = True
+        """
+        self.__stop = True
+
+    def _raise_on_stop(self):
+        """
+        Raise StopThreads if 'stop' == True
+        """
+        if self.__stop:
+            raise StopThreads
 
 
 class RecordProcess(Popen):
