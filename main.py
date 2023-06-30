@@ -267,7 +267,7 @@ class Controller(QObject):
 
     @pyqtSlot()
     def del_channel(self):
-        """ Delete a channel from the scan list """
+        """ Delete selected channel from the scan list """
         channel_name = self.Window.widget_channels_tree.selected_channel_name()
         if channel_name not in self._channels:
             return
