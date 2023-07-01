@@ -75,8 +75,7 @@ class Controller(QObject):
 
     def _connect_ui_signals(self):
         # Settings
-        self.Window.settings_window.button_apply.clicked.connect(
-            self._save_settings)
+        self.Window.saveSettings.connect(self._save_settings)
 
         # Channel management
         self.Window.field_add_channels.textChanged[str].connect(

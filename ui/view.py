@@ -88,6 +88,8 @@ class RecordProcessItem(QStandardItem):
 
 
 class MainWindow(QWidget):
+    saveSettings = pyqtSignal(SettingsType)
+
     def __init__(self, settings: SettingsType):
         super(MainWindow, self).__init__()
         self._init_ui()
@@ -99,6 +101,8 @@ class MainWindow(QWidget):
 
         # Settings window
         self.settings_window = SettingsWindow()
+        self.settings_window.button_apply.clicked.connect(
+            self._send_save_settings)
         button_settings = QPushButton('Settings')
         button_settings.clicked.connect(self.settings_window.show)
 
@@ -195,6 +199,10 @@ class MainWindow(QWidget):
             settings[KEYS.HIDE_SUC_FIN_PROC])
         self.widget_channels_tree.hide_suc_fin_proc = \
             settings[KEYS.HIDE_SUC_FIN_PROC]
+
+    def _send_save_settings(self):
+        settings = self.get_common_settings_values()
+        self.saveSettings[SettingsType].emit(settings)
 
     @pyqtSlot(int)
     def update_next_scan_timer(self, seconds: int):
