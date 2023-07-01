@@ -101,22 +101,22 @@ class Controller(QObject):
 
     def _connect_services_signals(self):
         # New message signals
-        self.Master.s_log[int, str].connect(self.add_log_message)
-        self.Master.Slave.s_proc_log[int, str].connect(
+        self.Master.log[int, str].connect(self.add_log_message)
+        self.Master.Slave.procLog[int, str].connect(
             self.Window.log_tabs.proc_log)
 
         # Channel status signals
-        self.Master.s_channel_off[str].connect(self._channel_off)
-        self.Master.s_channel_live[str].connect(self._channel_live)
+        self.Master.channelOff[str].connect(self._channel_off)
+        self.Master.channelLive[str].connect(self._channel_live)
 
         # Next scan timer signal
-        self.Master.s_next_scan_timer[int].connect(
+        self.Master.nextScanTimer[int].connect(
             self.Window.update_next_scan_timer)
 
         # Stream status signals
-        self.Master.Slave.s_stream_rec[str, int, str].connect(self._stream_rec)
-        self.Master.Slave.s_stream_finished[int].connect(self._stream_finished)
-        self.Master.Slave.s_stream_fail[int].connect(self._stream_fail)
+        self.Master.Slave.streamRec[str, int, str].connect(self._stream_rec)
+        self.Master.Slave.streamFinished[int].connect(self._stream_finished)
+        self.Master.Slave.streamFailed[int].connect(self._stream_fail)
 
     def _load_settings(self, update: bool = True):
         """ Loading configuration """
@@ -354,10 +354,10 @@ class Master(SoftStoppableThread):
      - edit Slave's queue
     """
 
-    s_log = pyqtSignal(int, str)
-    s_channel_off = pyqtSignal(str)
-    s_channel_live = pyqtSignal(str)
-    s_next_scan_timer = pyqtSignal(int)
+    log = pyqtSignal(int, str)
+    channelOff = pyqtSignal(str)
+    channelLive = pyqtSignal(str)
+    nextScanTimer = pyqtSignal(int)
 
     def __init__(self, channels: dict[str, ChannelData]):
         super(Master, self).__init__()
@@ -367,17 +367,17 @@ class Master(SoftStoppableThread):
         self.__scheduled_streams: dict[str, bool] = {}
         self.scanner_sleep_min: int = DEFAULT.SCANNER_SLEEP
         self.Slave = Slave()
-        self.Slave.s_log[int, str].connect(self.log)
+        self.Slave.log[int, str].connect(self._log)
 
-    def log(self, level: int, text: str):
-        self.s_log[int, str].emit(level, text)
+    def _log(self, level: int, text: str):
+        self.log[int, str].emit(level, text)
 
     def set_start_force_scan(self):
         self.__start_force_scan = True
 
     def run(self) -> None:
         super(Master, self).run()
-        self.log(INFO, "Scanning channels started.")
+        self._log(INFO, "Scanning channels started.")
         self.Slave.start()
 
         try:
@@ -391,18 +391,18 @@ class Master(SoftStoppableThread):
                 self.wait_and_check()
         except StopThreads:
             pass
-        self.log(INFO, "Scanning channels stopped.")
+        self._log(INFO, "Scanning channels stopped.")
 
     def wait_and_check(self):
         """ Waiting with a check to stop """
         # Convert minutes to seconds
         c = self.scanner_sleep_min * 60
         while c != 0 and not self.__start_force_scan:
-            self.s_next_scan_timer[int].emit(c)
+            self.nextScanTimer[int].emit(c)
             sleep(1)
             self._raise_on_stop()
             c -= 1
-        self.s_next_scan_timer[int].emit(c)
+        self.nextScanTimer[int].emit(c)
 
     def channel_status_changed(self, channel_name: str, status: bool):
         if (channel_name in self.__last_status
@@ -422,7 +422,7 @@ class Master(SoftStoppableThread):
                     url, download=False,
                     extra_info={'quiet': True, 'verbose': False})
             except yt_dlp.utils.UserNotLive:
-                self.s_channel_off[str].emit(channel_name)
+                self.channelOff[str].emit(channel_name)
                 return
             except yt_dlp.utils.DownloadError as e:
                 # Check for live flag and last status
@@ -433,22 +433,22 @@ class Master(SoftStoppableThread):
                 ):
                     warn = str(e)
                     leftover = warn[warn.find(FLAG_LIVE) + len(FLAG_LIVE):]
-                    self.log(WARNING,
-                             f"{channel_name} stream in {leftover}.")
+                    self._log(WARNING,
+                              f"{channel_name} stream in {leftover}.")
                     self.__scheduled_streams[channel_name] = True
-                self.s_channel_off[str].emit(channel_name)
+                self.channelOff[str].emit(channel_name)
                 return
             except Exception as e:
                 logger.exception(e)
-                self.log(ERROR, f"<yt-dlp>: {str(e)}")
-                self.s_channel_off[str].emit(channel_name)
+                self._log(ERROR, f"<yt-dlp>: {str(e)}")
+                self.channelOff[str].emit(channel_name)
                 return
 
         # Check channel stream is on
         if info_dict.get("is_live"):
             if self.channel_status_changed(channel_name, True):
-                self.log(INFO, f"Channel {channel_name} is online.")
-                self.s_channel_live[str].emit(channel_name)
+                self._log(INFO, f"Channel {channel_name} is online.")
+                self.channelLive[str].emit(channel_name)
 
             # Check if Slave is ready
             THREADS_LOCK.lock()
@@ -465,20 +465,20 @@ class Master(SoftStoppableThread):
                     'title': info_dict['title'],
                 }
                 self.Slave.queue.put(stream_data, block=True)
-                self.log(INFO, f"Recording {channel_name} added to queue.")
+                self._log(INFO, f"Recording {channel_name} added to queue.")
 
         elif self.channel_status_changed(channel_name, False):
-            self.log(INFO, f"Channel {channel_name} is offline.")
-            self.s_channel_off[str].emit(channel_name)
+            self._log(INFO, f"Channel {channel_name} is offline.")
+            self.channelOff[str].emit(channel_name)
 
 
 class Slave(SoftStoppableThread):
     # TODO: add memory check
-    s_log = pyqtSignal(int, str)
-    s_proc_log = pyqtSignal(int, str)
-    s_stream_rec = pyqtSignal(str, int, str)
-    s_stream_finished = pyqtSignal(int)
-    s_stream_fail = pyqtSignal(int)
+    log = pyqtSignal(int, str)
+    procLog = pyqtSignal(int, str)
+    streamRec = pyqtSignal(str, int, str)
+    streamFinished = pyqtSignal(int)
+    streamFailed = pyqtSignal(int)
 
     def __init__(self):
         super().__init__()
@@ -493,12 +493,12 @@ class Slave(SoftStoppableThread):
         self.max_downloads: int = DEFAULT.MAX_DOWNLOADS
         self.proc_term_timeout: int = DEFAULT.PROC_TERM_TIMOUT
 
-    def log(self, level: int, text: str):
-        self.s_log[int, str].emit(level, text)
+    def _log(self, level: int, text: str):
+        self.log[int, str].emit(level, text)
 
     def run(self):
         super(Slave, self).run()
-        self.log(INFO, "Recorder started.")
+        self._log(INFO, "Recorder started.")
 
         try:
             while True:
@@ -511,7 +511,7 @@ class Slave(SoftStoppableThread):
                 self._raise_on_stop()
         except StopThreads:
             self.stop_downloads()
-        self.log(INFO, "Recorder stopped.")
+        self._log(INFO, "Recorder stopped.")
 
     def get_names_of_active_channels(self):
         return [proc.channel for proc in self.running_downloads]
@@ -530,12 +530,12 @@ class Slave(SoftStoppableThread):
                 continue
             # Handling finished process
             if ret_code == 0:
-                self.s_stream_finished[int].emit(proc.pid)
-                self.log(INFO, f"Recording {proc.channel} finished.")
+                self.streamFinished[int].emit(proc.pid)
+                self._log(INFO, f"Recording {proc.channel} finished.")
             else:
-                self.s_stream_fail[int].emit(proc.pid)
-                self.log(ERROR, f"Recording {proc.channel} "
-                                f"stopped with an error code: {ret_code}!")
+                self.streamFailed[int].emit(proc.pid)
+                self._log(ERROR, f"Recording {proc.channel}"
+                                 f" stopped with an error code: {ret_code}!")
             self.handle_process_finished(proc)
 
         self.running_downloads = list_running
@@ -561,7 +561,7 @@ class Slave(SoftStoppableThread):
 
         temp_log = tempfile.TemporaryFile(mode='w+b')
 
-        self.log(INFO, f"Recording {channel_name} started.")
+        self._log(INFO, f"Recording {channel_name} started.")
 
         cmd = self.ytdlp_command.split() + [
             stream_url,
@@ -594,7 +594,7 @@ class Slave(SoftStoppableThread):
         self.temp_logs[proc.pid] = temp_log
         self.running_downloads.append(proc)
 
-        self.s_stream_rec[str, int, str].emit(
+        self.streamRec[str, int, str].emit(
             channel_name, proc.pid, stream_title)
 
     def check_pids_to_stop(self):
@@ -606,7 +606,7 @@ class Slave(SoftStoppableThread):
                 self.send_process_stop(proc)
 
     def send_process_stop(self, proc: RecordProcess):
-        self.log(INFO, f"Stopping process {proc.pid}...")
+        self._log(INFO, f"Stopping process {proc.pid}...")
         try:
             # Fixme:
             #  ValueError raises when Windows couldn't indentify SIGINT
@@ -619,7 +619,7 @@ class Slave(SoftStoppableThread):
         """ Stop all downloads """
         if not self.running_downloads:
             return
-        self.log(INFO, "Stopping records.")
+        self._log(INFO, "Stopping records.")
 
         for proc in self.running_downloads:
             self.send_process_stop(proc)
@@ -628,17 +628,16 @@ class Slave(SoftStoppableThread):
             try:
                 ret = proc.wait(self.proc_term_timeout)
                 if ret == 0:
-                    self.s_stream_finished[int].emit(proc.pid)
+                    self.streamFinished[int].emit(proc.pid)
                 else:
-                    self.s_stream_fail[int].emit(proc.pid)
-                    self.log(ERROR, "Error while stopping channel {} record :("
-                             .format(proc.channel))
+                    self.streamFailed[int].emit(proc.pid)
+                    self._log(ERROR, f"Recording {proc.channel} stopped"
+                                     f" with an error code: {ret}!")
             except subprocess.TimeoutExpired:
                 proc.kill()
-                self.s_stream_fail[int].emit(proc.pid)
-                self.log(ERROR,
-                         "Recording[{}] of channel {} has been killed!".format(
-                             proc.pid, proc.channel))
+                self.streamFailed[int].emit(proc.pid)
+                self._log(ERROR, "Recording[{}] of channel {} has been"
+                                 " killed!".format(proc.pid, proc.channel))
             finally:
                 self.handle_process_finished(proc)
         self.running_downloads = []
@@ -650,8 +649,8 @@ class Slave(SoftStoppableThread):
         if line == b'':
             return
         self.last_log_byte[proc.pid] = last_byte + len(line)
-        self.s_proc_log[int, str].emit(proc.pid,
-                                       line.decode('utf-8', errors='ignore'))
+        self.procLog[int, str].emit(proc.pid,
+                                    line.decode('utf-8', errors='ignore'))
 
     def handle_process_finished(self, proc: RecordProcess):
         self.handle_process_output(proc)

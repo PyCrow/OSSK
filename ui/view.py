@@ -561,7 +561,7 @@ class SettingsWindow(QWidget):
                                      alignment=Qt.AlignRight)
 
         # Field: Process termination timeout
-        label_proc_term_timeout = QLabel("Process termination timeout")
+        label_proc_term_timeout = QLabel("Process termination timeout (sec)")
         self.box_proc_term_timeout = QSpinBox(self)
         self.box_proc_term_timeout.setRange(0, 3600)
         self.box_proc_term_timeout.valueChanged[int].connect(
