@@ -101,10 +101,10 @@ class MainWindow(QWidget):
 
         # Settings window
         self.settings_window = SettingsWindow()
-        self.settings_window.button_apply.clicked.connect(
+        self.settings_window.button_apply.clicked[bool].connect(
             self._send_save_settings)
         button_settings = QPushButton('Settings')
-        button_settings.clicked.connect(self.settings_window.show)
+        button_settings.clicked[bool].connect(self.settings_window.show)
 
         self.field_add_channels = QLineEdit()
         self.field_add_channels.setPlaceholderText("Enter channel name")
@@ -128,9 +128,9 @@ class MainWindow(QWidget):
         left_vbox.addWidget(self.widget_channels_tree)
 
         self.log_tabs = LogTabWidget()
-        self.widget_channels_tree.s_open_tab_by_pid[int, str].connect(
+        self.widget_channels_tree.openTabByPid[int, str].connect(
             self.log_tabs.open_tab_by_pid)
-        self.widget_channels_tree.s_close_tab_by_pid[int].connect(
+        self.widget_channels_tree.closeTabByPid[int].connect(
             self.log_tabs.process_hide)
 
         main_hbox = QHBoxLayout()
@@ -220,8 +220,8 @@ class ListView(QListView):
 
 
 class ChannelsTree(QTreeView):
-    s_open_tab_by_pid = pyqtSignal(int, str)
-    s_close_tab_by_pid = pyqtSignal(int)
+    openTabByPid = pyqtSignal(int, str)
+    closeTabByPid = pyqtSignal(int)
 
     def __init__(self):
         super(ChannelsTree, self).__init__()
@@ -242,13 +242,17 @@ class ChannelsTree(QTreeView):
         self._map_channel_item: dict[str, ChannelItem] = {}
         self._map_pid_item: dict[int, RecordProcessItem] = {}
 
+        # Actions initialization
         self.on_click_channel_settings = QAction("Channel settings", self)
         self.on_click_delete_channel = QAction("Delete channel", self)
         self._on_click_open_tab = QAction("Open tab", self)
-        self._on_click_open_tab.triggered.connect(self._send_open_tab_by_pid)
         self.on_click_stop = QAction("Stop process", self)
         self._on_click_hide_process = QAction("Hide", self)
-        self._on_click_hide_process.triggered.connect(
+        
+        # Connect actions
+        self._on_click_open_tab.triggered[bool].connect(
+            self._send_open_tab_by_pid)
+        self._on_click_hide_process.triggered[bool].connect(
             self._del_finished_process_item)
 
     def mousePressEvent(self, e: QMouseEvent):
@@ -328,7 +332,7 @@ class ChannelsTree(QTreeView):
     def _send_open_tab_by_pid(self):
         process_item = self._selected_item()
         stream_name = process_item.text()
-        self.s_open_tab_by_pid[int, str].emit(process_item.pid, stream_name)
+        self.openTabByPid[int, str].emit(process_item.pid, stream_name)
 
     # Process management
     def add_child_process_item(self, channel_name: str,
@@ -350,7 +354,7 @@ class ChannelsTree(QTreeView):
         channel_item = process_item.parent()
         channel_item.removeRow(process_item.row())
         del self._map_pid_item[process_item.pid]
-        self.s_close_tab_by_pid[int].emit(process_item.pid)
+        self.closeTabByPid[int].emit(process_item.pid)
 
     def stream_finished(self, pid: int):
         process_item = self._map_pid_item[pid]
