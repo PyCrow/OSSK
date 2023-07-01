@@ -29,7 +29,6 @@ from utils import (
 
 
 # Threads management attributes
-GLOBAL_STOP = False
 THREADS_LOCK = QMutex()
 
 # Local logging config
@@ -217,9 +216,6 @@ class Controller(QObject):
         if self.Master.isRunning() and self.Master.Slave.isRunning():
             self.Master.set_start_force_scan()
             return
-
-        global GLOBAL_STOP
-        GLOBAL_STOP = False
 
         self.Master.start()
 
@@ -665,6 +661,7 @@ class Slave(SoftStoppableThread):
 
 
 if __name__ == '__main__':
+    controller = None
     try:
         app = QApplication(sys.argv)
         controller = Controller()
@@ -673,4 +670,5 @@ if __name__ == '__main__':
     except Exception as e_:
         logger.critical(e_, exc_info=True)
     finally:
-        GLOBAL_STOP = True
+        if controller is not None:
+            controller.set_stop_services()
