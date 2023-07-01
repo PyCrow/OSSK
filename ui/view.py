@@ -88,7 +88,7 @@ class RecordProcessItem(QStandardItem):
 
 
 class MainWindow(QWidget):
-    saveSettings = pyqtSignal(SettingsType)
+    saveSettings = pyqtSignal(dict)
 
     def __init__(self, settings: SettingsType):
         super(MainWindow, self).__init__()
@@ -202,7 +202,7 @@ class MainWindow(QWidget):
 
     def _send_save_settings(self):
         settings = self.get_common_settings_values()
-        self.saveSettings[SettingsType].emit(settings)
+        self.saveSettings[dict].emit(settings)
 
     @pyqtSlot(int)
     def update_next_scan_timer(self, seconds: int):
