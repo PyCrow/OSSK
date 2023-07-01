@@ -45,11 +45,11 @@ def logger_handler(func):
             return func(*args, **kwargs)
         except Exception as e:
             if not isinstance(e, StopThreads):
-                logger.exception("Function {func_name} got exception: {err}"
-                                 .format(func_name=func.__name__, err=e),
-                                 stack_info=True)
+                logger.exception(
+                    "Function {func_name} got exception: {err}".format(
+                        func_name=func.__name__, err=e),
+                    stack_info=True)
             raise e
-
     return _wrapper
 
 
@@ -58,18 +58,20 @@ class Controller(QObject):
         super(Controller, self).__init__()
         self._channels: dict[str, ChannelData] = {}
 
-        settings = self._load_settings(update=False)
+        self.settings = self._load_settings(update_everywhere=False)
 
         # Initiate UI and services, update views settings
-        self.Window = MainWindow(settings)
+        self.Window = MainWindow(self.settings)
         self.Master = Master(deepcopy(self._channels))
         self._srv_thread: QThread | None = None
         self._srv_controller: ServiceController | None = None
 
+        # Connecting signals
         self._connect_ui_signals()
         self._connect_services_signals()
 
-        self._update_threads_settings(settings)
+        # Updating services settings
+        self._update_threads_settings(self.settings)
 
         self.Window.show()
 
@@ -78,25 +80,20 @@ class Controller(QObject):
         self.Window.saveSettings.connect(self._save_settings)
 
         # Channel management
-        self.Window.field_add_channels.textChanged[str].connect(
-            self.highlight_on_exists)
-        self.Window.button_add_channel.clicked.connect(self.add_channel)
+        self.Window.checkExistsChannel[str].connect(self.highlight_on_exists)
+        self.Window.addChannel[str].connect(self.add_channel)
+        self.Window.delChannel[str].connect(self.del_channel)
+        self.Window.openChannelSettings[str].connect(
+            self.open_channel_settings)
+        self.Window.applyChannelSettings[tuple].connect(
+            self.apply_channel_settings)
 
-        # Management buttons
-        self.Window.start_button.clicked.connect(self.run_master)
+        # Service management
+        self.Window.runServices.connect(self.run_services)
         self.Window.stop_button.clicked.connect(self.set_stop_services)
 
-        # Channel tree
-        self.Window.widget_channels_tree.on_click_channel_settings.triggered. \
-            connect(self.open_channel_settings)
-        self.Window.widget_channels_tree.on_click_delete_channel.triggered. \
-            connect(self.del_channel)
-        self.Window.widget_channels_tree.on_click_stop.triggered. \
-            connect(self.stop_single_process)
-
-        # Channel settings
-        self.Window.channel_settings_window.button_apply.clicked.connect(
-            self.clicked_apply_channel_settings)
+        # Process
+        self.Window.stopProcess[int].connect(self.stop_single_process)
 
     def _connect_services_signals(self):
         # New message signals
@@ -117,8 +114,14 @@ class Controller(QObject):
         self.Master.Slave.streamFinished[int].connect(self._stream_finished)
         self.Master.Slave.streamFailed[int].connect(self._stream_fail)
 
-    def _load_settings(self, update: bool = True):
-        """ Loading configuration """
+    def _load_settings(
+            self, update_everywhere: bool = True
+    ) -> SettingsType | None:
+        """
+        Loading settings
+
+        :param update_everywhere: Update services and view by loaded settings
+        """
         suc, settings = get_settings()
         if not suc:
             self.add_log_message(ERROR, "Settings loading error!")
@@ -141,21 +144,19 @@ class Controller(QObject):
             KEYS.HIDE_SUC_FIN_PROC, DEFAULT.HIDE_SUC_FIN_PROC)
 
         # Update Master, Slave and views
-        if update:
+        if update_everywhere:
             self._update_settings_everywhere(settings)
         else:
             return settings
 
-    @pyqtSlot()
-    def _save_settings(self):
+    @pyqtSlot(dict)
+    def _save_settings(self, settings: SettingsType = None):
         """
-        Saving configuration
-        1. Collecting settings from UI
-        2. Preparing settings data to save
-        3. Saving settings
+        Preparing and saving settings data
         """
-        # Collecting common settings values
-        settings = self.Window.get_common_settings_values()
+        if settings is None:
+            settings = self.settings
+
         # Set static ffmpeg path if field is empty
         settings[KEYS.FFMPEG] = settings[KEYS.FFMPEG] or DEFAULT.FFMPEG
         # Set static ytdlp run command if field is empty
@@ -167,7 +168,7 @@ class Controller(QObject):
         if not suc:
             self.add_log_message(ERROR, "Settings saving error!")
 
-        # Update Master, Slave and views
+        # Update services and views
         self._update_settings_everywhere(settings)
 
         self.add_log_message(DEBUG, "Settings updated.")
@@ -177,6 +178,9 @@ class Controller(QObject):
         self._update_views_settings(settings)
 
     def _update_threads_settings(self, settings: SettingsType):
+        # There is no need to make settings deep copy.
+        # All transferring data values are immutable.
+        # TODO: add check for settings data is immutable.
         THREADS_LOCK.lock()
         self.Master.scanner_sleep_min = settings[KEYS.SCANNER_SLEEP]
         self.Master.Slave.max_downloads = settings[KEYS.MAX_DOWNLOADS]
@@ -186,29 +190,39 @@ class Controller(QObject):
         THREADS_LOCK.unlock()
 
     def _update_views_settings(self, settings: SettingsType):
+        # There is no need to make settings deep copy.
+        # The View should not change settings data.
         self.Window.set_common_settings_values(settings)
 
-    @pyqtSlot()
-    def run_master(self):
-        ffmpeg_path = self.Window.settings_window.field_ffmpeg.text()
-        ytdlp_command = self.Window.settings_window.field_ytdlp.text()
-
+    @pyqtSlot(str, str)
+    def run_services(self, ffmpeg_path: str, ytdlp_command: str):
+        """
+        Run checks for ffmpeg and yt-dlp in another thread.
+        """
         # Initialize
         self._srv_thread = QThread()
         self._srv_controller = ServiceController(ffmpeg_path, ytdlp_command)
         self._srv_controller.moveToThread(self._srv_thread)
 
         # Connect signals
+        # noinspection PyUnresolvedReferences
         self._srv_thread.started.connect(self._srv_controller.run)
         self._srv_controller.finished[bool, str].connect(self._real_run_master)
         self._srv_controller.finished.connect(self._srv_thread.quit)
         self._srv_controller.finished.connect(self._srv_controller.deleteLater)
+        # noinspection PyUnresolvedReferences
         self._srv_thread.finished.connect(self._srv_thread.deleteLater)
 
         self._srv_thread.start()
 
     @pyqtSlot(bool, str)
     def _real_run_master(self, suc: bool, message: str):
+        """
+        Checks thread output and services, then start services.
+
+        :param suc: Is ffmpeg and yt-dlp checks finished successfully
+        :param message: Error message
+        """
         if not suc:
             self.add_log_message(WARNING, message)
 
@@ -225,9 +239,8 @@ class Controller(QObject):
         self.Master.Slave.soft_stop()
         THREADS_LOCK.unlock()
 
-    @pyqtSlot()
-    def stop_single_process(self):
-        pid = self.Window.widget_channels_tree.selected_process_id()
+    @pyqtSlot(int)
+    def stop_single_process(self, pid: int):
         THREADS_LOCK.lock()
         self.Master.Slave.pids_to_stop.append(pid)
         THREADS_LOCK.unlock()
@@ -238,10 +251,9 @@ class Controller(QObject):
         message = f"[{DEBUG_LEVELS[level]}] {text}"
         self.Window.log_tabs.add_common_message(message, level)
 
-    @pyqtSlot()
-    def add_channel(self):
-        """ Add a channel to the scan list """
-        channel_name = self.Window.field_add_channels.text()
+    @pyqtSlot(str)
+    def add_channel(self, channel_name: str):
+        """ Add a channel to the monitored list """
         if not channel_name or channel_name in self._channels:
             return
         channel_data = ChannelData(channel_name)
@@ -260,10 +272,9 @@ class Controller(QObject):
             channel_name, channel_data.alias)
         self.Window.field_add_channels.clear()
 
-    @pyqtSlot()
-    def del_channel(self):
-        """ Delete selected channel from the scan list """
-        channel_name = self.Window.widget_channels_tree.selected_channel_name()
+    @pyqtSlot(str)
+    def del_channel(self, channel_name: str):
+        """ Delete selected channel from the monitored list """
         if channel_name not in self._channels:
             return
 
@@ -295,9 +306,8 @@ class Controller(QObject):
             else STYLE.LINE_VALID
         self.Window.field_add_channels.setStyleSheet(status)
 
-    @pyqtSlot()
-    def open_channel_settings(self):
-        channel_name = self.Window.widget_channels_tree.selected_channel_name()
+    @pyqtSlot(str)
+    def open_channel_settings(self, channel_name: str):
         if channel_name not in self._channels:
             return
         self.Window.channel_settings_window.update_data(
@@ -307,9 +317,9 @@ class Controller(QObject):
         )
         self.Window.channel_settings_window.show()
 
-    @pyqtSlot()
-    def clicked_apply_channel_settings(self):
-        ch_name, alias, svq = self.Window.channel_settings_window.get_data()
+    @pyqtSlot(tuple)
+    def apply_channel_settings(self, channel_settings: tuple[str, str, str]):
+        ch_name, alias, svq = channel_settings
         self._channels[ch_name].alias = alias
         self._channels[ch_name].svq = svq
         self._save_settings()
@@ -346,19 +356,20 @@ class Controller(QObject):
 
 
 class Master(SoftStoppableThread):
-    """
-    Master:
-     - run Slave
-     - search for new streams
-     - edit Slave's queue
-    """
-
     log = pyqtSignal(int, str)
     channelOff = pyqtSignal(str)
     channelLive = pyqtSignal(str)
     nextScanTimer = pyqtSignal(int)
 
     def __init__(self, channels: dict[str, ChannelData]):
+        """
+        Service Master:
+         - run service Slave
+         - search for new streams
+         - edit Slave's queue
+
+        :param channels: List of monitored channels.
+        """
         super(Master, self).__init__()
         self.__start_force_scan = False
         self.channels: dict[str, ChannelData] = channels
@@ -480,6 +491,9 @@ class Slave(SoftStoppableThread):
     streamFailed = pyqtSignal(int)
 
     def __init__(self):
+        """
+        Service Slave
+        """
         super().__init__()
         self.queue: Queue[dict[str, str]] = Queue(-1)
         self.running_downloads: list[RecordProcess] = []
@@ -666,6 +680,7 @@ if __name__ == '__main__':
 
         sys.exit(app.exec_())
     except Exception as e_:
+        print(e_)
         logger.critical(e_, exc_info=True)
     finally:
         if controller is not None:

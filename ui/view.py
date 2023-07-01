@@ -89,6 +89,14 @@ class RecordProcessItem(QStandardItem):
 
 class MainWindow(QWidget):
     saveSettings = pyqtSignal(dict)
+    runServices = pyqtSignal(str, str)
+    stopProcess = pyqtSignal(int)
+
+    checkExistsChannel = pyqtSignal(str)
+    addChannel = pyqtSignal(str)
+    delChannel = pyqtSignal(str)
+    openChannelSettings = pyqtSignal(str)
+    applyChannelSettings = pyqtSignal(tuple)
 
     def __init__(self, settings: SettingsType):
         super(MainWindow, self).__init__()
@@ -108,8 +116,11 @@ class MainWindow(QWidget):
 
         self.field_add_channels = QLineEdit()
         self.field_add_channels.setPlaceholderText("Enter channel name")
+        self.field_add_channels.textChanged[str].connect(
+            self.checkExistsChannel[str].emit)
 
         self.button_add_channel = QPushButton("Add")
+        self.button_add_channel.clicked[bool].connect(self._send_add_channel)
 
         hbox_channels_tree_header = QHBoxLayout()
         hbox_channels_tree_header.addWidget(QLabel("Monitored channels"))
@@ -118,6 +129,15 @@ class MainWindow(QWidget):
         self.label_next_scan_timer = QLabel("Next scan timer")
 
         self.widget_channels_tree = ChannelsTree()
+        # noinspection PyUnresolvedReferences
+        self.widget_channels_tree.on_click_stop.triggered\
+            .connect(self._send_stop_process)
+        # noinspection PyUnresolvedReferences
+        self.widget_channels_tree.on_click_delete_channel.triggered\
+            .connect(self._send_del_channel)
+        # noinspection PyUnresolvedReferences
+        self.widget_channels_tree.on_click_channel_settings.triggered\
+            .connect(self._send_open_channel_settings)
 
         left_vbox = QVBoxLayout()
         left_vbox.addWidget(button_settings)
@@ -138,6 +158,7 @@ class MainWindow(QWidget):
         main_hbox.addWidget(self.log_tabs, 2)
 
         self.start_button = QPushButton("Start")
+        self.start_button.clicked[bool].connect(self._send_start_service)
         self.stop_button = QPushButton("Stop all")
         hbox_master_buttons = QHBoxLayout()
         hbox_master_buttons.addWidget(self.start_button)
@@ -157,6 +178,9 @@ class MainWindow(QWidget):
         # Channel settings window
         self.channel_settings_window = ChannelSettingsWindow()
         self.channel_settings_window.setStyleSheet(style)
+        # noinspection PyUnresolvedReferences
+        self.channel_settings_window.button_apply.clicked.connect(
+            self._send_apply_channel_settings)
 
     def _init_settings(self, settings: SettingsType):
         self._set_channels(settings[KEYS.CHANNELS])
@@ -202,10 +226,51 @@ class MainWindow(QWidget):
 
     def _send_save_settings(self):
         settings = self.get_common_settings_values()
+        self.settings_window.close()
         self.saveSettings[dict].emit(settings)
 
+    # OUTGOING SIGNALS
+    @pyqtSlot()
+    def _send_start_service(self):
+        """ [OUT] """
+        ffmpeg_path = self.settings_window.field_ffmpeg.text()
+        ytdlp_command = self.settings_window.field_ytdlp.text()
+        self.runServices[str, str].emit(ffmpeg_path, ytdlp_command)
+
+    @pyqtSlot()
+    def _send_stop_process(self):
+        """ [OUT] """
+        pid = self.widget_channels_tree.selected_process_id()
+        self.stopProcess[int].emit(pid)
+
+    @pyqtSlot()
+    def _send_add_channel(self):
+        """ [OUT] """
+        channel_name = self.field_add_channels.text()
+        self.addChannel[str].emit(channel_name)
+
+    @pyqtSlot()
+    def _send_del_channel(self):
+        """ [OUT] """
+        channel_name = self.widget_channels_tree.selected_channel_name()
+        self.delChannel[str].emit(channel_name)
+
+    @pyqtSlot()
+    def _send_open_channel_settings(self):
+        """ [OUT] """
+        channel_name = self.widget_channels_tree.selected_channel_name()
+        self.openChannelSettings[str].emit(channel_name)
+
+    @pyqtSlot()
+    def _send_apply_channel_settings(self):
+        """ [OUT] """
+        channel_setting = self.channel_settings_window.get_data()
+        self.applyChannelSettings[tuple].emit(channel_setting)
+
+    # INCOMING SIGNALS
     @pyqtSlot(int)
     def update_next_scan_timer(self, seconds: int):
+        """ [IN] """
         self.label_next_scan_timer.setText(f"Next scan in: {seconds} seconds")
 
 
