@@ -1,9 +1,11 @@
 # StreamSaver
 
-A program to automate the tracking of YouTube channels and recording their streams.
+A program to automate the tracking of YouTube channels and recording their streams.<br>
+Main channel: https://t.me/StreamSaverProject
 
-All records will be saved in a folder next to the program: `./records/<CHANNEL_NAME>`
+### ATTENTION!<br> Works stably on Linux systems, however, work on Windows systems may still fail. For example, video and audio tracks will not merged.<br> Report all bugs here: https://t.me/StreamSaverChat
 
+All records will be saved to the root folder of the project: `./records/<CHANNEL_NAME>`<br>
 The event log is stored in the `stream_saver.log` file.
 
 Channel management:
@@ -21,19 +23,22 @@ Settings (`settings` file):
 - in the _yt-dlp_ field, enter the run command or the path to the yt-dlp library / .exe file (default: `python -m yt_dlp`)
 - you can specify a maximum number of concurrent downloads to limit CPU, disk and network usage (default: `2`)
 - you can specify the idle time between full channel scan cycles in minutes (default: `5`).
-This option will avoid a ban from YouTube, which may consider the scan as a DoS attack.
+  This option will avoid a ban from YouTube, which may consider the scan as a DoS attack.
 
 Channel settings:
 - if an alias is specified, it will be displayed in the channel line instead of its ID
 - stream video quality[`480`, `720`, `1080`]: an attempt will be made downloads
  in this capacity. If the format is not available, the download will be cancelled.
 - stream video quality[`best`]: search for the best available format (top to bottom).
+
 ---
 
 Программа для автоматизации отслеживания YouTube каналов и записи их стримов.
+Основной канал: https://t.me/StreamSaverProject
 
-Все записи будут сохраняться в папку, рядом с программой: `./records/<НАЗВАНИЕ_КАНАЛА>`
+### ВНИМАНИЕ!<br> Стабильно работает в системах Linux, однако работа на системах Windows пока ещё может дать сбой. Например не объеденятся видео- и аудио-дорожки.<br> Обо всех ошибках пишите сюда: https://t.me/StreamSaverChat
 
+Все записи будут сохраняться в корневую папку проекта: `./records/<НАЗВАНИЕ_КАНАЛА>`<br>
 Журнал событий сохраняется в файл `stream_saver.log`.
 
 Управление каналами:
