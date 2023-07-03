@@ -132,14 +132,20 @@ class Controller(QObject):
             {channel_data[KEYS.CHANNEL_NAME]: ChannelData.j_load(channel_data)
              for channel_data in settings.get(KEYS.CHANNELS, {})}
 
-        settings[KEYS.FFMPEG] = settings.get(KEYS.FFMPEG, DEFAULT.FFMPEG)
-        settings[KEYS.YTDLP] = settings.get(KEYS.YTDLP, DEFAULT.YTDLP)
+        # Do not allow empty ffmpeg path
+        settings[KEYS.FFMPEG] = settings.get(KEYS.FFMPEG) or DEFAULT.FFMPEG
+        # Do not allow empty yt-dlp command
+        settings[KEYS.YTDLP] = settings.get(KEYS.YTDLP) or DEFAULT.YTDLP
+        # Allow 0
         settings[KEYS.MAX_DOWNLOADS] = settings.get(
             KEYS.MAX_DOWNLOADS, DEFAULT.MAX_DOWNLOADS)
+        # Do not allow 0
         settings[KEYS.SCANNER_SLEEP] = settings.get(
-            KEYS.SCANNER_SLEEP, DEFAULT.SCANNER_SLEEP)
+            KEYS.SCANNER_SLEEP) or DEFAULT.SCANNER_SLEEP
+        # Allow 0 (kill immediately)
         settings[KEYS.PROC_TERM_TIMOUT] = settings.get(
             KEYS.PROC_TERM_TIMOUT, DEFAULT.PROC_TERM_TIMOUT)
+        # Allow any bool value
         settings[KEYS.HIDE_SUC_FIN_PROC] = settings.get(
             KEYS.HIDE_SUC_FIN_PROC, DEFAULT.HIDE_SUC_FIN_PROC)
 
