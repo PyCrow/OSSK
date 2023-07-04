@@ -1,0 +1,9 @@
+{
+    "ffmpeg": "ffmpeg",
+    "ytdlp": "python -m yt_dlp",
+    "max_downloads": 2,
+    "scanner_sleep": 5,
+    "proc_term_timeout": 600,
+    "hide_suc_fin_proc": false,
+    "channels": []
+}
