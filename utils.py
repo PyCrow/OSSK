@@ -8,8 +8,9 @@ from subprocess import run, DEVNULL
 
 from PyQt5.QtCore import QObject, pyqtSignal
 
-from static_vars import (SETTINGS_FILE, RECORDS_PATH, SettingsType,
-                         KEYS, DEFAULT, ChannelData)
+from static_vars import (SETTINGS_FILE, RECORDS_PATH,
+                         KEYS, DEFAULT, ChannelData,
+                         SettingsType, ChannelsDataType)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -56,7 +57,7 @@ def load_settings() -> tuple[bool, SettingsType, str]:
     channels = {}
     try:
         raw_channels = settings.get(KEYS.CHANNELS, {})
-        channels: dict[str, ChannelData] = \
+        channels: ChannelsDataType = \
             {channel_id: ChannelData.j_load(raw_channels[channel_id])
              for channel_id in raw_channels.keys()}
         parsed = True
