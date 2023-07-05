@@ -55,9 +55,10 @@ def load_settings() -> tuple[bool, SettingsType, str]:
 
     channels = {}
     try:
-        channels = \
-            {channel_data[KEYS.CHANNEL_NAME]: ChannelData.j_load(channel_data)
-             for channel_data in settings.get(KEYS.CHANNELS, {})}
+        raw_channels = settings.get(KEYS.CHANNELS, {})
+        channels: dict[str, ChannelData] = \
+            {channel_id: ChannelData.j_load(raw_channels[channel_id])
+             for channel_id in raw_channels.keys()}
         parsed = True
     except Exception as e:
         logger.error(e, exc_info=True)
@@ -80,8 +81,9 @@ def save_settings(settings_: SettingsType) -> tuple[bool, str]:
     settings = deepcopy(settings_)
     try:
         settings = _parse_settings(settings)
-        channels = settings[KEYS.CHANNELS].values()
-        settings[KEYS.CHANNELS] = [i.j_dump() for i in channels]
+        channels: dict[str, ChannelData] = settings[KEYS.CHANNELS]
+        settings[KEYS.CHANNELS] = {ch_id: channels[ch_id].j_dump()
+                                   for ch_id in channels}
         with open(SETTINGS_FILE, 'w') as conf_file:
             json.dump(settings, conf_file, indent=4)
         suc = True
