@@ -56,10 +56,28 @@ def load_settings() -> tuple[bool, SettingsType, str]:
 
     channels = {}
     try:
-        raw_channels = settings.get(KEYS.CHANNELS, {})
-        channels: ChannelsDataType = \
-            {channel_id: ChannelData.j_load(raw_channels[channel_id])
-             for channel_id in raw_channels.keys()}
+        # TODO: StreamSaver 2.0.0 will be support only dict channels
+        #
+        # raw_channels = settings.get(KEYS.CHANNELS, {})
+        # channels: ChannelsDataType = \
+        #     {channel_id: ChannelData.j_load(raw_channels[channel_id])
+        #      for channel_id in raw_channels.keys()}
+
+        # .---- Backward compatibility version ----.
+        raw_channels = settings.get(KEYS.CHANNELS, None)
+        if raw_channels is None:
+            raw_channels = {}
+
+        if isinstance(raw_channels, dict):
+            channels: ChannelsDataType = \
+                {channel_id: ChannelData.j_load(raw_channels[channel_id])
+                 for channel_id in raw_channels.keys()}
+        elif isinstance(raw_channels, list):
+            channels: ChannelsDataType = \
+                {channel_data[KEYS.CHANNEL_NAME]:
+                    ChannelData.j_load(channel_data)
+                 for channel_data in raw_channels}
+        # ^------ Backward compatibility end ------^
         parsed = True
     except Exception as e:
         logger.error(e, exc_info=True)
