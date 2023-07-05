@@ -48,10 +48,6 @@ class DEFAULT:
     CHANNEL_SVQ = 'best'
 
 
-RawChannelDataType = dict[str, str]
-SettingsType = dict[str, Union[bool, int, str, list[RawChannelDataType]]]
-
-
 AVAILABLE_STREAM_RECORD_QUALITIES = {
     'best': ('-f', 'bestvideo*+bestaudio/best'),
     '1080': ('-S', 'res:1080'),
@@ -139,3 +135,8 @@ class RecordProcess(Popen):
     def __init__(self, *args, **kwargs) -> None:
         self.channel: str = UNKNOWN
         super().__init__(*args, **kwargs)
+
+
+ChannelsDataType = dict[str, ChannelData]
+SettingsType = dict[str, Union[bool, int, str, ChannelsDataType]]
+UISettingsType = dict[str, Union[bool, int, str]]

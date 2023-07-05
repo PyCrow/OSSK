@@ -13,7 +13,7 @@ from PyQt5.QtWidgets import (QAbstractItemView, QAction, QCheckBox, QComboBox,
 
 from static_vars import (logging_handler, AVAILABLE_STREAM_RECORD_QUALITIES,
                          KEYS, RecordProcess, STYLESHEET_PATH,
-                         SettingsType, ChannelData)
+                         SettingsType, UISettingsType, ChannelData)
 from ui.dynamic_style import STYLE
 from utils import check_exists_and_callable, is_callable
 
@@ -181,7 +181,7 @@ class MainWindow(QWidget):
         self.channel_settings_window.button_apply.clicked.connect(
             self._send_apply_channel_settings)
 
-    def init_settings(self, settings: dict):
+    def init_settings(self, settings: SettingsType):
         self._set_channels(settings[KEYS.CHANNELS])
         self.set_common_settings_values(settings)
 
@@ -192,7 +192,7 @@ class MainWindow(QWidget):
                 channels[channel_name].alias,
             )
 
-    def get_common_settings_values(self) -> SettingsType:
+    def get_common_settings_values(self) -> UISettingsType:
         ffmpeg_path = self.settings_window.field_ffmpeg.text()
         ytdlp_command = self.settings_window.field_ytdlp.text()
         max_downloads = self.settings_window.box_max_downloads.value()
@@ -209,7 +209,7 @@ class MainWindow(QWidget):
             KEYS.HIDE_SUC_FIN_PROC: hide_suc_fin_proc,
         }
 
-    def set_common_settings_values(self, settings: SettingsType):
+    def set_common_settings_values(self, settings: UISettingsType):
         self.settings_window.field_ffmpeg.setText(settings[KEYS.FFMPEG])
         self.settings_window.field_ytdlp.setText(settings[KEYS.YTDLP])
         self.settings_window.box_max_downloads.setValue(
