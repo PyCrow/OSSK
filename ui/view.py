@@ -15,8 +15,7 @@ from static_vars import (logging_handler, AVAILABLE_STREAM_RECORD_QUALITIES,
                          KEYS, RecordProcess, STYLESHEET_PATH,
                          SettingsType, UISettingsType, ChannelData)
 from ui.dynamic_style import STYLE
-from utils import check_exists_and_callable, is_callable
-
+from utils import check_exists_and_callable, is_callable, check_dir_exists
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
@@ -193,6 +192,7 @@ class MainWindow(QWidget):
             )
 
     def get_common_settings_values(self) -> UISettingsType:
+        records_dir = self.settings_window.field_records_dir.text()
         ffmpeg_path = self.settings_window.field_ffmpeg.text()
         ytdlp_command = self.settings_window.field_ytdlp.text()
         max_downloads = self.settings_window.box_max_downloads.value()
@@ -201,6 +201,7 @@ class MainWindow(QWidget):
         hide_suc_fin_proc = self.settings_window.box_hide_suc_fin_proc\
             .isChecked()
         return {
+            KEYS.RECORDS_DIR: records_dir,
             KEYS.FFMPEG: ffmpeg_path,
             KEYS.YTDLP: ytdlp_command,
             KEYS.MAX_DOWNLOADS: max_downloads,
@@ -210,6 +211,8 @@ class MainWindow(QWidget):
         }
 
     def set_common_settings_values(self, settings: UISettingsType):
+        self.settings_window.field_records_dir.setText(
+            settings[KEYS.RECORDS_DIR])
         self.settings_window.field_ffmpeg.setText(settings[KEYS.FFMPEG])
         self.settings_window.field_ytdlp.setText(settings[KEYS.YTDLP])
         self.settings_window.box_max_downloads.setValue(
@@ -567,10 +570,22 @@ class SettingsWindow(QWidget):
     def _init_ui(self):
         self.setWindowTitle("StreamSaver | Settings")
         self.setWindowModality(Qt.ApplicationModal)
+        self.setFixedSize(750, 500)
 
-        self.setMinimumSize(500, 360)
-        self.setMaximumSize(550, 460)
-        self.resize(500, 360)
+        # Field: Records directory
+        label_records_dir = QLabel("Records directory")
+        self.field_records_dir = QLineEdit(parent=self)
+        self.field_records_dir.setPlaceholderText(
+            "Enter path to records directory")
+        self.field_records_dir.textChanged[str].connect(
+            self._check_records_dir)
+        self.field_records_dir.setToolTip(
+            "Checks is the specified path available as a directory.\n"
+            "The field is highlighted in red if the path is\n"
+            " not available.")
+        hbox_records = QVBoxLayout()
+        hbox_records.addWidget(label_records_dir)
+        hbox_records.addWidget(self.field_records_dir)
 
         # Field: Path to ffmpeg
         label_ffmpeg = QLabel("Path to ffmpeg")
@@ -669,6 +684,8 @@ class SettingsWindow(QWidget):
         self.button_apply = QPushButton("Accept", self)
 
         vbox = QVBoxLayout()
+        vbox.addLayout(hbox_records)
+        vbox.addStretch(1)
         vbox.addLayout(hbox_ffmpeg)
         vbox.addStretch(1)
         vbox.addLayout(hbox_ytdlp)
@@ -690,6 +707,12 @@ class SettingsWindow(QWidget):
         status = STYLE.SPIN_WARNING if value not in range(1, 13) \
             else STYLE.SPIN_VALID
         self.box_max_downloads.setStyleSheet(status)
+
+    @pyqtSlot(str)
+    def _check_records_dir(self, records_dir: str):
+        suc = check_dir_exists(records_dir)
+        status = STYLE.LINE_INVALID if not suc else STYLE.LINE_VALID
+        self.field_records_dir.setStyleSheet(status)
 
     @pyqtSlot(str)
     def _check_ffmpeg(self, ffmpeg_path: str):

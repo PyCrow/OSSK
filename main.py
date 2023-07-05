@@ -167,9 +167,10 @@ class Controller(QObject):
         # TODO: add check for settings data is immutable.
         THREADS_LOCK.lock()
         self.Master.scanner_sleep_min = settings[KEYS.SCANNER_SLEEP]
-        self.Master.Slave.max_downloads = settings[KEYS.MAX_DOWNLOADS]
+        self.Master.Slave.records_path = settings[KEYS.RECORDS_DIR]
         self.Master.Slave.path_to_ffmpeg = settings[KEYS.FFMPEG]
         self.Master.Slave.ytdlp_command = settings[KEYS.YTDLP]
+        self.Master.Slave.max_downloads = settings[KEYS.MAX_DOWNLOADS]
         self.Master.Slave.proc_term_timeout = settings[KEYS.PROC_TERM_TIMOUT]
         THREADS_LOCK.unlock()
         self.add_log_message(DEBUG, "Service settings updated.")
@@ -484,6 +485,7 @@ class Slave(SoftStoppableThread):
         self.temp_logs: dict[int, IO] = {}
         self.last_log_byte: dict[int, int] = {}
 
+        self.records_path: str = DEFAULT.RECORDS_DIR
         self.path_to_ffmpeg: str = DEFAULT.FFMPEG
         self.ytdlp_command: str = DEFAULT.YTDLP
         self.max_downloads: int = DEFAULT.MAX_DOWNLOADS
@@ -552,7 +554,7 @@ class Slave(SoftStoppableThread):
         records_quality: tuple = stream_data[KEYS.CHANNEL_SVQ]
         stream_title: str = stream_data['title']
 
-        channel_dir = str(get_channel_dir(channel_name))
+        channel_dir = str(get_channel_dir(self.records_path, channel_name))
         file_name = '%(title)s.%(ext)s'
 
         temp_log = tempfile.TemporaryFile(mode='w+b')

@@ -8,8 +8,7 @@ from subprocess import run, DEVNULL
 
 from PyQt5.QtCore import QObject, pyqtSignal
 
-from static_vars import (SETTINGS_FILE, RECORDS_PATH,
-                         KEYS, DEFAULT, ChannelData,
+from static_vars import (SETTINGS_FILE, KEYS, DEFAULT, ChannelData,
                          SettingsType, ChannelsDataType)
 
 logger = logging.getLogger(__name__)
@@ -34,6 +33,12 @@ def check_exists_and_callable(_path: str) -> bool:
     return False
 
 
+def check_dir_exists(_path: str) -> bool:
+    if Path(_path).exists() and Path(_path).is_dir():
+        return True
+    return False
+
+
 def load_settings() -> tuple[bool, SettingsType, str]:
     loaded = False
     parsed = False
@@ -41,6 +46,7 @@ def load_settings() -> tuple[bool, SettingsType, str]:
     settings = {}
     message = "Settings loaded successfully."
 
+    # Loading settings
     try:
         with open(SETTINGS_FILE, 'r') as conf_file:
             settings = json.load(conf_file)
@@ -52,8 +58,10 @@ def load_settings() -> tuple[bool, SettingsType, str]:
         logger.error(e, exc_info=True)
         message = "Settings loading error!"
 
+    # Soft settings validation
     settings = _parse_settings(settings)
 
+    # Loading channels
     channels = {}
     try:
         # TODO: StreamSaver 2.0.0 will be support only dict channels
@@ -84,6 +92,7 @@ def load_settings() -> tuple[bool, SettingsType, str]:
         message = "Channels list parsing failed!"
     settings[KEYS.CHANNELS] = channels
 
+    # Save if needed
     saved = True
     if file_not_found:
         saved, saver_message = save_settings(settings)
@@ -114,6 +123,9 @@ def save_settings(settings_: SettingsType) -> tuple[bool, str]:
 
 
 def _parse_settings(settings: dict) -> dict:
+    # Do not allow empty records path
+    settings[KEYS.RECORDS_DIR] = settings.get(KEYS.RECORDS_DIR) \
+                                  or DEFAULT.RECORDS_DIR
     # Do not allow empty ffmpeg path
     settings[KEYS.FFMPEG] = settings.get(KEYS.FFMPEG) or DEFAULT.FFMPEG
     # Do not allow empty yt-dlp command
@@ -133,9 +145,9 @@ def _parse_settings(settings: dict) -> dict:
     return settings
 
 
-def get_channel_dir(channel_name: str) -> Path:
+def get_channel_dir(records_dir: str, channel_name: str) -> Path:
     """ Create channel's dir is not exist and return its path """
-    channel_dir = RECORDS_PATH.joinpath(channel_name)
+    channel_dir = Path(records_dir).joinpath(channel_name)
     if not channel_dir.exists():
         channel_dir.mkdir(parents=True, exist_ok=True)
     return channel_dir
