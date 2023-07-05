@@ -145,24 +145,17 @@ class Controller(QObject):
         """
         Preparing and saving settings data
         """
-        if settings is None:
-            settings = self.settings
+        if settings is not None:
+            self.settings.update(settings)
 
-        # Set static ffmpeg path if field is empty
-        settings[KEYS.FFMPEG] = settings[KEYS.FFMPEG] or DEFAULT.FFMPEG
-        # Set static ytdlp run command if field is empty
-        settings[KEYS.YTDLP] = settings[KEYS.YTDLP] or DEFAULT.YTDLP
-        # Channels classes to list of dicts
-        settings[KEYS.CHANNELS] = [i.j_dump() for i in self._channels.values()]
-
-        suc = save_settings(settings)
+        suc, message = save_settings(self.settings)
         if not suc:
-            self.add_log_message(ERROR, "Settings saving error!")
+            self.add_log_message(ERROR, message)
+        elif message:
+            self.add_log_message(DEBUG, message)
 
         # Update services and views
-        self._update_settings_everywhere(settings)
-
-        self.add_log_message(DEBUG, "Settings updated.")
+        self._update_settings_everywhere(self.settings)
 
     def _update_settings_everywhere(self, settings: SettingsType):
         self._update_threads_settings(settings)
@@ -179,6 +172,7 @@ class Controller(QObject):
         self.Master.Slave.ytdlp_command = settings[KEYS.YTDLP]
         self.Master.Slave.proc_term_timeout = settings[KEYS.PROC_TERM_TIMOUT]
         THREADS_LOCK.unlock()
+        self.add_log_message(DEBUG, "Service settings updated.")
 
     def _update_views_settings(self, settings: SettingsType):
         # There is no need to make settings deep copy.
