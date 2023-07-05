@@ -13,7 +13,7 @@ from PyQt5.QtWidgets import (QAbstractItemView, QAction, QCheckBox, QComboBox,
 
 from static_vars import (logging_handler, AVAILABLE_STREAM_RECORD_QUALITIES,
                          KEYS, RecordProcess, STYLESHEET_PATH,
-                         SettingsType, RawChannelDataType)
+                         SettingsType, ChannelData)
 from ui.dynamic_style import STYLE
 from utils import check_exists_and_callable, is_callable
 
@@ -181,15 +181,15 @@ class MainWindow(QWidget):
         self.channel_settings_window.button_apply.clicked.connect(
             self._send_apply_channel_settings)
 
-    def init_settings(self, settings: SettingsType):
+    def init_settings(self, settings: dict):
         self._set_channels(settings[KEYS.CHANNELS])
         self.set_common_settings_values(settings)
 
-    def _set_channels(self, channels: list[RawChannelDataType]):
-        for channel_data in channels:
+    def _set_channels(self, channels: dict[str, ChannelData]):
+        for channel_name in channels:
             self.widget_channels_tree.add_channel_item(
-                channel_data[KEYS.CHANNEL_NAME],
-                channel_data[KEYS.CHANNEL_ALIAS],
+                channels[channel_name].name,
+                channels[channel_name].alias,
             )
 
     def get_common_settings_values(self) -> SettingsType:

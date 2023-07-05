@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+from copy import deepcopy
 from pathlib import Path
 from subprocess import run, DEVNULL
 
@@ -35,11 +36,16 @@ def check_exists_and_callable(_path: str) -> bool:
 def load_settings() -> tuple[bool, SettingsType, str]:
     loaded = False
     parsed = False
+    file_not_found = False
     settings = {}
-    message = "Settings loading finished successfully."
+    message = "Settings loaded successfully."
+
     try:
         with open(SETTINGS_FILE, 'r') as conf_file:
             settings = json.load(conf_file)
+        loaded = True
+    except FileNotFoundError:
+        file_not_found = True
         loaded = True
     except Exception as e:
         logger.error(e, exc_info=True)
@@ -56,24 +62,34 @@ def load_settings() -> tuple[bool, SettingsType, str]:
     except Exception as e:
         logger.error(e, exc_info=True)
         message = "Channels list parsing failed!"
-    finally:
-        settings[KEYS.CHANNELS] = channels
+    settings[KEYS.CHANNELS] = channels
 
-    suc: bool = loaded and parsed
+    saved = True
+    if file_not_found:
+        saved, saver_message = save_settings(settings)
+        message = " ".join((message, saver_message))
+    suc: bool = loaded and parsed and saved
 
     return suc, settings, message
 
 
-def save_settings(settings: SettingsType) -> bool:
+def save_settings(settings_: SettingsType) -> tuple[bool, str]:
+    """ Don't worry - I'll make a deep copy. """
     suc = False
+    message = "Settings saved."
+    settings = deepcopy(settings_)
     try:
+        settings = _parse_settings(settings)
+        channels = settings[KEYS.CHANNELS].values()
+        settings[KEYS.CHANNELS] = [i.j_dump() for i in channels]
         with open(SETTINGS_FILE, 'w') as conf_file:
             json.dump(settings, conf_file, indent=4)
         suc = True
     except Exception as e:
         logger.error(e, exc_info=True)
+        message = "Settings saving error!"
     finally:
-        return suc
+        return suc, message
 
 
 def _parse_settings(settings: dict) -> dict:
