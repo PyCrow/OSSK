@@ -23,7 +23,7 @@ from static_vars import (
 from ui.view import MainWindow, Status
 from ui.dynamic_style import STYLE
 from utils import (
-    get_settings, save_settings,
+    load_settings, save_settings,
     ServiceController,
     get_channel_dir)
 
@@ -58,11 +58,14 @@ class Controller(QObject):
         super(Controller, self).__init__()
         self._channels: dict[str, ChannelData] = {}
 
-        self.settings = self._load_settings(update_everywhere=False)
-
         # Initiate UI and services, update views settings
-        self.Window = MainWindow(self.settings)
-        self.Master = Master(deepcopy(self._channels))
+        self.Window = MainWindow()
+        self.Master = Master()
+
+        self.settings = self._load_settings(update_everywhere=False)
+        self.Window.init_settings(self.settings)
+        self.Master.channels = deepcopy(self._channels)
+
         self._srv_thread: QThread | None = None
         self._srv_controller: ServiceController | None = None
 
@@ -122,32 +125,14 @@ class Controller(QObject):
 
         :param update_everywhere: Update services and view by loaded settings
         """
-        suc, settings = get_settings()
+        suc, settings, message = load_settings()
         if not suc:
-            self.add_log_message(ERROR, "Settings loading error!")
-            return
+            self.add_log_message(ERROR, message)
+        elif message:
+            self.add_log_message(DEBUG, message)
 
         # Getting channels from settings and saving them
-        self._channels = \
-            {channel_data[KEYS.CHANNEL_NAME]: ChannelData.j_load(channel_data)
-             for channel_data in settings.get(KEYS.CHANNELS, {})}
-
-        # Do not allow empty ffmpeg path
-        settings[KEYS.FFMPEG] = settings.get(KEYS.FFMPEG) or DEFAULT.FFMPEG
-        # Do not allow empty yt-dlp command
-        settings[KEYS.YTDLP] = settings.get(KEYS.YTDLP) or DEFAULT.YTDLP
-        # Allow 0
-        settings[KEYS.MAX_DOWNLOADS] = settings.get(
-            KEYS.MAX_DOWNLOADS, DEFAULT.MAX_DOWNLOADS)
-        # Do not allow 0
-        settings[KEYS.SCANNER_SLEEP] = settings.get(
-            KEYS.SCANNER_SLEEP) or DEFAULT.SCANNER_SLEEP
-        # Allow 0 (kill immediately)
-        settings[KEYS.PROC_TERM_TIMOUT] = settings.get(
-            KEYS.PROC_TERM_TIMOUT, DEFAULT.PROC_TERM_TIMOUT)
-        # Allow any bool value
-        settings[KEYS.HIDE_SUC_FIN_PROC] = settings.get(
-            KEYS.HIDE_SUC_FIN_PROC, DEFAULT.HIDE_SUC_FIN_PROC)
+        self._channels = settings[KEYS.CHANNELS]
 
         # Update Master, Slave and views
         if update_everywhere:
@@ -367,18 +352,16 @@ class Master(SoftStoppableThread):
     channelLive = pyqtSignal(str)
     nextScanTimer = pyqtSignal(int)
 
-    def __init__(self, channels: dict[str, ChannelData]):
+    def __init__(self):
         """
         Service Master:
          - run service Slave
          - search for new streams
          - edit Slave's queue
-
-        :param channels: List of monitored channels.
         """
         super(Master, self).__init__()
         self.__start_force_scan = False
-        self.channels: dict[str, ChannelData] = channels
+        self.channels: dict[str, ChannelData] = {}
         self.__last_status: dict[str, bool] = {}
         self.__scheduled_streams: dict[str, bool] = {}
         self.scanner_sleep_min: int = DEFAULT.SCANNER_SLEEP

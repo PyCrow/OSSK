@@ -37,7 +37,7 @@ class KEYS:
 
 
 class DEFAULT:
-    FFMPEG = ''
+    FFMPEG = 'ffmpeg'
     YTDLP = 'python -m yt_dlp'
     MAX_DOWNLOADS = 2
     SCANNER_SLEEP = 5

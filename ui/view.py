@@ -98,10 +98,9 @@ class MainWindow(QWidget):
     openChannelSettings = pyqtSignal(str)
     applyChannelSettings = pyqtSignal(tuple)
 
-    def __init__(self, settings: SettingsType):
+    def __init__(self):
         super(MainWindow, self).__init__()
         self._init_ui()
-        self._init_settings(settings)
 
     def _init_ui(self):
         self.setWindowTitle("StreamSaver")
@@ -182,7 +181,7 @@ class MainWindow(QWidget):
         self.channel_settings_window.button_apply.clicked.connect(
             self._send_apply_channel_settings)
 
-    def _init_settings(self, settings: SettingsType):
+    def init_settings(self, settings: SettingsType):
         self._set_channels(settings[KEYS.CHANNELS])
         self.set_common_settings_values(settings)
 
