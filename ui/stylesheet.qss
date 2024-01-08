@@ -56,7 +56,8 @@ QTreeView::branch:hover {
     background-color: black; }
 QListView::item:selected {
     background-color: black;
-    border: 1px solid #0f0; }
+    border: 1px solid #0f0;
+    color: #fff; }
 QTreeView::branch:selected {
     background-color: black;
     border-top: 1px solid #0f0;
@@ -64,7 +65,8 @@ QTreeView::branch:selected {
 QTreeView::item:selected {
     background-color: black;
     border-top: 1px solid #0f0;
-    border-bottom: 1px solid #0f0; }
+    border-bottom: 1px solid #0f0;
+    color: #fff; }
 QListView::item:disabled,
 QTreeView::item:disabled,
 QLineEdit:disabled {
