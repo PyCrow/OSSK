@@ -191,12 +191,10 @@ class Controller(QObject):
         self._srv_controller.moveToThread(self._srv_thread)
 
         # Connect signals
-        # noinspection PyUnresolvedReferences
         self._srv_thread.started.connect(self._srv_controller.run)
         self._srv_controller.finished[bool, str].connect(self._real_run_master)
         self._srv_controller.finished.connect(self._srv_thread.quit)
         self._srv_controller.finished.connect(self._srv_controller.deleteLater)
-        # noinspection PyUnresolvedReferences
         self._srv_thread.finished.connect(self._srv_thread.deleteLater)
 
         self._srv_thread.start()

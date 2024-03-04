@@ -127,13 +127,10 @@ class MainWindow(QWidget):
         self.label_next_scan_timer = QLabel("Next scan timer")
 
         self.widget_channels_tree = ChannelsTree()
-        # noinspection PyUnresolvedReferences
         self.widget_channels_tree.on_click_stop.triggered\
             .connect(self._send_stop_process)
-        # noinspection PyUnresolvedReferences
         self.widget_channels_tree.on_click_delete_channel.triggered\
             .connect(self._send_del_channel)
-        # noinspection PyUnresolvedReferences
         self.widget_channels_tree.on_click_channel_settings.triggered\
             .connect(self._send_open_channel_settings)
 
@@ -176,7 +173,6 @@ class MainWindow(QWidget):
         # Channel settings window
         self.channel_settings_window = ChannelSettingsWindow()
         self.channel_settings_window.setStyleSheet(style)
-        # noinspection PyUnresolvedReferences
         self.channel_settings_window.button_apply.clicked.connect(
             self._send_apply_channel_settings)
 
