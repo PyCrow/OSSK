@@ -141,9 +141,9 @@ class MainWindow(QWidget):
         left_vbox.addWidget(button_settings)
         left_vbox.addWidget(self.field_add_channels)
         left_vbox.addLayout(hbox_channels_tree_header)
+        left_vbox.addWidget(self.widget_channels_tree)
         left_vbox.addWidget(self.label_next_scan_timer,
                             alignment=Qt.AlignHCenter)
-        left_vbox.addWidget(self.widget_channels_tree)
 
         self.log_tabs = LogTabWidget()
         self.widget_channels_tree.openTabByPid[int, str].connect(

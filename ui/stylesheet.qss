@@ -33,7 +33,11 @@ QTabBar::tab:selected,
 QTabBar::tab:hover {
     color: #0f0; }
 QTabBar::tab:!selected {
-    margin-top: 2px;
+    margin-top: 2px; }
+QTabBar::close-button {
+    image: url(ui/icons/cross.ico); }
+QTabBar::close-button:hover {
+    image: url(ui/icons/cross_hover.ico);
 }
 QListView,
 QTreeView,
