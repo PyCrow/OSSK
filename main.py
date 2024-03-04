@@ -539,6 +539,7 @@ class Slave(SoftStoppableThread):
         self.running_downloads = list_running
 
     def ready_to_download(self) -> bool:
+        # Unlimited downloads if 'max_downloads' set to 0
         if self.max_downloads == 0:
             return True
         if len(self.running_downloads) < self.max_downloads:
@@ -572,7 +573,7 @@ class Slave(SoftStoppableThread):
             # tracks (video and audio) during download
             '--no-part',
             # Update sockets when failed
-            '--socket-timeout', '5',
+            '--socket-timeout', '10',
             '--retries', '10',
             '--retry-sleep', '5',
             # No progress bar
@@ -586,8 +587,8 @@ class Slave(SoftStoppableThread):
             '--hls-use-mpegts',
         ]
 
-        proc = RecordProcess(cmd, stdout=temp_log, stderr=temp_log)
-        proc.channel = channel_name
+        proc = RecordProcess(cmd, stdout=temp_log, stderr=temp_log,
+                             channel=channel_name)
         self.last_log_byte[proc.pid] = 0
         self.temp_logs[proc.pid] = temp_log
         self.running_downloads.append(proc)

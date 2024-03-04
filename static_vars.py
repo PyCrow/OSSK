@@ -134,7 +134,7 @@ class SoftStoppableThread(QThread):
 
 class RecordProcess(Popen):
     def __init__(self, *args, **kwargs) -> None:
-        self.channel: str = UNKNOWN
+        self.channel: str = kwargs.pop('channel')
         super().__init__(*args, **kwargs)
 
 
