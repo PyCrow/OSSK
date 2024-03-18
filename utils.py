@@ -64,7 +64,7 @@ def load_settings() -> tuple[bool, SettingsType, str]:
     # Loading channels
     channels = {}
     try:
-        # TODO: StreamSaver 2.0.0 will be support only dict channels
+        # TODO: OSSK 2.0.0 will be support only dict channels
         #
         # raw_channels = settings.get(KEYS.CHANNELS, {})
         # channels: ChannelsDataType = \

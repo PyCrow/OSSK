@@ -102,7 +102,7 @@ class MainWindow(QWidget):
         self._init_ui()
 
     def _init_ui(self):
-        self.setWindowTitle("StreamSaver")
+        self.setWindowTitle("OSSK")
         self.resize(980, 600)
 
         # Settings window
@@ -311,7 +311,7 @@ class ChannelsTree(QTreeView):
         self._on_click_open_tab = QAction("Open tab", self)
         self.on_click_stop = QAction("Stop process", self)
         self._on_click_hide_process = QAction("Hide", self)
-        
+
         # Connect actions
         self._on_click_open_tab.triggered[bool].connect(
             self._send_open_tab_by_pid)
@@ -564,7 +564,7 @@ class SettingsWindow(QWidget):
         self._init_ui()
 
     def _init_ui(self):
-        self.setWindowTitle("StreamSaver | Settings")
+        self.setWindowTitle("OSSK | Settings")
         self.setWindowModality(Qt.ApplicationModal)
         self.setFixedSize(750, 500)
 
@@ -739,7 +739,7 @@ class ChannelSettingsWindow(QWidget):
         self._init_ui()
 
     def _init_ui(self):
-        self.setWindowTitle("StreamSaver | Channel settings")
+        self.setWindowTitle("OSSK | Channel settings")
         self.setWindowModality(Qt.ApplicationModal)
 
         self.setMinimumWidth(300)

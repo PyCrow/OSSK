@@ -1,9 +1,9 @@
-# StreamSaver
+# OpenSourceStreamKeeper
 
 A program to automate the tracking of YouTube channels and recording their streams.<br>
-Main channel: https://t.me/StreamSaverProject
+Main channel: https://t.me/OSSKProject
 
-### ATTENTION!<br> Works stably on Linux systems, however, work on Windows systems may still fail. For example, video and audio tracks will not merged.<br> Report all bugs here: https://t.me/StreamSaverChat
+### ATTENTION!<br> Works stably on Linux systems, however, work on Windows systems may still fail. For example, video and audio tracks will not merged.<br> Report all bugs here: https://t.me/OSSKChat
 
 All records will be saved to the root folder of the project: `./records/<CHANNEL_NAME>`<br>
 The event log is stored in the `stream_saver.log` file.
@@ -34,9 +34,9 @@ Channel settings:
 ---
 
 Программа для автоматизации отслеживания YouTube каналов и записи их стримов.
-Основной канал: https://t.me/StreamSaverProject
+Основной канал: https://t.me/OSSKProject
 
-### ВНИМАНИЕ!<br> Стабильно работает в системах Linux, однако работа на системах Windows пока ещё может дать сбой. Например не объеденятся видео- и аудио-дорожки.<br> Обо всех ошибках пишите сюда: https://t.me/StreamSaverChat
+### ВНИМАНИЕ!<br> Стабильно работает в системах Linux, однако работа на системах Windows пока ещё может дать сбой. Например не объеденятся видео- и аудио-дорожки.<br> Обо всех ошибках пишите сюда: https://t.me/OSSKChat
 
 Все записи будут сохраняться в корневую папку проекта: `./records/<НАЗВАНИЕ_КАНАЛА>`<br>
 Журнал событий сохраняется в файл `stream_saver.log`.

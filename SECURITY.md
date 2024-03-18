@@ -9,4 +9,4 @@
 
 ## Reporting a Vulnerability
 
-https://t.me/StreamSaverChat
+https://t.me/OSSKChat
