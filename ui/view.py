@@ -107,7 +107,7 @@ class MainWindow(QWidget):
 
         # Settings window
         self.settings_window = SettingsWindow()
-        self.settings_window.button_apply.clicked[bool].connect(
+        self.settings_window.saveSettings.connect(
             self._send_save_settings)
         button_settings = QPushButton('Settings')
         button_settings.clicked[bool].connect(self.settings_window.show)
@@ -193,7 +193,7 @@ class MainWindow(QWidget):
         ytdlp_command = self.settings_window.field_ytdlp.text()
         max_downloads = self.settings_window.box_max_downloads.value()
         scanner_sleep_min = self.settings_window.box_scanner_sleep.value()
-        proc_term_timeout = self.settings_window.box_proc_term_timeout.value()
+        proc_term_timeout_sec = self.settings_window.box_proc_term_timeout.value()
         hide_suc_fin_proc = self.settings_window.box_hide_suc_fin_proc\
             .isChecked()
         return {
@@ -201,8 +201,8 @@ class MainWindow(QWidget):
             KEYS.FFMPEG: ffmpeg_path,
             KEYS.YTDLP: ytdlp_command,
             KEYS.MAX_DOWNLOADS: max_downloads,
-            KEYS.SCANNER_SLEEP: scanner_sleep_min,
-            KEYS.PROC_TERM_TIMOUT: proc_term_timeout,
+            KEYS.SCANNER_SLEEP_MIN: scanner_sleep_min,
+            KEYS.PROC_TERM_TIMEOUT_SEC: proc_term_timeout_sec,
             KEYS.HIDE_SUC_FIN_PROC: hide_suc_fin_proc,
         }
 
@@ -214,9 +214,9 @@ class MainWindow(QWidget):
         self.settings_window.box_max_downloads.setValue(
             settings[KEYS.MAX_DOWNLOADS])
         self.settings_window.box_scanner_sleep.setValue(
-            settings[KEYS.SCANNER_SLEEP])
+            settings[KEYS.SCANNER_SLEEP_MIN])
         self.settings_window.box_proc_term_timeout.setValue(
-            settings[KEYS.PROC_TERM_TIMOUT])
+            settings[KEYS.PROC_TERM_TIMEOUT_SEC])
         self.settings_window.box_hide_suc_fin_proc.setChecked(
             settings[KEYS.HIDE_SUC_FIN_PROC])
         self.widget_channels_tree.hide_suc_fin_proc = \
@@ -559,6 +559,8 @@ class LogWidget(ListView):
 
 
 class SettingsWindow(QWidget):
+    saveSettings = pyqtSignal()
+
     def __init__(self):
         super(SettingsWindow, self).__init__()
         self._init_ui()
@@ -604,7 +606,6 @@ class SettingsWindow(QWidget):
         self.field_ytdlp = QLineEdit(parent=self)
         self.field_ytdlp.setPlaceholderText(
             "Enter command or path to yt-dlp")
-        self.field_ytdlp.textChanged[str].connect(self._check_ytdlp)
         self.field_ytdlp.setToolTip(
             "Checks:\n"
             "1. Is called as a command.\n"
@@ -678,6 +679,7 @@ class SettingsWindow(QWidget):
                                          alignment=Qt.AlignRight)
 
         self.button_apply = QPushButton("Accept", self)
+        self.button_apply.clicked.connect(self._post_validation)
 
         vbox = QVBoxLayout()
         vbox.addLayout(hbox_records)
@@ -716,11 +718,12 @@ class SettingsWindow(QWidget):
         status = STYLE.LINE_INVALID if not suc else STYLE.LINE_VALID
         self.field_ffmpeg.setStyleSheet(status)
 
-    @pyqtSlot(str)
-    def _check_ytdlp(self, ytdlp_path: str):
+    def _check_ytdlp(self):
+        ytdlp_path = self.field_ytdlp.text()
         suc = is_callable(ytdlp_path)
         status = STYLE.LINE_INVALID if not suc else STYLE.LINE_VALID
         self.field_ytdlp.setStyleSheet(status)
+        return suc
 
     @pyqtSlot(int)
     def _check_scanner_sleep(self, value: int):
@@ -731,6 +734,10 @@ class SettingsWindow(QWidget):
     def _check_proc_term_timeout(self, value: int):
         status = STYLE.SPIN_WARNING if value < 20 else STYLE.SPIN_VALID
         self.box_proc_term_timeout.setStyleSheet(status)
+
+    def _post_validation(self):
+        if self._check_ytdlp():
+            self.saveSettings.emit()
 
 
 class ChannelSettingsWindow(QWidget):

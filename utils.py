@@ -9,10 +9,24 @@ from subprocess import run, DEVNULL
 from PyQt5.QtCore import QObject, pyqtSignal
 
 from static_vars import (SETTINGS_FILE, KEYS, DEFAULT, ChannelData,
-                         SettingsType, ChannelsDataType)
+                         SettingsType, ChannelsDataType, StopThreads)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
+
+def logger_handler(func):
+    def _wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            if not isinstance(e, StopThreads):
+                logger.exception(
+                    "Function {func_name} got exception: {err}".format(
+                        func_name=func.__name__, err=e),
+                    stack_info=True)
+            raise e
+    return _wrapper
 
 
 def is_callable(_path: str):
@@ -66,26 +80,10 @@ def load_settings() -> tuple[bool, SettingsType, str]:
     try:
         # TODO: OSSK 2.0.0 will be support only dict channels
         #
-        # raw_channels = settings.get(KEYS.CHANNELS, {})
-        # channels: ChannelsDataType = \
-        #     {channel_id: ChannelData.j_load(raw_channels[channel_id])
-        #      for channel_id in raw_channels.keys()}
-
-        # .---- Backward compatibility version ----.
-        raw_channels = settings.get(KEYS.CHANNELS, None)
-        if raw_channels is None:
-            raw_channels = {}
-
-        if isinstance(raw_channels, dict):
-            channels: ChannelsDataType = \
-                {channel_id: ChannelData.j_load(raw_channels[channel_id])
-                 for channel_id in raw_channels.keys()}
-        elif isinstance(raw_channels, list):
-            channels: ChannelsDataType = \
-                {channel_data[KEYS.CHANNEL_NAME]:
-                    ChannelData.j_load(channel_data)
-                 for channel_data in raw_channels}
-        # ^------ Backward compatibility end ------^
+        raw_channels = settings.get(KEYS.CHANNELS, {})
+        channels: ChannelsDataType = \
+            {channel_id: ChannelData.j_load(raw_channels[channel_id])
+             for channel_id in raw_channels.keys()}
         parsed = True
     except Exception as e:
         logger.error(e, exc_info=True)
@@ -122,26 +120,30 @@ def save_settings(settings_: SettingsType) -> tuple[bool, str]:
         return suc, message
 
 
-def _parse_settings(settings: dict) -> dict:
-    # Do not allow empty records path
-    settings[KEYS.RECORDS_DIR] = settings.get(KEYS.RECORDS_DIR) \
-                                  or DEFAULT.RECORDS_DIR
-    # Do not allow empty ffmpeg path
-    settings[KEYS.FFMPEG] = settings.get(KEYS.FFMPEG) or DEFAULT.FFMPEG
-    # Do not allow empty yt-dlp command
-    settings[KEYS.YTDLP] = settings.get(KEYS.YTDLP) or DEFAULT.YTDLP
-    # Allow 0
-    settings[KEYS.MAX_DOWNLOADS] = settings.get(
-        KEYS.MAX_DOWNLOADS, DEFAULT.MAX_DOWNLOADS)
-    # Do not allow 0
-    settings[KEYS.SCANNER_SLEEP] = settings.get(
-        KEYS.SCANNER_SLEEP) or DEFAULT.SCANNER_SLEEP
-    # Allow 0 (kill immediately)
-    settings[KEYS.PROC_TERM_TIMOUT] = settings.get(
-        KEYS.PROC_TERM_TIMOUT, DEFAULT.PROC_TERM_TIMOUT)
-    # Allow any bool value
-    settings[KEYS.HIDE_SUC_FIN_PROC] = settings.get(
-        KEYS.HIDE_SUC_FIN_PROC, DEFAULT.HIDE_SUC_FIN_PROC)
+def _parse_settings(settings_: dict) -> dict:
+    settings = {
+        KEYS.CHANNELS: settings_.get(KEYS.CHANNELS, {}),
+
+        # Do not allow empty records path
+        KEYS.RECORDS_DIR: (settings_.get(KEYS.RECORDS_DIR)
+                           or DEFAULT.RECORDS_DIR),
+        # Do not allow empty ffmpeg path
+        KEYS.FFMPEG: settings_.get(KEYS.FFMPEG) or DEFAULT.FFMPEG,
+        # Do not allow empty yt-dlp command
+        KEYS.YTDLP: settings_.get(KEYS.YTDLP) or DEFAULT.YTDLP,
+        # Allow 0
+        KEYS.MAX_DOWNLOADS: settings_.get(KEYS.MAX_DOWNLOADS,
+                                          DEFAULT.MAX_DOWNLOADS),
+        # Do not allow 0
+        KEYS.SCANNER_SLEEP_MIN: (settings_.get(KEYS.SCANNER_SLEEP_MIN)
+                                 or DEFAULT.SCANNER_SLEEP_MIN),
+        # Allow 0 (kill immediately)
+        KEYS.PROC_TERM_TIMEOUT_SEC: settings_.get(
+            KEYS.PROC_TERM_TIMEOUT_SEC, DEFAULT.PROC_TERM_TIMEOUT_SEC),
+        # Allow any bool value
+        KEYS.HIDE_SUC_FIN_PROC: settings_.get(KEYS.HIDE_SUC_FIN_PROC,
+                                              DEFAULT.HIDE_SUC_FIN_PROC)
+    }
     return settings
 
 

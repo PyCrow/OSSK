@@ -1,4 +1,5 @@
 import logging
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from subprocess import Popen
 from typing import Union
@@ -15,7 +16,8 @@ STYLESHEET_PATH = CURRENT_PATH.joinpath('ui').joinpath('stylesheet.qss')
 FLAG_LIVE = 'live event will begin in '
 
 # Logging config
-logging_handler = logging.FileHandler(LOG_FILE, encoding='utf-8')
+logging_handler = RotatingFileHandler(LOG_FILE, maxBytes=1024*1024*10,
+                                      backupCount=2, encoding='utf-8')
 logging_handler.setLevel(logging.DEBUG)
 logging_handler.setFormatter(logging.Formatter(
     '%(asctime)s [%(levelname)s] %(message)s', "%Y-%m-%d %H:%M:%S"))
@@ -26,8 +28,8 @@ class KEYS:
     FFMPEG = 'ffmpeg'
     YTDLP = 'ytdlp'
     MAX_DOWNLOADS = 'max_downloads'
-    SCANNER_SLEEP = 'scanner_sleep'
-    PROC_TERM_TIMOUT = 'proc_term_timeout'
+    SCANNER_SLEEP_MIN = 'scanner_sleep'
+    PROC_TERM_TIMEOUT_SEC = 'proc_term_timeout_sec'
     HIDE_SUC_FIN_PROC = 'hide_suc_fin_proc'
     CHANNELS = 'channels'
 
@@ -41,8 +43,8 @@ class DEFAULT:
     FFMPEG = 'ffmpeg'
     YTDLP = 'python -m yt_dlp'
     MAX_DOWNLOADS = 2
-    SCANNER_SLEEP = 5
-    PROC_TERM_TIMOUT = 600
+    SCANNER_SLEEP_MIN = 5
+    PROC_TERM_TIMEOUT_SEC = 600
     HIDE_SUC_FIN_PROC = False
 
     CHANNEL_ALIAS = ''
