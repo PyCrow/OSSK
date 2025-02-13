@@ -3,23 +3,33 @@ from __future__ import annotations
 import logging
 from datetime import datetime
 
-from PyQt5.QtCore import pyqtSignal, pyqtSlot, QModelIndex, Qt
+from PyQt5.QtCore import pyqtSignal, pyqtSlot, QModelIndex, Qt, QUrl
 from PyQt5.QtGui import (QColor, QLinearGradient, QMouseEvent,
-                         QStandardItem, QStandardItemModel)
+                         QStandardItem, QStandardItemModel, QDesktopServices)
 from PyQt5.QtWidgets import (QAbstractItemView, QAction, QCheckBox, QComboBox,
                              QHBoxLayout, QLabel, QLineEdit, QListView, QMenu,
                              QPushButton, QSpinBox, QTabWidget, QTreeView,
-                             QVBoxLayout, QWidget)
+                             QVBoxLayout, QWidget, QMainWindow, QFrame,
+                             QFileDialog, QDialog, QApplication)
 
+from main_utils import check_exists_and_callable, is_callable, check_dir_exists
 from static_vars import (logging_handler, AVAILABLE_STREAM_RECORD_QUALITIES,
                          KEYS, RecordProcess, STYLESHEET_PATH,
                          SettingsType, UISettingsType, ChannelData)
+from ui.components.menu import AddChannelWidget
 from ui.dynamic_style import STYLE
-from utils import check_exists_and_callable, is_callable, check_dir_exists
+from ui.utils import centralize
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 logger.addHandler(logging_handler)
+
+
+def common_splitter():
+    splitter = QFrame()
+    splitter.setObjectName('splitter')
+    splitter.setFrameStyle(QFrame.HLine | QFrame.Plain)
+    return splitter
 
 
 class Status:
@@ -86,7 +96,7 @@ class RecordProcessItem(QStandardItem):
         super(RecordProcessItem, self).__init__(*args, **kwargs)
 
 
-class MainWindow(QWidget):
+class MainWindow(QMainWindow):
     saveSettings = pyqtSignal(dict)
     runServices = pyqtSignal(str, str)
     stopProcess = pyqtSignal(int)
@@ -100,29 +110,44 @@ class MainWindow(QWidget):
     def __init__(self):
         super(MainWindow, self).__init__()
         self._init_ui()
+        self._init_menu()
+
+    def _init_menu(self):
+        bar = self.menuBar()
+
+        main_menu = QMenu("File", self)
+        action_add_channel = QAction("Add channel to track", self)
+        action_add_channel.triggered.connect(self.add_channel_widget.show)
+        main_menu.addAction(action_add_channel)
+        bar.addMenu(main_menu)
+
+        settings_menu = QMenu("Settings", self)
+        general_settings = QAction("General settings", self)
+        general_settings.triggered.connect(self.settings_window.show)
+        settings_menu.addAction(general_settings)
+        bar.addMenu(settings_menu)
 
     def _init_ui(self):
         self.setWindowTitle("OSSK")
-        self.resize(980, 600)
+        self.resize(860, 660)
+        centralize(self)
+
+        # Style loading
+        style = STYLESHEET_PATH.read_text()
+        self.setStyleSheet(style)
+
+        # Main menu widgets
+        self.add_channel_widget = AddChannelWidget()
+        self.add_channel_widget.checkChannelExists.connect(
+            self.checkExistsChannel.emit)
+        self.add_channel_widget.commit.connect(self._send_add_channel)
+        self.add_channel_widget.setStyleSheet(style)
 
         # Settings window
         self.settings_window = SettingsWindow()
         self.settings_window.saveSettings.connect(
             self._send_save_settings)
-        button_settings = QPushButton('Settings')
-        button_settings.clicked[bool].connect(self.settings_window.show)
-
-        self.field_add_channels = QLineEdit()
-        self.field_add_channels.setPlaceholderText("Enter channel name")
-        self.field_add_channels.textChanged[str].connect(
-            self.checkExistsChannel[str].emit)
-
-        self.button_add_channel = QPushButton("Add")
-        self.button_add_channel.clicked[bool].connect(self._send_add_channel)
-
-        hbox_channels_tree_header = QHBoxLayout()
-        hbox_channels_tree_header.addWidget(QLabel("Monitored channels"))
-        hbox_channels_tree_header.addWidget(self.button_add_channel)
+        self.settings_window.setStyleSheet(style)
 
         self.label_next_scan_timer = QLabel("Next scan timer")
 
@@ -134,13 +159,11 @@ class MainWindow(QWidget):
         self.widget_channels_tree.on_click_channel_settings.triggered\
             .connect(self._send_open_channel_settings)
 
-        left_vbox = QVBoxLayout()
-        left_vbox.addWidget(button_settings)
-        left_vbox.addWidget(self.field_add_channels)
-        left_vbox.addLayout(hbox_channels_tree_header)
-        left_vbox.addWidget(self.widget_channels_tree)
-        left_vbox.addWidget(self.label_next_scan_timer,
-                            alignment=Qt.AlignHCenter)
+        channels_tree = QVBoxLayout()
+        channels_tree.addWidget(QLabel("Monitored channels"),
+                                alignment=Qt.AlignHCenter)
+        channels_tree.addWidget(self.widget_channels_tree)
+        channels_tree.addWidget(self.label_next_scan_timer)
 
         self.log_tabs = LogTabWidget()
         self.widget_channels_tree.openTabByPid[int, str].connect(
@@ -148,8 +171,8 @@ class MainWindow(QWidget):
         self.widget_channels_tree.closeTabByPid[int].connect(
             self.log_tabs.process_hide)
 
-        main_hbox = QHBoxLayout()
-        main_hbox.addLayout(left_vbox, 1)
+        main_hbox = QVBoxLayout()
+        main_hbox.addLayout(channels_tree, 1)
         main_hbox.addWidget(self.log_tabs, 2)
 
         self.start_button = QPushButton("Start")
@@ -163,12 +186,9 @@ class MainWindow(QWidget):
         main_box.addLayout(main_hbox)
         main_box.addLayout(hbox_master_buttons)
 
-        self.setLayout(main_box)
-
-        # Style loading
-        style = STYLESHEET_PATH.read_text()
-        self.setStyleSheet(style)
-        self.settings_window.setStyleSheet(style)
+        central_widget = QWidget(self)
+        central_widget.setLayout(main_box)
+        self.setCentralWidget(central_widget)
 
         # Channel settings window
         self.channel_settings_window = ChannelSettingsWindow()
@@ -189,7 +209,7 @@ class MainWindow(QWidget):
 
     def get_common_settings_values(self) -> UISettingsType:
         records_dir = self.settings_window.field_records_dir.text()
-        ffmpeg_path = self.settings_window.field_ffmpeg.text()
+        ffmpeg_path = self.settings_window.field_ffmpeg_file.text()
         ytdlp_command = self.settings_window.field_ytdlp.text()
         max_downloads = self.settings_window.box_max_downloads.value()
         scanner_sleep_min = self.settings_window.box_scanner_sleep.value()
@@ -209,7 +229,7 @@ class MainWindow(QWidget):
     def set_common_settings_values(self, settings: UISettingsType):
         self.settings_window.field_records_dir.setText(
             settings[KEYS.RECORDS_DIR])
-        self.settings_window.field_ffmpeg.setText(settings[KEYS.FFMPEG])
+        self.settings_window.field_ffmpeg_file.setText(settings[KEYS.FFMPEG])
         self.settings_window.field_ytdlp.setText(settings[KEYS.YTDLP])
         self.settings_window.box_max_downloads.setValue(
             settings[KEYS.MAX_DOWNLOADS])
@@ -231,7 +251,7 @@ class MainWindow(QWidget):
     @pyqtSlot()
     def _send_start_service(self):
         """ [OUT] """
-        ffmpeg_path = self.settings_window.field_ffmpeg.text()
+        ffmpeg_path = self.settings_window.field_ffmpeg_file.text()
         ytdlp_command = self.settings_window.field_ytdlp.text()
         self.runServices[str, str].emit(ffmpeg_path, ytdlp_command)
 
@@ -244,7 +264,7 @@ class MainWindow(QWidget):
     @pyqtSlot()
     def _send_add_channel(self):
         """ [OUT] """
-        channel_name = self.field_add_channels.text()
+        channel_name = self.add_channel_widget.field_channel.text()
         self.addChannel[str].emit(channel_name)
 
     @pyqtSlot()
@@ -566,13 +586,13 @@ class SettingsWindow(QWidget):
         self._init_ui()
 
     def _init_ui(self):
-        self.setWindowTitle("OSSK | Settings")
+        self.setWindowTitle("OSSK | General settings")
         self.setWindowModality(Qt.ApplicationModal)
         self.setFixedSize(750, 500)
+        centralize(self)
 
         # Field: Records directory
-        label_records_dir = QLabel("Records directory")
-        self.field_records_dir = QLineEdit(parent=self)
+        self.field_records_dir = QLineEdit(self)
         self.field_records_dir.setPlaceholderText(
             "Enter path to records directory")
         self.field_records_dir.textChanged[str].connect(
@@ -581,25 +601,41 @@ class SettingsWindow(QWidget):
             "Checks is the specified path available as a directory.\n"
             "The field is highlighted in red if the path is\n"
             " not available.")
-        hbox_records = QVBoxLayout()
-        hbox_records.addWidget(label_records_dir)
-        hbox_records.addWidget(self.field_records_dir)
+        button_open_rec_dir = QPushButton("Open")
+        button_open_rec_dir.clicked[bool].connect(
+            lambda: QDesktopServices.openUrl(
+                QUrl.fromLocalFile(self.field_records_dir.text())
+            )
+        )
+        button_select_ffmpeg_file = QPushButton("Select")
+        button_select_ffmpeg_file.clicked[bool].connect(
+            self._records_dir_selector)
+        records_dir_layout = QHBoxLayout()
+        records_dir_layout.addWidget(self.field_records_dir)
+        records_dir_layout.addWidget(button_open_rec_dir)
+        records_dir_layout.addWidget(button_select_ffmpeg_file)
+        records_layout = QVBoxLayout()
+        records_layout.addWidget(QLabel("Records directory"))
+        records_layout.addLayout(records_dir_layout)
 
         # Field: Path to ffmpeg
-        label_ffmpeg = QLabel("Path to ffmpeg")
-        self.field_ffmpeg = QLineEdit(parent=self)
-        self.field_ffmpeg.setPlaceholderText(
-            "Enter path to ffmpeg")
-        self.field_ffmpeg.textChanged[str].connect(self._check_ffmpeg)
-        self.field_ffmpeg.setToolTip(
+        self.field_ffmpeg_file = QLineEdit(self)
+        self.field_ffmpeg_file.setPlaceholderText("Enter path to ffmpeg")
+        self.field_ffmpeg_file.textChanged[str].connect(self._check_ffmpeg)
+        self.field_ffmpeg_file.setToolTip(
             "Checks:\n"
             "1. Is the specified path available as a file.\n"
             "2. Is the specified file can be called.\n"
             "The field is highlighted in red if the path file is\n"
             " not available.")
-        hbox_ffmpeg = QVBoxLayout()
-        hbox_ffmpeg.addWidget(label_ffmpeg)
-        hbox_ffmpeg.addWidget(self.field_ffmpeg)
+        button_select_ffmpeg_file = QPushButton("Select")
+        button_select_ffmpeg_file.clicked[bool].connect(self._ffmpeg_selector)
+        hbox_ffmpeg = QHBoxLayout()
+        hbox_ffmpeg.addWidget(self.field_ffmpeg_file)
+        hbox_ffmpeg.addWidget(button_select_ffmpeg_file)
+        ffmpeg_layout = QVBoxLayout()
+        ffmpeg_layout.addWidget(QLabel("Path to ffmpeg"))
+        ffmpeg_layout.addLayout(hbox_ffmpeg)
 
         # Field: Command or path to yt-dlp
         label_ytdlp = QLabel("Command or path to yt-dlp")
@@ -682,23 +718,42 @@ class SettingsWindow(QWidget):
         self.button_apply.clicked.connect(self._post_validation)
 
         vbox = QVBoxLayout()
-        vbox.addLayout(hbox_records)
-        vbox.addStretch(1)
-        vbox.addLayout(hbox_ffmpeg)
-        vbox.addStretch(1)
+        vbox.addLayout(records_layout)
+        vbox.addWidget(common_splitter())
+        vbox.addLayout(ffmpeg_layout)
+        vbox.addWidget(common_splitter())
         vbox.addLayout(hbox_ytdlp)
-        vbox.addStretch(1)
+        vbox.addWidget(common_splitter())
         vbox.addLayout(hbox_max_downloads)
-        vbox.addStretch(1)
+        vbox.addWidget(common_splitter())
         vbox.addLayout(hbox_scanner_sleep)
-        vbox.addStretch(1)
+        vbox.addWidget(common_splitter())
         vbox.addLayout(hbox_proc_term_timeout)
-        vbox.addStretch(1)
+        vbox.addWidget(common_splitter())
         vbox.addLayout(hbox_hide_suc_fin_proc)
-        vbox.addStretch(2)
+        vbox.addSpacing(20)
         vbox.addWidget(self.button_apply)
 
         self.setLayout(vbox)
+
+    def _records_dir_selector(self):
+        d = QFileDialog(
+            caption="Select records directory",
+            directory=self.field_records_dir.text())
+        d.setFileMode(QFileDialog.Directory)
+        d.setOption(QFileDialog.ShowDirsOnly)
+        d.setViewMode(QFileDialog.Detail)
+        if d.exec_() == QDialog.Accepted:
+            self.field_records_dir.setText(d.selectedFiles()[0])
+
+    def _ffmpeg_selector(self):
+        d = QFileDialog(
+            caption="Select ffmpeg file",
+            directory=self.field_ffmpeg_file.text())
+        d.setFileMode(QFileDialog.ExistingFile)
+        d.setViewMode(QFileDialog.Detail)
+        if d.exec_() == QDialog.Accepted:
+            self.field_ffmpeg_file.setText(d.selectedFiles()[0])
 
     @pyqtSlot(int)
     def _check_max_downloads(self, value: int):
@@ -716,7 +771,7 @@ class SettingsWindow(QWidget):
     def _check_ffmpeg(self, ffmpeg_path: str):
         suc = check_exists_and_callable(ffmpeg_path)
         status = STYLE.LINE_INVALID if not suc else STYLE.LINE_VALID
-        self.field_ffmpeg.setStyleSheet(status)
+        self.field_ffmpeg_file.setStyleSheet(status)
 
     def _check_ytdlp(self):
         ytdlp_path = self.field_ytdlp.text()
@@ -754,8 +809,10 @@ class ChannelSettingsWindow(QWidget):
         self.setMinimumHeight(300)
         self.setMaximumHeight(500)
         self.resize(400, 300)
+        centralize(self)
 
         self.label_channel = QLabel(self)
+        self.label_channel.setTextInteractionFlags(Qt.TextSelectableByMouse)
 
         self.line_alias = QLineEdit()
         self.line_alias.setPlaceholderText(

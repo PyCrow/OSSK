@@ -29,8 +29,8 @@ def logger_handler(func):
     return _wrapper
 
 
-def is_callable(_path: str):
-    cmd = _path.split()
+def is_callable(path: str):
+    cmd = path.split()
     cmd.append('--help')
     try:
         return run(cmd, stdout=DEVNULL, stderr=DEVNULL).returncode == 0

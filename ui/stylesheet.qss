@@ -86,11 +86,11 @@ QStandardItem {
 QPushButton {
     min-height: 22;
     font-size: 16px;
-    background-color: #303030;
-    border-top: 1px solid #0a0;
+    background-color: #333333;
+    border-top: 0;
     border-left: 1px solid #242;
     border-right: 1px solid #353;
-    border-bottom: 1px solid #101010;
+    border-bottom: 0;
     border-radius: 6px;
     margin-top: 2;
     margin-bottom: 2; }
@@ -148,6 +148,25 @@ QScrollBar::sub-line {
 QScrollBar::add-page,
 QScrollBar::sub-page {
     background: none;
+}
+
+QMenu {
+    border: 1px solid #333333;
+}
+QMenu:selected {
+    background: #333333;
+}
+
+QMenuBar {
+    background: #202020;
+}
+QMenuBar::item:selected {
+    background: #333333;
+    border-bottom: 1px solid #333;
+}
+
+QFrame#splitter {
+    background: #333;
 }
 
 QToolTip {

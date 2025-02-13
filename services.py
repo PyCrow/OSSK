@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import subprocess
 import tempfile
@@ -10,10 +12,10 @@ from typing import IO
 import yt_dlp
 from PyQt5.QtCore import pyqtSignal, QMutex
 
+from main_utils import get_channel_dir, logger_handler
 from static_vars import (SoftStoppableThread, ChannelData, StopThreads,
                          DEFAULT, FLAG_LIVE, KEYS, RecordProcess,
                          logging_handler)
-from utils import get_channel_dir, logger_handler
 
 # Local logging config
 logger = logging.getLogger()

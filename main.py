@@ -16,7 +16,7 @@ from static_vars import (
     SettingsType)
 from ui.view import MainWindow, Status
 from ui.dynamic_style import STYLE
-from utils import (
+from main_utils import (
     load_settings,
     save_settings,
     ServiceController)
@@ -235,7 +235,7 @@ class Controller(QObject):
         # Update UI
         self.Window.widget_channels_tree.add_channel_item(
             channel_name, channel_data.alias)
-        self.Window.field_add_channels.clear()
+        self.Window.add_channel_widget.field_channel.clear()
 
     @pyqtSlot(str)
     def del_channel(self, channel_name: str):
@@ -266,7 +266,7 @@ class Controller(QObject):
     def highlight_on_exists(self, ch_name: str):
         status = STYLE.LINE_INVALID if ch_name in self._channels \
             else STYLE.LINE_VALID
-        self.Window.field_add_channels.setStyleSheet(status)
+        self.Window.add_channel_widget.field_channel.setStyleSheet(status)
 
     @pyqtSlot(str)
     def open_channel_settings(self, channel_name: str):
