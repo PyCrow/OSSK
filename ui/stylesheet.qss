@@ -166,7 +166,7 @@ QMenuBar::item:selected {
 }
 
 QFrame#splitter {
-    background: #333;
+    background: #303030;
 }
 
 QToolTip {
@@ -176,4 +176,8 @@ QToolTip {
     border-left: 1px solid #242;
     border-right: 1px solid #353;
     border-bottom: 1px solid #101010;
+}
+
+QStatusBar {
+    color: #909090;
 }

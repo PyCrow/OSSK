@@ -10,13 +10,14 @@ from PyQt5.QtWidgets import (QAbstractItemView, QAction, QCheckBox, QComboBox,
                              QHBoxLayout, QLabel, QLineEdit, QListView, QMenu,
                              QPushButton, QSpinBox, QTabWidget, QTreeView,
                              QVBoxLayout, QWidget, QMainWindow, QFrame,
-                             QFileDialog, QDialog, QApplication)
+                             QFileDialog, QDialog)
 
 from main_utils import check_exists_and_callable, is_callable, check_dir_exists
 from static_vars import (logging_handler, AVAILABLE_STREAM_RECORD_QUALITIES,
                          KEYS, RecordProcess, STYLESHEET_PATH,
                          SettingsType, UISettingsType, ChannelData)
-from ui.components.menu import AddChannelWidget
+from ui.components.base import ConfirmableWidget
+from ui.components.menu import AddChannelWidget, BypassWidget
 from ui.dynamic_style import STYLE
 from ui.utils import centralize
 
@@ -122,9 +123,12 @@ class MainWindow(QMainWindow):
         bar.addMenu(main_menu)
 
         settings_menu = QMenu("Settings", self)
-        general_settings = QAction("General settings", self)
+        general_settings = QAction("General", self)
         general_settings.triggered.connect(self.settings_window.show)
+        bypass_settings = QAction("Bypass", self)
+        bypass_settings.triggered.connect(self.bypass_settings.show)
         settings_menu.addAction(general_settings)
+        settings_menu.addAction(bypass_settings)
         bar.addMenu(settings_menu)
 
     def _init_ui(self):
@@ -140,16 +144,18 @@ class MainWindow(QMainWindow):
         self.add_channel_widget = AddChannelWidget()
         self.add_channel_widget.checkChannelExists.connect(
             self.checkExistsChannel.emit)
-        self.add_channel_widget.commit.connect(self._send_add_channel)
+        self.add_channel_widget.confirm.connect(self._send_add_channel)
         self.add_channel_widget.setStyleSheet(style)
 
         # Settings window
         self.settings_window = SettingsWindow()
-        self.settings_window.saveSettings.connect(
-            self._send_save_settings)
+        self.settings_window.confirm.connect(self._send_save_settings)
         self.settings_window.setStyleSheet(style)
 
-        self.label_next_scan_timer = QLabel("Next scan timer")
+        self.bypass_settings = BypassWidget()
+        self.bypass_settings.setStyleSheet(style)
+
+        self.status_bar = self.statusBar()
 
         self.widget_channels_tree = ChannelsTree()
         self.widget_channels_tree.on_click_stop.triggered\
@@ -163,7 +169,6 @@ class MainWindow(QMainWindow):
         channels_tree.addWidget(QLabel("Monitored channels"),
                                 alignment=Qt.AlignHCenter)
         channels_tree.addWidget(self.widget_channels_tree)
-        channels_tree.addWidget(self.label_next_scan_timer)
 
         self.log_tabs = LogTabWidget()
         self.widget_channels_tree.openTabByPid[int, str].connect(
@@ -193,8 +198,8 @@ class MainWindow(QMainWindow):
         # Channel settings window
         self.channel_settings_window = ChannelSettingsWindow()
         self.channel_settings_window.setStyleSheet(style)
-        self.channel_settings_window.button_apply.clicked.connect(
-            self._send_apply_channel_settings)
+        self.channel_settings_window.confirm.connect(
+            self._apply_channel_settings)
 
     def init_settings(self, settings: SettingsType):
         self._set_channels(settings[KEYS.CHANNELS])
@@ -244,7 +249,6 @@ class MainWindow(QMainWindow):
 
     def _send_save_settings(self):
         settings = self.get_common_settings_values()
-        self.settings_window.close()
         self.saveSettings[dict].emit(settings)
 
     # OUTGOING SIGNALS
@@ -280,7 +284,7 @@ class MainWindow(QMainWindow):
         self.openChannelSettings[str].emit(channel_name)
 
     @pyqtSlot()
-    def _send_apply_channel_settings(self):
+    def _apply_channel_settings(self):
         """ [OUT] """
         channel_setting = self.channel_settings_window.get_data()
         self.applyChannelSettings[tuple].emit(channel_setting)
@@ -289,7 +293,7 @@ class MainWindow(QMainWindow):
     @pyqtSlot(int)
     def update_next_scan_timer(self, seconds: int):
         """ [IN] """
-        self.label_next_scan_timer.setText(f"Next scan in: {seconds} seconds")
+        self.status_bar.showMessage(f"Next scan in: {seconds} seconds", 3000)
 
 
 class ListView(QListView):
@@ -578,18 +582,11 @@ class LogWidget(ListView):
         self.scrollToBottom()
 
 
-class SettingsWindow(QWidget):
-    saveSettings = pyqtSignal()
-
-    def __init__(self):
-        super(SettingsWindow, self).__init__()
-        self._init_ui()
+class SettingsWindow(ConfirmableWidget):
 
     def _init_ui(self):
         self.setWindowTitle("OSSK | General settings")
-        self.setWindowModality(Qt.ApplicationModal)
         self.setFixedSize(750, 500)
-        centralize(self)
 
         # Field: Records directory
         self.field_records_dir = QLineEdit(self)
@@ -714,7 +711,7 @@ class SettingsWindow(QWidget):
         hbox_hide_suc_fin_proc.addWidget(self.box_hide_suc_fin_proc,
                                          alignment=Qt.AlignRight)
 
-        self.button_apply = QPushButton("Accept", self)
+        self.button_apply = QPushButton("Apply", self)
         self.button_apply.clicked.connect(self._post_validation)
 
         vbox = QVBoxLayout()
@@ -792,24 +789,19 @@ class SettingsWindow(QWidget):
 
     def _post_validation(self):
         if self._check_ytdlp():
-            self.saveSettings.emit()
+            self.confirm.emit()
 
 
-class ChannelSettingsWindow(QWidget):
-    def __init__(self):
-        super(ChannelSettingsWindow, self).__init__()
-        self._init_ui()
+class ChannelSettingsWindow(ConfirmableWidget):
 
     def _init_ui(self):
         self.setWindowTitle("OSSK | Channel settings")
-        self.setWindowModality(Qt.ApplicationModal)
 
         self.setMinimumWidth(300)
         self.setMaximumWidth(500)
         self.setMinimumHeight(300)
         self.setMaximumHeight(500)
         self.resize(400, 300)
-        centralize(self)
 
         self.label_channel = QLabel(self)
         self.label_channel.setTextInteractionFlags(Qt.TextSelectableByMouse)
@@ -821,7 +813,8 @@ class ChannelSettingsWindow(QWidget):
         self.box_svq = QComboBox()
         self.box_svq.addItems(list(AVAILABLE_STREAM_RECORD_QUALITIES.keys()))
 
-        self.button_apply = QPushButton("Accept", self)
+        button_apply = QPushButton("Apply", self)
+        button_apply.clicked.connect(self.confirm.emit)
 
         vbox = QVBoxLayout()
         vbox.addWidget(self.label_channel, alignment=Qt.AlignHCenter)
@@ -832,7 +825,7 @@ class ChannelSettingsWindow(QWidget):
         vbox.addWidget(QLabel("Stream video quality"))
         vbox.addWidget(self.box_svq)
         vbox.addStretch(2)
-        vbox.addWidget(self.button_apply)
+        vbox.addWidget(button_apply)
 
         self.setLayout(vbox)
 
@@ -850,5 +843,4 @@ class ChannelSettingsWindow(QWidget):
         ch_name = self.label_channel.text()
         alias = self.line_alias.text()
         svq = self.box_svq.currentText()
-        self.close()
         return ch_name, alias, svq
