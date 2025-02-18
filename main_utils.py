@@ -142,7 +142,9 @@ def _parse_settings(settings_: dict) -> dict:
             KEYS.PROC_TERM_TIMEOUT_SEC, DEFAULT.PROC_TERM_TIMEOUT_SEC),
         # Allow any bool value
         KEYS.HIDE_SUC_FIN_PROC: settings_.get(KEYS.HIDE_SUC_FIN_PROC,
-                                              DEFAULT.HIDE_SUC_FIN_PROC)
+                                              DEFAULT.HIDE_SUC_FIN_PROC),
+        # Allow any bool value
+        KEYS.USE_COOKIES: settings_.get(KEYS.USE_COOKIES, DEFAULT.USE_COOKIES)
     }
     return settings
 

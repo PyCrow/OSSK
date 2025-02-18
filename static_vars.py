@@ -32,6 +32,7 @@ class KEYS:
     PROC_TERM_TIMEOUT_SEC = 'proc_term_timeout_sec'
     HIDE_SUC_FIN_PROC = 'hide_suc_fin_proc'
     CHANNELS = 'channels'
+    USE_COOKIES = 'use_cookies'
 
     CHANNEL_NAME = 'name'
     CHANNEL_ALIAS = 'alias'
@@ -46,6 +47,7 @@ class DEFAULT:
     SCANNER_SLEEP_MIN = 5
     PROC_TERM_TIMEOUT_SEC = 600
     HIDE_SUC_FIN_PROC = False
+    USE_COOKIES = False
 
     CHANNEL_ALIAS = ''
     CHANNEL_SVQ = 'best'
