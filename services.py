@@ -177,6 +177,7 @@ class Slave(SoftStoppableThread):
         self.ytdlp_command: str = DEFAULT.YTDLP
         self.max_downloads: int = DEFAULT.MAX_DOWNLOADS
         self.proc_term_timeout_sec: int = DEFAULT.PROC_TERM_TIMEOUT_SEC
+        self.use_cookies: bool = DEFAULT.USE_COOKIES
 
     def _log(self, level: int, text: str):
         self.log[int, str].emit(level, text)

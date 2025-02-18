@@ -153,6 +153,7 @@ class MainWindow(QMainWindow):
         self.settings_window.setStyleSheet(style)
 
         self.bypass_settings = BypassWidget()
+        self.bypass_settings.confirm.connect(self._send_save_settings)
         self.bypass_settings.setStyleSheet(style)
 
         self.status_bar = self.statusBar()
@@ -218,9 +219,12 @@ class MainWindow(QMainWindow):
         ytdlp_command = self.settings_window.field_ytdlp.text()
         max_downloads = self.settings_window.box_max_downloads.value()
         scanner_sleep_min = self.settings_window.box_scanner_sleep.value()
-        proc_term_timeout_sec = self.settings_window.box_proc_term_timeout.value()
-        hide_suc_fin_proc = self.settings_window.box_hide_suc_fin_proc\
-            .isChecked()
+        proc_term_timeout_sec = (
+            self.settings_window.box_proc_term_timeout.value())
+        hide_suc_fin_proc = (
+            self.settings_window.box_hide_suc_fin_proc.isChecked())
+        use_cookies = (
+            self.bypass_settings.checkbox_use_cookie.widget.isChecked())
         return {
             KEYS.RECORDS_DIR: records_dir,
             KEYS.FFMPEG: ffmpeg_path,
@@ -229,6 +233,7 @@ class MainWindow(QMainWindow):
             KEYS.SCANNER_SLEEP_MIN: scanner_sleep_min,
             KEYS.PROC_TERM_TIMEOUT_SEC: proc_term_timeout_sec,
             KEYS.HIDE_SUC_FIN_PROC: hide_suc_fin_proc,
+            KEYS.USE_COOKIES: use_cookies,
         }
 
     def set_common_settings_values(self, settings: UISettingsType):
@@ -246,6 +251,8 @@ class MainWindow(QMainWindow):
             settings[KEYS.HIDE_SUC_FIN_PROC])
         self.widget_channels_tree.hide_suc_fin_proc = \
             settings[KEYS.HIDE_SUC_FIN_PROC]
+        self.bypass_settings.checkbox_use_cookie.widget.setChecked(
+            settings[KEYS.USE_COOKIES])
 
     def _send_save_settings(self):
         settings = self.get_common_settings_values()
