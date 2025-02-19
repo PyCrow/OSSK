@@ -1,19 +1,15 @@
-from __future__ import annotations
-
-import json
 import logging
-from copy import deepcopy
 from pathlib import Path
 from subprocess import run, DEVNULL
 
 from PyQt5.QtCore import QObject, pyqtSignal
 from fake_useragent import UserAgent
 
-from static_vars import (SETTINGS_FILE, KEYS, DEFAULT, ChannelData,
-                         SettingsType, ChannelDataType, StopThreads)
+from static_vars import StopThreads, logging_handler
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+logger.addHandler(logging_handler)
 
 UA = UserAgent(min_version=130.0, platforms='desktop')
 
@@ -58,104 +54,6 @@ def check_dir_exists(_path: str) -> bool:
     if Path(_path).exists() and Path(_path).is_dir():
         return True
     return False
-
-
-def load_settings() -> tuple[bool, SettingsType, str]:
-    loaded = False
-    parsed = False
-    file_not_found = False
-    settings = {}
-    message = "Settings loaded successfully."
-
-    # Loading settings
-    try:
-        with open(SETTINGS_FILE, 'r') as conf_file:
-            settings = json.load(conf_file)
-        loaded = True
-    except FileNotFoundError:
-        file_not_found = True
-        loaded = True
-    except Exception as e:
-        logger.error(e, exc_info=True)
-        message = "Settings loading error!"
-
-    # Soft settings validation
-    settings = _parse_settings(settings)
-
-    # Loading channels
-    channels = {}
-    try:
-        # TODO: OSSK 2.0.0 will be support only dict channels
-        #
-        raw_channels = settings.get(KEYS.CHANNELS, {})
-        channels: ChannelDataType = \
-            {channel_id: ChannelData.j_load(raw_channels[channel_id])
-             for channel_id in raw_channels.keys()}
-        parsed = True
-    except Exception as e:
-        logger.error(e, exc_info=True)
-        message = "Channels list parsing failed!"
-    settings[KEYS.CHANNELS] = channels
-
-    # Save if needed
-    saved = True
-    if file_not_found:
-        saved, saver_message = save_settings(settings)
-        message = " ".join((message, saver_message))
-    suc: bool = loaded and parsed and saved
-
-    return suc, settings, message
-
-
-def save_settings(settings_: SettingsType) -> tuple[bool, str]:
-    """ Don't worry - I'll make a deep copy. """
-    suc = False
-    message = "Settings saved."
-    settings = deepcopy(settings_)
-    try:
-        settings = _parse_settings(settings)
-        channels: dict[str, ChannelData] = settings[KEYS.CHANNELS]
-        settings[KEYS.CHANNELS] = {ch_id: channels[ch_id].j_dump()
-                                   for ch_id in channels}
-        with open(SETTINGS_FILE, 'w') as conf_file:
-            json.dump(settings, conf_file, indent=4)
-        suc = True
-    except Exception as e:
-        logger.error(e, exc_info=True)
-        message = "Settings saving error!"
-    finally:
-        return suc, message
-
-
-def _parse_settings(settings_: dict) -> dict:
-    settings = {
-        KEYS.CHANNELS: settings_.get(KEYS.CHANNELS, {}),
-
-        # Do not allow empty records path
-        KEYS.RECORDS_DIR: (settings_.get(KEYS.RECORDS_DIR)
-                           or DEFAULT.RECORDS_DIR),
-        # Do not allow empty ffmpeg path
-        KEYS.FFMPEG: settings_.get(KEYS.FFMPEG) or DEFAULT.FFMPEG,
-        # Do not allow empty yt-dlp command
-        KEYS.YTDLP: settings_.get(KEYS.YTDLP) or DEFAULT.YTDLP,
-        # Allow 0
-        KEYS.MAX_DOWNLOADS: settings_.get(KEYS.MAX_DOWNLOADS,
-                                          DEFAULT.MAX_DOWNLOADS),
-        # Do not allow 0
-        KEYS.SCANNER_SLEEP_MIN: (settings_.get(KEYS.SCANNER_SLEEP_MIN)
-                                 or DEFAULT.SCANNER_SLEEP_MIN),
-        # Allow 0 (kill immediately)
-        KEYS.PROC_TERM_TIMEOUT_SEC: settings_.get(
-            KEYS.PROC_TERM_TIMEOUT_SEC, DEFAULT.PROC_TERM_TIMEOUT_SEC),
-        # Allow any bool value
-        KEYS.HIDE_SUC_FIN_PROC: settings_.get(KEYS.HIDE_SUC_FIN_PROC,
-                                              DEFAULT.HIDE_SUC_FIN_PROC),
-        # Allow any bool value
-        KEYS.USE_COOKIES: settings_.get(KEYS.USE_COOKIES, DEFAULT.USE_COOKIES),
-        KEYS.BROWSER: settings_.get(KEYS.BROWSER, DEFAULT.BROWSER),
-
-    }
-    return settings
 
 
 def get_channel_dir(records_dir: str, channel_name: str) -> Path:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
+from typing import Union
 
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, QModelIndex, Qt, QUrl
 from PyQt5.QtGui import (QColor, QLinearGradient, QMouseEvent,
@@ -12,9 +13,9 @@ from PyQt5.QtWidgets import (
     QTreeView, QVBoxLayout, QWidget, QMainWindow, QFileDialog, QDialog)
 
 from main_utils import check_exists_and_callable, is_callable, check_dir_exists
-from static_vars import (logging_handler, AVAILABLE_STREAM_RECORD_QUALITIES,
-                         KEYS, RecordProcess, STYLESHEET_PATH,
-                         SettingsType, ChannelData)
+from static_vars import (
+    logging_handler, AVAILABLE_STREAM_RECORD_QUALITIES, RecordProcess,
+    STYLESHEET_PATH, Settings)
 from ui.components.base import common_splitter, ConfirmableWidget, Field, \
     SettingsWidget
 from ui.components.menu import AddChannelWidget, BypassWidget
@@ -31,7 +32,6 @@ class Status:
     class Channel:
         OFF = 0
         LIVE = 1
-
         _color_map = {OFF: QColor(50, 50, 50),
                       LIVE: QColor(0, 180, 0)}
 
@@ -85,13 +85,13 @@ class ChannelItem(QStandardItem):
 
 class RecordProcessItem(QStandardItem):
     def __init__(self, *args, **kwargs):
-        self.pid: int | None = None
+        self.pid: Union[int, None] = None
         self.finished: bool = False
         super(RecordProcessItem, self).__init__(*args, **kwargs)
 
 
 class MainWindow(QMainWindow):
-    saveSettings = pyqtSignal(dict)
+    saveSettings = pyqtSignal(Settings)
     runServices = pyqtSignal(str, str)
     stopServices = pyqtSignal()
     stopProcess = pyqtSignal(int)
@@ -102,13 +102,15 @@ class MainWindow(QMainWindow):
     openChannelSettings = pyqtSignal(str)
     applyChannelSettings = pyqtSignal(tuple)
 
-    def __init__(self):
+    def __init__(self, settings: Settings):
         super(MainWindow, self).__init__()
         self._master_works = False
         self._slave_works = False
+        self.settings: Union[Settings, None] = None
         self._init_ui()
         self._init_menu()
         self._update_manage_buttons_status()
+        self.init_settings(settings)
 
     def _init_menu(self):
         bar = self.menuBar()
@@ -202,51 +204,53 @@ class MainWindow(QMainWindow):
         self.channel_settings_window.confirm.connect(
             self._apply_channel_settings)
 
-    def init_settings(self, settings: SettingsType):
-        self._set_channels(settings[KEYS.CHANNELS])
-        self.set_common_settings_values(settings)
+    def init_settings(self, settings: Settings):
+        """ One-time run """
+        self._set_channels(settings)
+        self.update_settings(settings)
 
-    def _set_channels(self, channels: dict[str, ChannelData]):
-        for channel_name in channels:
+    def update_settings(self, settings: Settings):
+        """ Update all UI values except channels """
+        self.settings = settings
+        self.set_common_settings_values()
+
+    def _set_channels(self, settings: Settings):
+        for channel_name, channel_data in settings.channels.items():
             self.widget_channels_tree.add_channel_item(
-                channels[channel_name].name,
-                channels[channel_name].alias,
+                channel_name,
+                channel_data.alias,
             )
 
-    def get_common_settings_values(self) -> SettingsType:
-        records_dir = self.settings_window.field_records_dir.text()
-        ffmpeg_path = self.settings_window.field_ffmpeg_file.text()
-        ytdlp_command = self.settings_window.line_ytdlp.text()
-        max_downloads = self.settings_window.box_max_downloads.value()
-        scanner_sleep_min = self.settings_window.box_scanner_sleep.value()
-        proc_term_timeout_sec = (
-            self.settings_window.box_proc_term_timeout.value())
-        hide_suc_fin_proc = (
-            self.settings_window.box_hide_suc_fin_proc.isChecked())
-        use_cookies = self.bypass_settings.field_use_cookie.widget.isChecked()
-        browser = \
+    def get_common_settings_values(self) -> Settings:
+        self.settings.records_dir = \
+            self.settings_window.field_records_dir.text()
+        self.settings.ffmpeg = \
+            self.settings_window.field_ffmpeg_file.text()
+        self.settings.ytdlp = \
+            self.settings_window.line_ytdlp.text()
+        self.settings.max_downloads = \
+            self.settings_window.box_max_downloads.value()
+        self.settings.scanner_sleep_min = \
+            self.settings_window.box_scanner_sleep.value()
+        self.settings.proc_term_timeout_sec = \
+            self.settings_window.box_proc_term_timeout.value()
+        self.settings.hide_suc_fin_proc = \
+            self.settings_window.box_hide_suc_fin_proc.isChecked()
+        self.settings.use_cookies = \
+            self.bypass_settings.field_use_cookie.widget.isChecked()
+        self.settings.browser = \
             self.bypass_settings.field_useragent.widget.currentText().lower()
-        return {
-            KEYS.RECORDS_DIR: records_dir,
-            KEYS.FFMPEG: ffmpeg_path,
-            KEYS.YTDLP: ytdlp_command,
-            KEYS.MAX_DOWNLOADS: max_downloads,
-            KEYS.SCANNER_SLEEP_MIN: scanner_sleep_min,
-            KEYS.PROC_TERM_TIMEOUT_SEC: proc_term_timeout_sec,
-            KEYS.HIDE_SUC_FIN_PROC: hide_suc_fin_proc,
-            KEYS.USE_COOKIES: use_cookies,
-            KEYS.BROWSER: browser,
-        }
+        return self.settings
 
-    def set_common_settings_values(self, settings: SettingsType):
-        self.settings_window.update_values(settings)
-        self.bypass_settings.update_values(settings)
+    def set_common_settings_values(self):
+        self.settings_window.update_values(self.settings)
+        self.bypass_settings.update_values(self.settings)
         self.widget_channels_tree.hide_suc_fin_proc = \
-            settings[KEYS.HIDE_SUC_FIN_PROC]
+            self.settings.hide_suc_fin_proc
 
     def _send_save_settings(self):
         settings = self.get_common_settings_values()
-        self.saveSettings[dict].emit(settings)
+        self.saveSettings[Settings].emit(settings)
 
     def _update_manage_buttons_status(self):
         if self._master_works or self._slave_works:
@@ -341,7 +345,7 @@ class ChannelsTree(QTreeView):
     def __init__(self):
         super(ChannelsTree, self).__init__()
         self.hide_suc_fin_proc = False
-        self.selected_item_index: QModelIndex | None = None
+        self.selected_item_index: Union[QModelIndex, None] = None
         self._init_ui()
 
     def _init_ui(self):
@@ -429,7 +433,7 @@ class ChannelsTree(QTreeView):
         return menu
 
     # Selected item functions
-    def _selected_item(self) -> ChannelItem | RecordProcessItem:
+    def _selected_item(self) -> Union[ChannelItem, RecordProcessItem]:
         return self._model.itemFromIndex(self.selected_item_index)
 
     def selected_channel_name(self) -> str:
@@ -450,8 +454,12 @@ class ChannelsTree(QTreeView):
         self.openTabByPid[int, str].emit(process_item.pid, stream_name)
 
     # Process management
-    def add_child_process_item(self, channel_name: str,
-                               pid: int, stream_name: str):
+    def add_child_process_item(
+            self,
+            channel_name: str,
+            pid: int,
+            stream_name: str
+    ):
         channel_item = self._map_channel_item[channel_name]
         process_item = RecordProcessItem(stream_name)
         process_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
@@ -590,13 +598,13 @@ class LogWidget(ListView):
         now = datetime.now()
         return now.strftime("%H:%M:%S")
 
-    def __init__(self, process: RecordProcess | None = None):
+    def __init__(self, process: Union[RecordProcess, None] = None):
         super().__init__()
         self.setMinimumWidth(460)
         self.setMinimumHeight(200)
         self.process = process
 
-    def add_message(self, text: str, level: int | None = None):
+    def add_message(self, text: str, level: Union[int, None] = None):
         message = f"{self.time} {text}"
         item = QStandardItem(message)
         item.setEditable(False)
@@ -747,17 +755,17 @@ class SettingsWindow(SettingsWidget):
 
         self.setLayout(vbox)
 
-    def update_values(self, settings: SettingsType = None):
+    def update_values(self, settings: Settings = None):
         if settings is not None:
-            self.field_records_dir.setText(settings[KEYS.RECORDS_DIR])
-            self.field_ffmpeg_file.setText(settings[KEYS.FFMPEG])
-            self.line_ytdlp.setText(settings[KEYS.YTDLP])
-            self.box_max_downloads.setValue(settings[KEYS.MAX_DOWNLOADS])
-            self.box_scanner_sleep.setValue(settings[KEYS.SCANNER_SLEEP_MIN])
+            self.field_records_dir.setText(settings.records_dir)
+            self.field_ffmpeg_file.setText(settings.ffmpeg)
+            self.line_ytdlp.setText(settings.ytdlp)
+            self.box_max_downloads.setValue(settings.max_downloads)
+            self.box_scanner_sleep.setValue(settings.scanner_sleep_min)
             self.box_proc_term_timeout.setValue(
-                settings[KEYS.PROC_TERM_TIMEOUT_SEC])
+                settings.proc_term_timeout_sec)
             self.box_hide_suc_fin_proc.setChecked(
-                settings[KEYS.HIDE_SUC_FIN_PROC])
+                settings.hide_suc_fin_proc)
 
     def _records_dir_selector(self):
         d = QFileDialog(

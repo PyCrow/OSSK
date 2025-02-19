@@ -12,15 +12,11 @@ from PyQt5.QtWidgets import QApplication
 from services import Master
 from static_vars import (
     logging_handler,
-    KEYS,
     ChannelData,
-    SettingsType)
+    Settings)
 from ui.view import MainWindow, Status
 from ui.dynamic_style import STYLE
-from main_utils import (
-    load_settings,
-    save_settings,
-    ServiceController)
+from main_utils import ServiceController
 
 
 # Threads management attributes
@@ -37,15 +33,12 @@ DEBUG_LEVELS = {DEBUG: 'DEBUG', INFO: 'INFO',
 class Controller(QObject):
     def __init__(self):
         super(Controller, self).__init__()
-        self._channels: dict[str, ChannelData] = {}
 
         # Initiate UI and services, update views settings
-        self.Window = MainWindow()
-        self.Master = Master(THREADS_LOCK)
+        suc_loaded, self.settings = Settings.load()
 
-        self.settings = self._load_settings(update_everywhere=False)
-        self.Window.init_settings(self.settings)
-        self.Master.channels = deepcopy(self._channels)
+        self.Window = MainWindow(self.settings)
+        self.Master = Master(THREADS_LOCK)
 
         self._srv_thread: QThread | None = None
         self._srv_controller: ServiceController | None = None
@@ -55,7 +48,12 @@ class Controller(QObject):
         self._connect_service_signals()
 
         # Updating services settings
-        self._update_threads_settings(self.settings)
+        self._update_threads_settings()
+
+        if not suc_loaded:
+            self.add_log_message(
+                ERROR, "Error loading settings! Base settings are used. "
+                       "Apply config to save settings.")
 
         self.Window.show()
 
@@ -99,69 +97,47 @@ class Controller(QObject):
         # Next scan timer signal
         self.Master.nextScanTimer[int].connect(self.Window.update_scan_timer)
 
-    def _load_settings(
-            self, update_everywhere: bool = True
-    ) -> SettingsType | None:
-        """
-        Loading settings
-
-        :param update_everywhere: Update services and view by loaded settings
-        """
-        suc, settings, message = load_settings()
-        if not suc:
-            self.add_log_message(ERROR, message)
-        elif message:
-            self.add_log_message(DEBUG, message)
-
-        # Getting channels from settings and saving them
-        self._channels = settings[KEYS.CHANNELS]
-
-        # Update Master, Slave and views
-        if update_everywhere:
-            self._update_settings_everywhere(settings)
-        else:
-            return settings
-
     @pyqtSlot(dict)
-    def _save_settings(self, settings: SettingsType = None):
+    def _save_settings(self, settings: Settings = None):
         """
         Preparing and saving settings data
         """
         if settings is not None:
-            self.settings.update(settings)
+            self.settings = settings
 
-        suc, message = save_settings(self.settings)
+        suc = self.settings.save()
         if not suc:
-            self.add_log_message(ERROR, message)
-        elif message:
-            self.add_log_message(DEBUG, message)
+            self.add_log_message(ERROR, "Settings saving error!")
 
         # Update services and views
-        self._update_settings_everywhere(self.settings)
+        self._update_settings_everywhere()
 
-    def _update_settings_everywhere(self, settings: SettingsType):
-        self._update_threads_settings(settings)
-        self._update_views_settings(settings)
+    def _update_settings_everywhere(self):
+        self._update_threads_settings()
+        self._update_views_settings()
 
-    def _update_threads_settings(self, settings: SettingsType):
+    def _update_threads_settings(self):
         # There is no need to make settings deep copy.
         # All transferring data values are immutable.
         # TODO: add check for settings data is immutable.
         THREADS_LOCK.lock()
-        self.Master.scanner_sleep_min = settings[KEYS.SCANNER_SLEEP_MIN]
-        self.Master.Slave.records_path = settings[KEYS.RECORDS_DIR]
-        self.Master.Slave.path_to_ffmpeg = settings[KEYS.FFMPEG]
-        self.Master.Slave.ytdlp_command = settings[KEYS.YTDLP]
-        self.Master.Slave.max_downloads = settings[KEYS.MAX_DOWNLOADS]
+        self.Master.channels = deepcopy(self.settings.channels)
+        self.Master.scanner_sleep_min = self.settings.scanner_sleep_min
+        self.Master.Slave.records_path = self.settings.records_dir
+        self.Master.Slave.path_to_ffmpeg = self.settings.ffmpeg
+        self.Master.Slave.ytdlp_command = self.settings.ytdlp
+        self.Master.Slave.max_downloads = self.settings.max_downloads
         self.Master.Slave.proc_term_timeout_sec = \
-            settings[KEYS.PROC_TERM_TIMEOUT_SEC]
+            self.settings.proc_term_timeout_sec
+        self.Master.Slave.use_cookies = self.settings.use_cookies
+        self.Master.Slave.browser = self.settings.browser
         THREADS_LOCK.unlock()
         self.add_log_message(DEBUG, "Service settings updated.")
 
-    def _update_views_settings(self, settings: SettingsType):
+    def _update_views_settings(self):
         # There is no need to make settings deep copy.
         # The View should not change settings data.
-        self.Window.set_common_settings_values(settings)
+        self.Window.update_settings(self.settings)
 
     @pyqtSlot(str, str)
     def run_services(self, ffmpeg_path: str, ytdlp_command: str):
@@ -221,10 +197,10 @@ class Controller(QObject):
     @pyqtSlot(str)
     def add_channel(self, channel_name: str):
         """ Add a channel to the monitored list """
-        if not channel_name or channel_name in self._channels:
+        if not channel_name or channel_name in self.settings.channels:
             return
         channel_data = ChannelData(channel_name)
-        self._channels[channel_name] = channel_data
+        self.settings.channels[channel_name] = channel_data
 
         # Saving settings
         self._save_settings()
@@ -242,7 +218,7 @@ class Controller(QObject):
     @pyqtSlot(str)
     def del_channel(self, channel_name: str):
         """ Delete selected channel from the monitored list """
-        if channel_name not in self._channels:
+        if channel_name not in self.settings.channels:
             return
         THREADS_LOCK.lock()
         active_channels = self.Master.Slave.get_names_of_active_channels()
@@ -253,7 +229,7 @@ class Controller(QObject):
                 f"Cannot delete channel \"{channel_name}\": "
                 "There are active downloads from this channel.")
             return
-        del self._channels[channel_name]
+        del self.settings.channels[channel_name]
         self._save_settings()
 
         # Update Master channel dict
@@ -266,39 +242,39 @@ class Controller(QObject):
 
     @pyqtSlot(str)
     def highlight_on_exists(self, ch_name: str):
-        status = STYLE.LINE_INVALID if ch_name in self._channels \
+        status = STYLE.LINE_INVALID if ch_name in self.settings.channels \
             else STYLE.LINE_VALID
         self.Window.add_channel_widget.field_channel.setStyleSheet(status)
 
     @pyqtSlot(str)
     def open_channel_settings(self, channel_name: str):
-        if channel_name not in self._channels:
+        if channel_name not in self.settings.channels:
             return
         self.Window.channel_settings_window.update_data(
             channel_name,
-            self._channels[channel_name].alias,
-            self._channels[channel_name].svq_view()
+            self.settings.channels[channel_name].alias,
+            self.settings.channels[channel_name].svq_view()
         )
         self.Window.channel_settings_window.show()
 
     @pyqtSlot(tuple)
     def apply_channel_settings(self, channel_settings: tuple[str, str, str]):
         ch_name, alias, svq = channel_settings
-        self._channels[ch_name].alias = alias
-        self._channels[ch_name].svq = svq
+        self.settings.channels[ch_name].alias = alias
+        self.settings.channels[ch_name].svq = svq
         self._save_settings()
         channel_row_text = alias if alias else ch_name
         self.Window.widget_channels_tree.set_channel_alias(channel_row_text)
 
     @pyqtSlot(str)
     def _channel_off(self, ch_name: str):
-        ch_index = list(self._channels.keys()).index(ch_name)
+        ch_index = list(self.settings.channels.keys()).index(ch_name)
         self.Window.widget_channels_tree.set_channel_status(
             ch_index, Status.Channel.OFF)
 
     @pyqtSlot(str)
     def _channel_live(self, ch_name: str):
-        ch_index = list(self._channels.keys()).index(ch_name)
+        ch_index = list(self.settings.channels.keys()).index(ch_name)
         self.Window.widget_channels_tree.set_channel_status(
             ch_index, Status.Channel.LIVE)
 
