@@ -172,9 +172,11 @@ class MainWindow(QMainWindow):
 
         self._button_start = QPushButton()
         self._button_start.setObjectName("start")
+        self._button_start.setToolTip("Start scanning and downloading")
         self._button_start.clicked[bool].connect(self._send_start_services)
         self._button_stop = QPushButton()
         self._button_stop.setObjectName("stop")
+        self._button_stop.setToolTip("Stop scanning and downloading")
         self._button_stop.clicked.connect(self._send_stop_services)
 
         hbox_channels_header = QHBoxLayout()
