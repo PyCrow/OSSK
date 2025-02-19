@@ -51,7 +51,7 @@ class Controller(QObject):
 
         # Connecting signals
         self._connect_ui_signals()
-        self._connect_services_signals()
+        self._connect_service_signals()
 
         # Updating services settings
         self._update_threads_settings(self.settings)
@@ -78,7 +78,7 @@ class Controller(QObject):
         # Process
         self.Window.stopProcess[int].connect(self.stop_single_process)
 
-    def _connect_services_signals(self):
+    def _connect_service_signals(self):
         # New message signals
         self.Master.log[int, str].connect(self.add_log_message)
         self.Master.Slave.procLog[int, str].connect(
@@ -320,14 +320,15 @@ class Controller(QObject):
 
 if __name__ == '__main__':
     controller = None
+    e_ = None
     try:
         app = QApplication(sys.argv)
         controller = Controller()
-
         sys.exit(app.exec_())
     except Exception as e_:
-        print(e_)
         logger.critical(e_, exc_info=True)
     finally:
         if controller is not None:
             controller.set_stop_services()
+        if e_ is not None:
+            raise e_
