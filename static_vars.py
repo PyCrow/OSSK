@@ -12,7 +12,7 @@ from PyQt5.QtCore import QThread
 UNKNOWN = '<UNKNOWN>'
 
 CURRENT_PATH = Path().resolve()
-LOG_FILE = CURRENT_PATH.joinpath('stream_saver.log')
+LOG_FILE = CURRENT_PATH.joinpath('ossk.log')
 SETTINGS_FILE = CURRENT_PATH.joinpath('settings')
 STYLESHEET_PATH = CURRENT_PATH.joinpath('ui').joinpath('stylesheet.qss')
 
@@ -56,6 +56,46 @@ class DEFAULT:
 
     CHANNEL_ALIAS = ''
     CHANNEL_SVQ = 'best'
+
+
+@dataclass
+class SettingsField:
+    key: str
+    value: Union[dict, str, int, bool]
+
+
+class Settings:
+    records_dir: str = SettingsField(
+        'records_dir', str(CURRENT_PATH.joinpath('records')))
+    ffmpeg: str = SettingsField(
+        'ffmpeg', 'ffmpeg')
+    ytdlp: str = SettingsField(
+        'ytdlp', 'python -m yt_dlp')
+    max_downloads: int = SettingsField(
+        'max_downloads', 2)
+    scanner_sleep: int = SettingsField(
+        'scanner_sleep', 5)
+    proc_term_timeout_sec: int = SettingsField(
+        'proc_term_timeout_sec', 600)
+    hide_suc_fin_proc: bool = SettingsField(
+        'hide_suc_fin_proc', False)
+    channels: dict[str, ChannelDataType] = SettingsField(
+        'channels', {})
+    use_cookies: bool = SettingsField(
+        'use_cookies', False)
+    browser: str = SettingsField(
+        'browser', 'firefox')
+
+    def __getattr__(self, field: str):
+        return getattr(self, field).value
+
+    def __setattr__(self, key, value):
+        field = getattr(self, key)
+        field.value = value
+        self.field = field
+
+    def __delattr__(self, item):
+        raise
 
 
 AVAILABLE_STREAM_RECORD_QUALITIES = {
