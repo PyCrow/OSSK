@@ -1,7 +1,15 @@
 from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtWidgets import QWidget, QHBoxLayout, QLabel
+from PyQt5.QtWidgets import QWidget, QLabel, QBoxLayout, QFrame
 
+from static_vars import SettingsType
 from ui.utils import centralize
+
+
+def common_splitter():
+    splitter = QFrame()
+    splitter.setObjectName('splitter')
+    splitter.setFrameStyle(QFrame.HLine | QFrame.Plain)
+    return splitter
 
 
 class BaseWidget(QWidget):
@@ -24,10 +32,24 @@ class ConfirmableWidget(BaseWidget):
         self.confirm.connect(self.close)
 
 
-class Field(QHBoxLayout):
+class SettingsWidget(ConfirmableWidget):
 
-    def __init__(self, field_name: str, widget):
-        super(Field, self).__init__()
+    def update_values(self, setting: SettingsType = None):
+        raise NotImplementedError
+
+
+class Field(QBoxLayout):
+
+    def __init__(
+            self,
+            field_name: str,
+            widget,
+            orientation=QBoxLayout.Direction.LeftToRight,
+    ):
+        super(Field, self).__init__(orientation)
         self.widget = widget
         self.addWidget(QLabel(field_name), alignment=Qt.AlignLeft)
-        self.addWidget(widget, alignment=Qt.AlignRight)
+        if orientation == QBoxLayout.Direction.LeftToRight:
+            self.addWidget(widget, alignment=Qt.AlignRight)
+        else:
+            self.addWidget(widget)

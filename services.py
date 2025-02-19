@@ -12,7 +12,7 @@ from typing import IO
 import yt_dlp
 from PyQt5.QtCore import pyqtSignal, QMutex
 
-from main_utils import get_channel_dir, logger_handler
+from main_utils import get_channel_dir, logger_handler, UA
 from static_vars import (SoftStoppableThread, ChannelData, StopThreads,
                          DEFAULT, FLAG_LIVE, KEYS, RecordProcess,
                          logging_handler)
@@ -182,6 +182,7 @@ class Slave(SoftStoppableThread):
         self.max_downloads: int = DEFAULT.MAX_DOWNLOADS
         self.proc_term_timeout_sec: int = DEFAULT.PROC_TERM_TIMEOUT_SEC
         self.use_cookies: bool = DEFAULT.USE_COOKIES
+        self.browser: str = DEFAULT.BROWSER
 
     def _log(self, level: int, text: str):
         self.log[int, str].emit(level, text)
@@ -280,6 +281,10 @@ class Slave(SoftStoppableThread):
             # if download is interrupted
             '--hls-use-mpegts',
         ]
+        if self.use_cookies:
+            cmd += ' --user-agent "{}" --cookies-from-browser {}'.format(
+                UA.getBrowser(self.browser), self.browser
+            )
 
         proc = RecordProcess(cmd, stdout=temp_log, stderr=temp_log,
                              channel=channel_name)

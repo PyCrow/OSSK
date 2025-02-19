@@ -57,6 +57,14 @@ QComboBox {
   border-radius: 12px;
   padding: 5px;
 }
+QListView:disabled,
+QTreeView:disabled,
+QLineEdit:disabled,
+QSpinBox:disabled,
+QComboBox:disabled {
+  color: #555;
+  border-bottom: 1px solid #555;
+}
 QListView::item,
 QTreeView::item {
   height: 22px;

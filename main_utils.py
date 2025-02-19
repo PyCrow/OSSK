@@ -7,12 +7,19 @@ from pathlib import Path
 from subprocess import run, DEVNULL
 
 from PyQt5.QtCore import QObject, pyqtSignal
+from fake_useragent import UserAgent
 
 from static_vars import (SETTINGS_FILE, KEYS, DEFAULT, ChannelData,
-                         SettingsType, ChannelsDataType, StopThreads)
+                         SettingsType, ChannelDataType, StopThreads)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
+UA = UserAgent(min_version=130.0, platforms='desktop')
+
+
+def get_useragent(browser: str):
+    return UA.getBrowser(browser)['useragent']
 
 
 def logger_handler(func):
@@ -81,7 +88,7 @@ def load_settings() -> tuple[bool, SettingsType, str]:
         # TODO: OSSK 2.0.0 will be support only dict channels
         #
         raw_channels = settings.get(KEYS.CHANNELS, {})
-        channels: ChannelsDataType = \
+        channels: ChannelDataType = \
             {channel_id: ChannelData.j_load(raw_channels[channel_id])
              for channel_id in raw_channels.keys()}
         parsed = True
@@ -144,7 +151,9 @@ def _parse_settings(settings_: dict) -> dict:
         KEYS.HIDE_SUC_FIN_PROC: settings_.get(KEYS.HIDE_SUC_FIN_PROC,
                                               DEFAULT.HIDE_SUC_FIN_PROC),
         # Allow any bool value
-        KEYS.USE_COOKIES: settings_.get(KEYS.USE_COOKIES, DEFAULT.USE_COOKIES)
+        KEYS.USE_COOKIES: settings_.get(KEYS.USE_COOKIES, DEFAULT.USE_COOKIES),
+        KEYS.BROWSER: settings_.get(KEYS.BROWSER, DEFAULT.BROWSER),
+
     }
     return settings
 
