@@ -1,8 +1,11 @@
 from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtWidgets import QVBoxLayout, QLineEdit, QPushButton, QHBoxLayout, \
-    QCheckBox
+    QCheckBox, QComboBox
 
-from ui.components.base import ConfirmableWidget, Field
+from main_utils import UA
+from static_vars import KEYS
+from ui.components.base import ConfirmableWidget, Field, common_splitter, \
+    SettingsWidget
 
 
 class AddChannelWidget(ConfirmableWidget):
@@ -41,18 +44,37 @@ class AddChannelWidget(ConfirmableWidget):
         self.field_channel.setFocus()
 
 
-class BypassWidget(ConfirmableWidget):
+class BypassWidget(SettingsWidget):
 
     def _init_ui(self):
         self.setWindowTitle("OSSK | Bypass settings")
-        self.setFixedSize(400, 120)
+        self.setFixedSize(450, 160)
 
-        self.checkbox_use_cookie = Field("Use cookies", QCheckBox())
+        checkbox_use_cookie = QCheckBox()
+        self.field_use_cookie = Field("Use cookies", checkbox_use_cookie)
+
+        box_browser = QComboBox()
+        box_browser.addItems(UA.browsers)
+        self.field_useragent = Field("User-Agent of", box_browser)
+
+        checkbox_use_cookie.stateChanged.connect(box_browser.setEnabled)
 
         button_apply = QPushButton("Apply")
         button_apply.clicked.connect(self.confirm.emit)
 
         vbox = QVBoxLayout()
-        vbox.addLayout(self.checkbox_use_cookie)
+        vbox.addLayout(self.field_use_cookie)
+        vbox.addWidget(common_splitter())
+        vbox.addLayout(self.field_useragent)
         vbox.addWidget(button_apply)
         self.setLayout(vbox)
+
+    def update_values(self, settings=None):
+        if settings is not None:
+            self.field_use_cookie.widget.setChecked(settings[KEYS.USE_COOKIES])
+            item = self.field_useragent.widget.findText(
+                settings[KEYS.BROWSER], Qt.MatchFixedString)
+            if item > -1:
+                self.field_useragent.widget.setCurrentIndex(item)
+        use_cookie = self.field_use_cookie.widget.isChecked()
+        self.field_useragent.widget.setEnabled(use_cookie)

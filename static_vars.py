@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 import logging
+from dataclasses import dataclass
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from subprocess import Popen
-from typing import Union
+from typing import TypedDict, Union
 
 from PyQt5.QtCore import QThread
 
@@ -33,6 +36,7 @@ class KEYS:
     HIDE_SUC_FIN_PROC = 'hide_suc_fin_proc'
     CHANNELS = 'channels'
     USE_COOKIES = 'use_cookies'
+    BROWSER = 'browser'
 
     CHANNEL_NAME = 'name'
     CHANNEL_ALIAS = 'alias'
@@ -48,6 +52,7 @@ class DEFAULT:
     PROC_TERM_TIMEOUT_SEC = 600
     HIDE_SUC_FIN_PROC = False
     USE_COOKIES = False
+    BROWSER = 'firefox'
 
     CHANNEL_ALIAS = ''
     CHANNEL_SVQ = 'best'
@@ -142,6 +147,20 @@ class RecordProcess(Popen):
         super().__init__(*args, **kwargs)
 
 
-ChannelsDataType = dict[str, ChannelData]
-SettingsType = dict[str, Union[bool, int, str, ChannelsDataType]]
-UISettingsType = dict[str, Union[bool, int, str]]
+class ChannelDataType(TypedDict):
+    name: str
+    alias: str
+    svq: str
+
+
+class SettingsType(TypedDict):
+    records_dir: str
+    ffmpeg: str
+    ytdlp: str
+    max_downloads: int
+    scanner_sleep: int
+    proc_term_timeout_sec: int
+    hide_suc_fin_proc: bool
+    channels: dict[str, ChannelDataType]
+    use_cookies: bool
+    browser: str

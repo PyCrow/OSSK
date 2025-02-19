@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sys
 import logging
+import traceback
 from copy import deepcopy
 from logging import DEBUG, INFO, WARNING, ERROR
 
@@ -320,15 +321,13 @@ class Controller(QObject):
 
 if __name__ == '__main__':
     controller = None
-    e_ = None
     try:
         app = QApplication(sys.argv)
         controller = Controller()
         sys.exit(app.exec_())
     except Exception as e_:
+        traceback.print_exc()
         logger.critical(e_, exc_info=True)
     finally:
         if controller is not None:
             controller.set_stop_services()
-        if e_ is not None:
-            raise e_

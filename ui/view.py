@@ -6,17 +6,17 @@ from datetime import datetime
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, QModelIndex, Qt, QUrl
 from PyQt5.QtGui import (QColor, QLinearGradient, QMouseEvent,
                          QStandardItem, QStandardItemModel, QDesktopServices)
-from PyQt5.QtWidgets import (QAbstractItemView, QAction, QCheckBox, QComboBox,
-                             QHBoxLayout, QLabel, QLineEdit, QListView, QMenu,
-                             QPushButton, QSpinBox, QTabWidget, QTreeView,
-                             QVBoxLayout, QWidget, QMainWindow, QFrame,
-                             QFileDialog, QDialog)
+from PyQt5.QtWidgets import (
+    QAbstractItemView, QAction, QBoxLayout, QCheckBox, QComboBox, QHBoxLayout,
+    QLabel, QLineEdit, QListView, QMenu, QPushButton, QSpinBox, QTabWidget,
+    QTreeView, QVBoxLayout, QWidget, QMainWindow, QFileDialog, QDialog)
 
 from main_utils import check_exists_and_callable, is_callable, check_dir_exists
 from static_vars import (logging_handler, AVAILABLE_STREAM_RECORD_QUALITIES,
                          KEYS, RecordProcess, STYLESHEET_PATH,
-                         SettingsType, UISettingsType, ChannelData)
-from ui.components.base import ConfirmableWidget
+                         SettingsType, ChannelData)
+from ui.components.base import common_splitter, ConfirmableWidget, Field, \
+    SettingsWidget
 from ui.components.menu import AddChannelWidget, BypassWidget
 from ui.dynamic_style import STYLE
 from ui.utils import centralize
@@ -24,13 +24,6 @@ from ui.utils import centralize
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 logger.addHandler(logging_handler)
-
-
-def common_splitter():
-    splitter = QFrame()
-    splitter.setObjectName('splitter')
-    splitter.setFrameStyle(QFrame.HLine | QFrame.Plain)
-    return splitter
 
 
 class Status:
@@ -220,18 +213,19 @@ class MainWindow(QMainWindow):
                 channels[channel_name].alias,
             )
 
-    def get_common_settings_values(self) -> UISettingsType:
+    def get_common_settings_values(self) -> SettingsType:
         records_dir = self.settings_window.field_records_dir.text()
         ffmpeg_path = self.settings_window.field_ffmpeg_file.text()
-        ytdlp_command = self.settings_window.field_ytdlp.text()
+        ytdlp_command = self.settings_window.line_ytdlp.text()
         max_downloads = self.settings_window.box_max_downloads.value()
         scanner_sleep_min = self.settings_window.box_scanner_sleep.value()
         proc_term_timeout_sec = (
             self.settings_window.box_proc_term_timeout.value())
         hide_suc_fin_proc = (
             self.settings_window.box_hide_suc_fin_proc.isChecked())
-        use_cookies = (
-            self.bypass_settings.checkbox_use_cookie.widget.isChecked())
+        use_cookies = self.bypass_settings.field_use_cookie.widget.isChecked()
+        browser = \
+            self.bypass_settings.field_useragent.widget.currentText().lower()
         return {
             KEYS.RECORDS_DIR: records_dir,
             KEYS.FFMPEG: ffmpeg_path,
@@ -241,25 +235,14 @@ class MainWindow(QMainWindow):
             KEYS.PROC_TERM_TIMEOUT_SEC: proc_term_timeout_sec,
             KEYS.HIDE_SUC_FIN_PROC: hide_suc_fin_proc,
             KEYS.USE_COOKIES: use_cookies,
+            KEYS.BROWSER: browser,
         }
 
-    def set_common_settings_values(self, settings: UISettingsType):
-        self.settings_window.field_records_dir.setText(
-            settings[KEYS.RECORDS_DIR])
-        self.settings_window.field_ffmpeg_file.setText(settings[KEYS.FFMPEG])
-        self.settings_window.field_ytdlp.setText(settings[KEYS.YTDLP])
-        self.settings_window.box_max_downloads.setValue(
-            settings[KEYS.MAX_DOWNLOADS])
-        self.settings_window.box_scanner_sleep.setValue(
-            settings[KEYS.SCANNER_SLEEP_MIN])
-        self.settings_window.box_proc_term_timeout.setValue(
-            settings[KEYS.PROC_TERM_TIMEOUT_SEC])
-        self.settings_window.box_hide_suc_fin_proc.setChecked(
-            settings[KEYS.HIDE_SUC_FIN_PROC])
+    def set_common_settings_values(self, settings: SettingsType):
+        self.settings_window.update_values(settings)
+        self.bypass_settings.update_values(settings)
         self.widget_channels_tree.hide_suc_fin_proc = \
             settings[KEYS.HIDE_SUC_FIN_PROC]
-        self.bypass_settings.checkbox_use_cookie.widget.setChecked(
-            settings[KEYS.USE_COOKIES])
 
     def _send_save_settings(self):
         settings = self.get_common_settings_values()
@@ -278,7 +261,7 @@ class MainWindow(QMainWindow):
     def _send_start_services(self):
         """ [OUT] """
         ffmpeg_path = self.settings_window.field_ffmpeg_file.text()
-        ytdlp_command = self.settings_window.field_ytdlp.text()
+        ytdlp_command = self.settings_window.line_ytdlp.text()
         self._button_start.setEnabled(False)
         self._button_stop.setEnabled(False)
         self.runServices[str, str].emit(ffmpeg_path, ytdlp_command)
@@ -627,14 +610,14 @@ class LogWidget(ListView):
         self.scrollToBottom()
 
 
-class SettingsWindow(ConfirmableWidget):
+class SettingsWindow(SettingsWidget):
 
     def _init_ui(self):
         self.setWindowTitle("OSSK | General settings")
         self.setFixedSize(750, 500)
 
         # Field: Records directory
-        self.field_records_dir = QLineEdit(self)
+        self.field_records_dir = QLineEdit()
         self.field_records_dir.setPlaceholderText(
             "Enter path to records directory")
         self.field_records_dir.textChanged[str].connect(
@@ -661,7 +644,7 @@ class SettingsWindow(ConfirmableWidget):
         records_layout.addLayout(records_dir_layout)
 
         # Field: Path to ffmpeg
-        self.field_ffmpeg_file = QLineEdit(self)
+        self.field_ffmpeg_file = QLineEdit()
         self.field_ffmpeg_file.setPlaceholderText("Enter path to ffmpeg")
         self.field_ffmpeg_file.textChanged[str].connect(self._check_ffmpeg)
         self.field_ffmpeg_file.setToolTip(
@@ -680,23 +663,21 @@ class SettingsWindow(ConfirmableWidget):
         ffmpeg_layout.addLayout(hbox_ffmpeg)
 
         # Field: Command or path to yt-dlp
-        label_ytdlp = QLabel("Command or path to yt-dlp")
-        self.field_ytdlp = QLineEdit(parent=self)
-        self.field_ytdlp.setPlaceholderText(
+        self.line_ytdlp = QLineEdit()
+        self.line_ytdlp.setPlaceholderText(
             "Enter command or path to yt-dlp")
-        self.field_ytdlp.setToolTip(
+        self.line_ytdlp.setToolTip(
             "Checks:\n"
             "1. Is called as a command.\n"
             "2. Is the specified path available as a file.\n"
             "3. Is the specified file can be called.\n"
             "The field is highlighted in red if the path file is\n"
             " not available.")
-        hbox_ytdlp = QVBoxLayout()
-        hbox_ytdlp.addWidget(label_ytdlp)
-        hbox_ytdlp.addWidget(self.field_ytdlp)
+        field_ytdlp = Field("Command or path to yt-dlp",
+                            self.line_ytdlp,
+                            orientation=QBoxLayout.Direction.TopToBottom)
 
         # Field: Max downloads
-        label_max_downloads = QLabel("Maximum number of synchronous downloads")
         self.box_max_downloads = QSpinBox(self)
         self.box_max_downloads.setRange(0, 50)
         self.box_max_downloads.valueChanged[int].connect(
@@ -705,13 +686,10 @@ class SettingsWindow(ConfirmableWidget):
             "Range from 1 to 50.\n"
             "It is not recommended to set a value greater than 12 or 0.\n"
             "0 - no restrictions.")
-        hbox_max_downloads = QHBoxLayout()
-        hbox_max_downloads.addWidget(label_max_downloads)
-        hbox_max_downloads.addWidget(self.box_max_downloads,
-                                     alignment=Qt.AlignRight)
+        field_max_downloads = Field("Maximum number of synchronous downloads",
+                                    self.box_max_downloads)
 
         # Field: Time between scans
-        label_scanner_sleep = QLabel("Time between scans (minutes)")
         self.box_scanner_sleep = QSpinBox(self)
         self.box_scanner_sleep.setRange(1, 60)
         self.box_scanner_sleep.valueChanged[int].connect(
@@ -721,13 +699,10 @@ class SettingsWindow(ConfirmableWidget):
             "Range from 1 to 60.\n"
             "It is not recommended to set it to less than 5 minutes, so\n"
             " that YouTube does not consider the scan as a DoS attack.")
-        hbox_scanner_sleep = QHBoxLayout()
-        hbox_scanner_sleep.addWidget(label_scanner_sleep)
-        hbox_scanner_sleep.addWidget(self.box_scanner_sleep,
-                                     alignment=Qt.AlignRight)
+        field_scanner_sleep = Field("Time between scans (minutes)",
+                                    self.box_scanner_sleep)
 
         # Field: Process termination timeout
-        label_proc_term_timeout = QLabel("Process termination timeout (sec)")
         self.box_proc_term_timeout = QSpinBox(self)
         self.box_proc_term_timeout.setRange(0, 3600)
         self.box_proc_term_timeout.valueChanged[int].connect(
@@ -740,21 +715,15 @@ class SettingsWindow(ConfirmableWidget):
             "It is not recommended to set it to less than 20 seconds,\n"
             " since it can take a long time to merge video and audio\n"
             " tracks of long recordings.")
-        hbox_proc_term_timeout = QHBoxLayout()
-        hbox_proc_term_timeout.addWidget(label_proc_term_timeout)
-        hbox_proc_term_timeout.addWidget(self.box_proc_term_timeout,
-                                         alignment=Qt.AlignRight)
+        field_proc_term_timeout = Field("Process termination timeout (sec)",
+                                        self.box_proc_term_timeout)
 
         # Field: Hide successfully finished processes
-        label_hide_suc_fin_proc = QLabel("Hide successfully "
-                                         "finished processes")
         self.box_hide_suc_fin_proc = QCheckBox()
         self.box_hide_suc_fin_proc.setToolTip(
             "Successfully finished processes will be hidden.")
-        hbox_hide_suc_fin_proc = QHBoxLayout()
-        hbox_hide_suc_fin_proc.addWidget(label_hide_suc_fin_proc)
-        hbox_hide_suc_fin_proc.addWidget(self.box_hide_suc_fin_proc,
-                                         alignment=Qt.AlignRight)
+        field_hide_suc_fin_proc = Field("Hide successfully finished processes",
+                                        self.box_hide_suc_fin_proc)
 
         self.button_apply = QPushButton("Apply", self)
         self.button_apply.clicked.connect(self._post_validation)
@@ -764,19 +733,31 @@ class SettingsWindow(ConfirmableWidget):
         vbox.addWidget(common_splitter())
         vbox.addLayout(ffmpeg_layout)
         vbox.addWidget(common_splitter())
-        vbox.addLayout(hbox_ytdlp)
+        vbox.addLayout(field_ytdlp)
         vbox.addWidget(common_splitter())
-        vbox.addLayout(hbox_max_downloads)
+        vbox.addLayout(field_max_downloads)
         vbox.addWidget(common_splitter())
-        vbox.addLayout(hbox_scanner_sleep)
+        vbox.addLayout(field_scanner_sleep)
         vbox.addWidget(common_splitter())
-        vbox.addLayout(hbox_proc_term_timeout)
+        vbox.addLayout(field_proc_term_timeout)
         vbox.addWidget(common_splitter())
-        vbox.addLayout(hbox_hide_suc_fin_proc)
+        vbox.addLayout(field_hide_suc_fin_proc)
         vbox.addSpacing(20)
         vbox.addWidget(self.button_apply)
 
         self.setLayout(vbox)
+
+    def update_values(self, settings: SettingsType = None):
+        if settings is not None:
+            self.field_records_dir.setText(settings[KEYS.RECORDS_DIR])
+            self.field_ffmpeg_file.setText(settings[KEYS.FFMPEG])
+            self.line_ytdlp.setText(settings[KEYS.YTDLP])
+            self.box_max_downloads.setValue(settings[KEYS.MAX_DOWNLOADS])
+            self.box_scanner_sleep.setValue(settings[KEYS.SCANNER_SLEEP_MIN])
+            self.box_proc_term_timeout.setValue(
+                settings[KEYS.PROC_TERM_TIMEOUT_SEC])
+            self.box_hide_suc_fin_proc.setChecked(
+                settings[KEYS.HIDE_SUC_FIN_PROC])
 
     def _records_dir_selector(self):
         d = QFileDialog(
@@ -816,10 +797,10 @@ class SettingsWindow(ConfirmableWidget):
         self.field_ffmpeg_file.setStyleSheet(status)
 
     def _check_ytdlp(self):
-        ytdlp_path = self.field_ytdlp.text()
+        ytdlp_path = self.line_ytdlp.text()
         suc = is_callable(ytdlp_path)
         status = STYLE.LINE_INVALID if not suc else STYLE.LINE_VALID
-        self.field_ytdlp.setStyleSheet(status)
+        self.line_ytdlp.setStyleSheet(status)
         return suc
 
     @pyqtSlot(int)
