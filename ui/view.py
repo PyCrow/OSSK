@@ -100,6 +100,7 @@ class RecordProcessItem(QStandardItem):
 class MainWindow(QMainWindow):
     saveSettings = pyqtSignal(dict)
     runServices = pyqtSignal(str, str)
+    stopServices = pyqtSignal()
     stopProcess = pyqtSignal(int)
 
     checkExistsChannel = pyqtSignal(str)
@@ -110,8 +111,11 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super(MainWindow, self).__init__()
+        self._master_works = False
+        self._slave_works = False
         self._init_ui()
         self._init_menu()
+        self._update_manage_buttons_status()
 
     def _init_menu(self):
         bar = self.menuBar()
@@ -166,9 +170,21 @@ class MainWindow(QMainWindow):
         self.widget_channels_tree.on_click_channel_settings.triggered\
             .connect(self._send_open_channel_settings)
 
+        self._button_start = QPushButton()
+        self._button_start.setObjectName("start")
+        self._button_start.clicked[bool].connect(self._send_start_services)
+        self._button_stop = QPushButton()
+        self._button_stop.setObjectName("stop")
+        self._button_stop.clicked.connect(self._send_stop_services)
+
+        hbox_channels_header = QHBoxLayout()
+        hbox_channels_header.addWidget(QLabel("Monitored channels"),
+                                       stretch=1, alignment=Qt.AlignLeft)
+        hbox_channels_header.addWidget(self._button_start)
+        hbox_channels_header.addWidget(self._button_stop)
+
         channels_tree = QVBoxLayout()
-        channels_tree.addWidget(QLabel("Monitored channels"),
-                                alignment=Qt.AlignHCenter)
+        channels_tree.addLayout(hbox_channels_header)
         channels_tree.addWidget(self.widget_channels_tree)
 
         self.log_tabs = LogTabWidget()
@@ -178,22 +194,11 @@ class MainWindow(QMainWindow):
             self.log_tabs.process_hide)
 
         main_hbox = QVBoxLayout()
-        main_hbox.addLayout(channels_tree, 1)
-        main_hbox.addWidget(self.log_tabs, 2)
-
-        self.start_button = QPushButton("Start")
-        self.start_button.clicked[bool].connect(self._send_start_service)
-        self.stop_button = QPushButton("Stop all")
-        hbox_master_buttons = QHBoxLayout()
-        hbox_master_buttons.addWidget(self.start_button)
-        hbox_master_buttons.addWidget(self.stop_button)
-
-        main_box = QVBoxLayout()
-        main_box.addLayout(main_hbox)
-        main_box.addLayout(hbox_master_buttons)
+        main_hbox.addLayout(channels_tree, 2)
+        main_hbox.addWidget(self.log_tabs, 3)
 
         central_widget = QWidget(self)
-        central_widget.setLayout(main_box)
+        central_widget.setLayout(main_hbox)
         self.setCentralWidget(central_widget)
 
         # Channel settings window
@@ -258,13 +263,30 @@ class MainWindow(QMainWindow):
         settings = self.get_common_settings_values()
         self.saveSettings[dict].emit(settings)
 
+    def _update_manage_buttons_status(self):
+        if self._master_works or self._slave_works:
+            self._button_start.setEnabled(False)
+            self._button_stop.setEnabled(True)
+        else:
+            self._button_start.setEnabled(True)
+            self._button_stop.setEnabled(False)
+
     # OUTGOING SIGNALS
     @pyqtSlot()
-    def _send_start_service(self):
+    def _send_start_services(self):
         """ [OUT] """
         ffmpeg_path = self.settings_window.field_ffmpeg_file.text()
         ytdlp_command = self.settings_window.field_ytdlp.text()
+        self._button_start.setEnabled(False)
+        self._button_stop.setEnabled(False)
         self.runServices[str, str].emit(ffmpeg_path, ytdlp_command)
+
+    @pyqtSlot()
+    def _send_stop_services(self):
+        """ [OUT] """
+        self._button_start.setEnabled(False)
+        self._button_stop.setEnabled(False)
+        self.stopServices.emit()
 
     @pyqtSlot()
     def _send_stop_process(self):
@@ -298,9 +320,19 @@ class MainWindow(QMainWindow):
 
     # INCOMING SIGNALS
     @pyqtSlot(int)
-    def update_next_scan_timer(self, seconds: int):
+    def update_scan_timer(self, seconds: int):
         """ [IN] """
         self.status_bar.showMessage(f"Next scan in: {seconds} seconds", 3000)
+
+    @pyqtSlot(bool)
+    def update_master_enabled(self, enabled: bool):
+        self._master_works = enabled
+        self._update_manage_buttons_status()
+
+    @pyqtSlot(bool)
+    def update_slave_enabled(self, enabled: bool):
+        self._slave_works = enabled
+        self._update_manage_buttons_status()
 
 
 class ListView(QListView):
@@ -311,6 +343,10 @@ class ListView(QListView):
         self.setModel(self._model)
         self.setWordWrap(True)
         self.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
+
+    def mousePressEvent(self, e: QMouseEvent):
+        self.clearSelection()
+        super(ListView, self).mousePressEvent(e)
 
 
 class ChannelsTree(QTreeView):

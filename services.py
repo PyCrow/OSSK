@@ -28,6 +28,7 @@ class Master(SoftStoppableThread):
     channelOff = pyqtSignal(str)
     channelLive = pyqtSignal(str)
     nextScanTimer = pyqtSignal(int)
+    works = pyqtSignal(bool)
 
     def __init__(self, threads_lock: QMutex):
         """
@@ -59,6 +60,7 @@ class Master(SoftStoppableThread):
     def run(self) -> None:
         super(Master, self).run()
         self._log(INFO, "Scanning channels started.")
+        self.works.emit(True)
         self.Slave.start()
 
         try:
@@ -73,6 +75,7 @@ class Master(SoftStoppableThread):
         except StopThreads:
             pass
         self._log(INFO, "Scanning channels stopped.")
+        self.works.emit(False)
 
     def wait_and_check(self):
         """ Waiting with a check to stop """
@@ -160,6 +163,7 @@ class Slave(SoftStoppableThread):
     streamRec = pyqtSignal(str, int, str)
     streamFinished = pyqtSignal(int)
     streamFailed = pyqtSignal(int)
+    works = pyqtSignal(bool)
 
     def __init__(self):
         """
@@ -185,6 +189,7 @@ class Slave(SoftStoppableThread):
     def run(self):
         super(Slave, self).run()
         self._log(INFO, "Recorder started.")
+        self.works.emit(True)
 
         try:
             while True:
@@ -198,6 +203,7 @@ class Slave(SoftStoppableThread):
         except StopThreads:
             self.stop_downloads()
         self._log(INFO, "Recorder stopped.")
+        self.works.emit(False)
 
     def get_names_of_active_channels(self):
         return [proc.channel for proc in self.running_downloads]
