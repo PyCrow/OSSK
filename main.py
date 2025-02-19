@@ -72,8 +72,8 @@ class Controller(QObject):
             self.apply_channel_settings)
 
         # Service management
-        self.Window.runServices.connect(self.run_services)
-        self.Window.stop_button.clicked.connect(self.set_stop_services)
+        self.Window.runServices[str, str].connect(self.run_services)
+        self.Window.stopServices.connect(self.set_stop_services)
 
         # Process
         self.Window.stopProcess[int].connect(self.stop_single_process)
@@ -84,18 +84,19 @@ class Controller(QObject):
         self.Master.Slave.procLog[int, str].connect(
             self.Window.log_tabs.proc_log)
 
+        # Stream status signals
+        self.Master.works[bool].connect(self.Window.update_master_enabled)
+        self.Master.Slave.works[bool].connect(self.Window.update_slave_enabled)
+        self.Master.Slave.streamRec[str, int, str].connect(self._stream_rec)
+        self.Master.Slave.streamFinished[int].connect(self._stream_finished)
+        self.Master.Slave.streamFailed[int].connect(self._stream_fail)
+
         # Channel status signals
         self.Master.channelOff[str].connect(self._channel_off)
         self.Master.channelLive[str].connect(self._channel_live)
 
         # Next scan timer signal
-        self.Master.nextScanTimer[int].connect(
-            self.Window.update_next_scan_timer)
-
-        # Stream status signals
-        self.Master.Slave.streamRec[str, int, str].connect(self._stream_rec)
-        self.Master.Slave.streamFinished[int].connect(self._stream_finished)
-        self.Master.Slave.streamFailed[int].connect(self._stream_fail)
+        self.Master.nextScanTimer[int].connect(self.Window.update_scan_timer)
 
     def _load_settings(
             self, update_everywhere: bool = True

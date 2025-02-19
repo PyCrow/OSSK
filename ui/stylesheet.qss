@@ -39,10 +39,10 @@ QTabBar::tab:!selected {
   margin-top: 2px;
 }
 QTabBar::close-button {
-  image: url(ui/icons/cross.ico);
+  image: url(ui/icons/cross.svg);
 }
 QTabBar::close-button:hover {
-  image: url(ui/icons/cross_hover.ico);
+  image: url(ui/icons/cross_hover.svg);
 }
 QListView,
 QTreeView,
@@ -123,6 +123,18 @@ QPushButton:pressed {
   border-left: 1px solid #333;
   border-right: 1px solid #333;
   border-bottom: 1px solid #0a0;
+}
+QPushButton#start {
+  image: url(ui/icons/button_start.svg);
+}
+QPushButton#start:disabled {
+  image: url(ui/icons/button_start_disabled.svg);
+}
+QPushButton#stop {
+  image: url(ui/icons/button_stop.svg);
+}
+QPushButton#stop:disabled {
+  image: url(ui/icons/button_stop_disabled.svg);
 }
 
 QCheckBox::indicator {
