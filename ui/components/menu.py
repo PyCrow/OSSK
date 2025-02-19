@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import QVBoxLayout, QLineEdit, QPushButton, QHBoxLayout, \
     QCheckBox, QComboBox
 
 from main_utils import UA
-from static_vars import KEYS
+from static_vars import Settings
 from ui.components.base import ConfirmableWidget, Field, common_splitter, \
     SettingsWidget
 
@@ -69,12 +69,10 @@ class BypassWidget(SettingsWidget):
         vbox.addWidget(button_apply)
         self.setLayout(vbox)
 
-    def update_values(self, settings=None):
-        if settings is not None:
-            self.field_use_cookie.widget.setChecked(settings[KEYS.USE_COOKIES])
-            item = self.field_useragent.widget.findText(
-                settings[KEYS.BROWSER], Qt.MatchFixedString)
-            if item > -1:
-                self.field_useragent.widget.setCurrentIndex(item)
-        use_cookie = self.field_use_cookie.widget.isChecked()
-        self.field_useragent.widget.setEnabled(use_cookie)
+    def update_values(self, settings: Settings = None):
+        self.field_use_cookie.widget.setChecked(settings.use_cookies)
+        browser_item = self.field_useragent.widget.findText(
+            settings.browser, Qt.MatchFixedString)
+        if browser_item > -1:
+            self.field_useragent.widget.setCurrentIndex(browser_item)
+        self.field_useragent.widget.setEnabled(settings.use_cookies)

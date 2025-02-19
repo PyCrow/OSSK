@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import logging
 import subprocess
 import tempfile
@@ -7,15 +5,14 @@ from logging import INFO, WARNING, ERROR
 from queue import Queue
 from signal import SIGINT
 from time import sleep
-from typing import IO
+from typing import IO, Dict
 
 import yt_dlp
 from PyQt5.QtCore import pyqtSignal, QMutex
 
 from main_utils import get_channel_dir, logger_handler, UA
 from static_vars import (SoftStoppableThread, ChannelData, StopThreads,
-                         DEFAULT, FLAG_LIVE, KEYS, RecordProcess,
-                         logging_handler)
+                         FLAG_LIVE, RecordProcess, logging_handler)
 
 # Local logging config
 logger = logging.getLogger()
@@ -40,10 +37,10 @@ class Master(SoftStoppableThread):
         super(Master, self).__init__()
         self.MUTEX = threads_lock
         self.__start_force_scan = False
-        self.channels: dict[str, ChannelData] = {}
-        self.__last_status: dict[str, bool] = {}
-        self.__scheduled_streams: dict[str, bool] = {}
-        self.scanner_sleep_min: int = DEFAULT.SCANNER_SLEEP_MIN
+        self.__last_status: Dict[str, bool] = {}
+        self.__scheduled_streams: Dict[str, bool] = {}
+        self.channels: Dict[str, ChannelData] | None = None
+        self.scanner_sleep_min: int | None = None
         self.Slave = Slave()
         self.Slave.log[int, str].connect(self._log)
 
@@ -143,8 +140,8 @@ class Master(SoftStoppableThread):
             # TODO: make sending data more thread-safe
             if channel_name not in running_downloads:
                 stream_data = {
-                    KEYS.CHANNEL_NAME: channel_name,
-                    KEYS.CHANNEL_SVQ: self.channels[channel_name].svq,
+                    'ch_name': channel_name,
+                    'ch_svq': self.channels[channel_name].svq,
                     'url': info_dict['webpage_url'],
                     'title': info_dict['title'],
                 }
@@ -170,19 +167,19 @@ class Slave(SoftStoppableThread):
         Service Slave
         """
         super().__init__()
-        self.queue: Queue[dict[str, str]] = Queue(-1)
+        self.queue: Queue[Dict[str, str]] = Queue(-1)
         self.running_downloads: list[RecordProcess] = []
         self.pids_to_stop: list[int] = []
-        self.temp_logs: dict[int, IO] = {}
-        self.last_log_byte: dict[int, int] = {}
+        self.temp_logs: Dict[int, IO] = {}
+        self.last_log_byte: Dict[int, int] = {}
 
-        self.records_path: str = DEFAULT.RECORDS_DIR
-        self.path_to_ffmpeg: str = DEFAULT.FFMPEG
-        self.ytdlp_command: str = DEFAULT.YTDLP
-        self.max_downloads: int = DEFAULT.MAX_DOWNLOADS
-        self.proc_term_timeout_sec: int = DEFAULT.PROC_TERM_TIMEOUT_SEC
-        self.use_cookies: bool = DEFAULT.USE_COOKIES
-        self.browser: str = DEFAULT.BROWSER
+        self.records_path: str | None = None
+        self.path_to_ffmpeg: str | None = None
+        self.ytdlp_command: str | None = None
+        self.max_downloads: int | None = None
+        self.proc_term_timeout_sec: int | None = None
+        self.use_cookies: bool | None = None
+        self.browser: str | None = None
 
     def _log(self, level: int, text: str):
         self.log[int, str].emit(level, text)
@@ -242,12 +239,12 @@ class Slave(SoftStoppableThread):
         return False
 
     @logger_handler
-    def record_stream(self, stream_data: dict[str, str | tuple]):
+    def record_stream(self, stream_data: Dict[str, str | tuple]):
         """ Starts stream recording """
 
-        channel_name: str = stream_data[KEYS.CHANNEL_NAME]
+        channel_name: str = stream_data['ch_name']
         stream_url: str = stream_data['url']
-        records_quality: tuple = stream_data[KEYS.CHANNEL_SVQ]
+        records_quality: tuple = stream_data['ch_svq']
         stream_title: str = stream_data['title']
 
         channel_dir = str(get_channel_dir(self.records_path, channel_name))
