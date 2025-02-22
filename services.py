@@ -178,8 +178,8 @@ class Slave(SoftStoppableThread):
         self.ytdlp_command: str | None = None
         self.max_downloads: int | None = None
         self.proc_term_timeout_sec: int | None = None
-        self.use_cookies: bool | None = None
-        self.browser: str | None = None
+        self.cookies_from_browser: str | None = None
+        self.fake_useragent: bool | None = None
 
     def _log(self, level: int, text: str):
         self.log[int, str].emit(level, text)
@@ -278,10 +278,10 @@ class Slave(SoftStoppableThread):
             # if download is interrupted
             '--hls-use-mpegts',
         ]
-        if self.use_cookies:
-            useragent = UA.getBrowser(self.browser)['useragent']
-            cmd += ['--user-agent', f'"{useragent}"',
-                    '--cookies-from-browser', self.browser]
+        if self.cookies_from_browser:
+            useragent = UA.getBrowser(self.cookies_from_browser)['useragent']
+            cmd += ['--cookies-from-browser', self.cookies_from_browser,
+                    '--user-agent', f'"{useragent}"']
 
         proc = RecordProcess(cmd, stdout=temp_log, stderr=temp_log,
                              channel=channel_name)

@@ -236,10 +236,12 @@ class MainWindow(QMainWindow):
             self.settings_window.box_proc_term_timeout.value()
         self.settings.hide_suc_fin_proc = \
             self.settings_window.box_hide_suc_fin_proc.isChecked()
-        self.settings.use_cookies = \
-            self.bypass_settings.field_use_cookie.widget.isChecked()
-        self.settings.browser = \
-            self.bypass_settings.field_useragent.widget.currentText().lower()
+        self.settings.fake_useragent = \
+            self.bypass_settings.field_fake_useragent.widget.isChecked()
+        self.settings.cookies_from_browser = (
+            self.bypass_settings.field_cookies_from_browser.widget
+            .currentText().lower()
+        )
         return self.settings
 
     def set_common_settings_values(self):
@@ -755,7 +757,7 @@ class SettingsWindow(SettingsWidget):
 
         self.setLayout(vbox)
 
-    def update_values(self, settings: Settings = None):
+    def update_values(self, settings: Settings):
         if settings is not None:
             self.field_records_dir.setText(settings.records_dir)
             self.field_ffmpeg_file.setText(settings.ffmpeg)

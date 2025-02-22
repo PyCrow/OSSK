@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import QVBoxLayout, QLineEdit, QPushButton, QHBoxLayout, \
     QCheckBox, QComboBox
 
 from main_utils import UA
-from static_vars import Settings
+from static_vars import Settings, EMPTY_ITEM
 from ui.components.base import ConfirmableWidget, Field, common_splitter, \
     SettingsWidget
 
@@ -50,29 +50,39 @@ class BypassWidget(SettingsWidget):
         self.setWindowTitle("OSSK | Bypass settings")
         self.setFixedSize(450, 160)
 
-        checkbox_use_cookie = QCheckBox()
-        self.field_use_cookie = Field("Use cookies", checkbox_use_cookie)
+        box_cookies_from_browser = QComboBox()
+        box_cookies_from_browser.addItem(EMPTY_ITEM)
+        box_cookies_from_browser.addItems(UA.browsers)
+        box_cookies_from_browser.currentIndexChanged.connect(
+            self._update_fake_useragent_status)
+        self.field_cookies_from_browser = Field(
+            "Use cookies", box_cookies_from_browser)
 
-        box_browser = QComboBox()
-        box_browser.addItems(UA.browsers)
-        self.field_useragent = Field("User-Agent of", box_browser)
-
-        checkbox_use_cookie.stateChanged.connect(box_browser.setEnabled)
+        checkbox_fake_useragent = QCheckBox()
+        self.field_fake_useragent = Field("Fake useragent",
+                                          checkbox_fake_useragent)
 
         button_apply = QPushButton("Apply")
         button_apply.clicked.connect(self.confirm.emit)
 
         vbox = QVBoxLayout()
-        vbox.addLayout(self.field_use_cookie)
+        vbox.addLayout(self.field_cookies_from_browser)
         vbox.addWidget(common_splitter())
-        vbox.addLayout(self.field_useragent)
+        vbox.addLayout(self.field_fake_useragent)
         vbox.addWidget(button_apply)
         self.setLayout(vbox)
 
-    def update_values(self, settings: Settings = None):
-        self.field_use_cookie.widget.setChecked(settings.use_cookies)
-        browser_item = self.field_useragent.widget.findText(
-            settings.browser, Qt.MatchFixedString)
-        if browser_item > -1:
-            self.field_useragent.widget.setCurrentIndex(browser_item)
-        self.field_useragent.widget.setEnabled(settings.use_cookies)
+    def _update_fake_useragent_status(self):
+        self.field_fake_useragent.widget.setEnabled(
+            self.field_cookies_from_browser.widget.currentText() != EMPTY_ITEM
+        )
+
+    def update_values(self, settings: Settings):
+        self.field_fake_useragent.widget.setChecked(settings.fake_useragent)
+
+        cookie_item = self.field_cookies_from_browser.widget.findText(
+            settings.cookies_from_browser, Qt.MatchFixedString)
+        if cookie_item > -1:
+            self.field_cookies_from_browser.widget.setCurrentIndex(cookie_item)
+
+        self._update_fake_useragent_status()
