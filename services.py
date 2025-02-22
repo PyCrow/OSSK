@@ -279,9 +279,9 @@ class Slave(SoftStoppableThread):
             '--hls-use-mpegts',
         ]
         if self.use_cookies:
-            cmd += ' --user-agent "{}" --cookies-from-browser {}'.format(
-                UA.getBrowser(self.browser), self.browser
-            )
+            useragent = UA.getBrowser(self.browser)['useragent']
+            cmd += ['--user-agent', f'"{useragent}"',
+                    '--cookies-from-browser', self.browser]
 
         proc = RecordProcess(cmd, stdout=temp_log, stderr=temp_log,
                              channel=channel_name)
