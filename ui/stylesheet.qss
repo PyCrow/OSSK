@@ -172,6 +172,9 @@ QCheckBox::indicator:checked {
 QCheckBox::indicator:checked:hover {
   background-color: #090;
 }
+QCheckBox::indicator:disabled {
+  border-bottom: 1px solid #555;
+}
 
 QScrollBar:horizontal {
   background-color: qlineargradient( x1:0, y1:0, x2:0, y2:1,

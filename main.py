@@ -129,8 +129,9 @@ class Controller(QObject):
         self.Master.Slave.max_downloads = self.settings.max_downloads
         self.Master.Slave.proc_term_timeout_sec = \
             self.settings.proc_term_timeout_sec
-        self.Master.Slave.use_cookies = self.settings.use_cookies
-        self.Master.Slave.browser = self.settings.browser
+        self.Master.Slave.fake_useragent = self.settings.fake_useragent
+        self.Master.Slave.cookies_from_browser = \
+            self.settings.cookies_from_browser
         THREADS_LOCK.unlock()
         self.add_log_message(DEBUG, "Service settings updated.")
 

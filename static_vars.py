@@ -3,19 +3,19 @@ import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from subprocess import Popen
-from typing import TypedDict
 
 from PyQt5.QtCore import QThread
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
-UNKNOWN = '<UNKNOWN>'
 
 CURRENT_PATH = Path().resolve()
 LOG_FILE = CURRENT_PATH.joinpath('ossk.log')
 SETTINGS_FILE = CURRENT_PATH.joinpath('config.json')
 STYLESHEET_PATH = CURRENT_PATH.joinpath('ui').joinpath('stylesheet.qss')
 
+UNKNOWN = '<UNKNOWN>'
+EMPTY_ITEM = '---'
 FLAG_LIVE = 'live event will begin in '
 
 # Logging config
@@ -46,7 +46,7 @@ class SettingsLoader(json.JSONDecoder):
         if 'channels' in dct:
             for ch_name in dct['channels'].keys():
                 dct['channels'][ch_name] = \
-                    ChannelData.load(dct['channels'][ch_name])
+                    ChannelData.load(ch_name, dct['channels'][ch_name])
         return dct
 
 
@@ -90,12 +90,12 @@ class Settings(BaseSettings):
         default={},
     )
 
-    use_cookies: bool = Field(
-        default=True,
+    cookies_from_browser: str = Field(
+        default=EMPTY_ITEM,
     )
 
-    browser: str = Field(
-        default='firefox',
+    fake_useragent: bool = Field(
+        default=True,
     )
 
     @classmethod
@@ -128,38 +128,6 @@ class Settings(BaseSettings):
             return suc
 
 
-class KEYS:
-    RECORDS_DIR = 'records_dir'
-    FFMPEG = 'ffmpeg'
-    YTDLP = 'ytdlp'
-    MAX_DOWNLOADS = 'max_downloads'
-    SCANNER_SLEEP_MIN = 'scanner_sleep'
-    PROC_TERM_TIMEOUT_SEC = 'proc_term_timeout_sec'
-    HIDE_SUC_FIN_PROC = 'hide_suc_fin_proc'
-    CHANNELS = 'channels'
-    USE_COOKIES = 'use_cookies'
-    BROWSER = 'browser'
-
-    CHANNEL_NAME = 'name'
-    CHANNEL_ALIAS = 'alias'
-    CHANNEL_SVQ = 'svq'
-
-
-class DEFAULT:
-    RECORDS_DIR = str(CURRENT_PATH.joinpath('records'))
-    FFMPEG = 'ffmpeg'
-    YTDLP = 'python -m yt_dlp'
-    MAX_DOWNLOADS = 2
-    SCANNER_SLEEP_MIN = 5
-    PROC_TERM_TIMEOUT_SEC = 600
-    HIDE_SUC_FIN_PROC = False
-    USE_COOKIES = False
-    BROWSER = 'firefox'
-
-    CHANNEL_ALIAS = ''
-    CHANNEL_SVQ = 'best'
-
-
 AVAILABLE_STREAM_RECORD_QUALITIES = {
     'best': ('-f', 'bestvideo*+bestaudio/best'),
     '1080': ('-S', 'res:1080'),
@@ -176,15 +144,15 @@ class ChannelData:
      - alias (editable)
      - svq (stream video quality)
     """
-    def __init__(self, name: str):
+    def __init__(self, name: str, alias: str = '', svq: str = 'best'):
         """
         :param name: channel YouTube ID
         (https://www.youtube.com/@channel_id).
         Channel GUI alias can be changed in channel settings.
         """
         self.name: str = name
-        self.alias: str = DEFAULT.CHANNEL_ALIAS
-        self.__svq: str = DEFAULT.CHANNEL_SVQ
+        self.alias: str = alias
+        self.__svq: str = svq
 
     @property
     def svq(self):
@@ -199,16 +167,13 @@ class ChannelData:
 
     def dump(self) -> dict:
         return {
-            KEYS.CHANNEL_ALIAS: self.alias,
-            KEYS.CHANNEL_SVQ: self.__svq,
+            'alias': self.alias,
+            'svq': self.__svq,
         }
 
     @staticmethod
-    def load(data: dict):
-        channel = ChannelData(data.get(KEYS.CHANNEL_NAME, UNKNOWN))
-        channel.alias = data.get(KEYS.CHANNEL_ALIAS, DEFAULT.CHANNEL_ALIAS)
-        channel.svq = data.get(KEYS.CHANNEL_SVQ, DEFAULT.CHANNEL_SVQ)
-        return channel
+    def load(channel_name: str, channel_data: dict):
+        return ChannelData(channel_name, **channel_data)
 
 
 class StopThreads(Exception):
@@ -246,22 +211,3 @@ class RecordProcess(Popen):
     def __init__(self, *args, **kwargs) -> None:
         self.channel: str = kwargs.pop('channel')
         super().__init__(*args, **kwargs)
-
-
-class ChannelDataType(TypedDict):
-    name: str
-    alias: str
-    svq: str
-
-
-class SettingsType(TypedDict):
-    records_dir: str
-    ffmpeg: str
-    ytdlp: str
-    max_downloads: int
-    scanner_sleep: int
-    proc_term_timeout_sec: int
-    hide_suc_fin_proc: bool
-    channels: dict[str, ChannelDataType]
-    use_cookies: bool
-    browser: str
