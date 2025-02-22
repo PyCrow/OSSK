@@ -13,7 +13,7 @@ UNKNOWN = '<UNKNOWN>'
 
 CURRENT_PATH = Path().resolve()
 LOG_FILE = CURRENT_PATH.joinpath('ossk.log')
-SETTINGS_FILE = CURRENT_PATH.joinpath('config.env')
+SETTINGS_FILE = CURRENT_PATH.joinpath('config.json')
 STYLESHEET_PATH = CURRENT_PATH.joinpath('ui').joinpath('stylesheet.qss')
 
 FLAG_LIVE = 'live event will begin in '
