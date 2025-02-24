@@ -13,7 +13,7 @@ import yt_dlp
 from PyQt5.QtCore import pyqtSignal, QMutex
 
 from main_utils import get_channel_dir, logger_handler, UA
-from static_vars import (SoftStoppableThread, ChannelData, StopThreads,
+from static_vars import (SoftStoppableThread, ChannelConfig, StopThreads,
                          FLAG_LIVE, RecordProcess, logging_handler)
 
 # Local logging config
@@ -41,7 +41,7 @@ class Master(SoftStoppableThread):
         self.__start_force_scan = False
         self.__last_status: Dict[str, bool] = {}
         self.__scheduled_streams: Dict[str, bool] = {}
-        self.channels: Dict[str, ChannelData] | None = None
+        self.channels: Dict[str, ChannelConfig] | None = None
         self.scanner_sleep_min: int | None = None
         self.Slave = Slave()
         self.Slave.log[int, str].connect(self._log)

@@ -12,7 +12,7 @@ from PyQt5.QtWidgets import QApplication
 from services import Master
 from static_vars import (
     logging_handler,
-    ChannelData,
+    ChannelConfig,
     Settings)
 from ui.view import MainWindow, Status
 from ui.dynamic_style import STYLE
@@ -200,7 +200,7 @@ class Controller(QObject):
         """ Add a channel to the monitored list """
         if not channel_name or channel_name in self.settings.channels:
             return
-        channel_data = ChannelData(channel_name)
+        channel_data = ChannelConfig()
         self.settings.channels[channel_name] = channel_data
 
         # Saving settings
@@ -254,7 +254,7 @@ class Controller(QObject):
         self.Window.channel_settings_window.update_data(
             channel_name,
             self.settings.channels[channel_name].alias,
-            self.settings.channels[channel_name].svq_view()
+            self.settings.channels[channel_name].svq,
         )
         self.Window.channel_settings_window.show()
 
