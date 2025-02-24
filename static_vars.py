@@ -33,8 +33,6 @@ logger.addHandler(logging_handler)
 
 class SettingsDumper(json.JSONEncoder):
     def default(self, obj):
-        if isinstance(obj, ChannelData):
-            return obj.dump()
         return json.JSONEncoder.default(self, obj)
 
 
@@ -44,10 +42,17 @@ class SettingsLoader(json.JSONDecoder):
             self, object_hook=self.object_hook, *args, **kwargs)
     def object_hook(self, dct: dict):
         if 'channels' in dct:
-            for ch_name in dct['channels'].keys():
-                dct['channels'][ch_name] = \
-                    ChannelData.load(ch_name, dct['channels'][ch_name])
+            for name in dct['channels'].keys():
+                dct['channels'][name] = ChannelConfig(**dct['channels'][name])
         return dct
+
+
+class ChannelConfig(BaseSettings):
+    alias: str = Field(default="")
+    svq: str = Field(default='best')
+
+    def svq_real(self):
+        return AVAILABLE_STREAM_RECORD_QUALITIES[self.svq]
 
 
 class Settings(BaseSettings):
@@ -86,7 +91,7 @@ class Settings(BaseSettings):
         default=False,
     )
 
-    channels: dict = Field(
+    channels: dict[str, ChannelConfig] = Field(
         default={},
     )
 
