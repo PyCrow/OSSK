@@ -15,7 +15,7 @@ SETTINGS_FILE = PROJECT_PATH.joinpath('config.json')
 STYLESHEET_PATH = PROJECT_PATH.joinpath('ui').joinpath('stylesheet.qss')
 
 UNKNOWN = '<UNKNOWN>'
-EMPTY_ITEM = '---'
+EMPTY_ITEM = '---EMPTY---'
 FLAG_LIVE = 'live event will begin in '
 
 # Logging config

@@ -40,8 +40,9 @@ class AddChannelWidget(ConfirmableWidget):
         self.setLayout(vbox)
 
     def show(self):
-        super().show()
+        self.field_channel.clear()
         self.field_channel.setFocus()
+        super().show()
 
 
 class BypassWidget(SettingsWidget):

@@ -53,16 +53,18 @@ QComboBox {
   border-top: 1px solid #000;
   border-left: 1px solid #333;
   border-right: 1px solid #333;
-  border-bottom: 1px solid #0a0;
+  border-bottom: 1px solid #070;
   border-radius: 12px;
   padding: 5px;
 }
 QListView:disabled,
+QListView::item:disabled,
 QTreeView:disabled,
+QTreeView::item:disabled,
 QLineEdit:disabled,
 QSpinBox:disabled,
 QComboBox:disabled {
-  color: #555;
+  color: #aaa;
   border-bottom: 1px solid #555;
 }
 QListView::item,
@@ -90,11 +92,6 @@ QTreeView::item:selected {
   border-bottom: 1px solid #0f0;
   color: #fff;
 }
-QListView::item:disabled,
-QTreeView::item:disabled,
-QLineEdit:disabled {
-  color: #aaa;
-}
 
 QStandardItem {
   background-color: yellow;
@@ -106,31 +103,27 @@ QPushButton {
   max-height: 24;
   font-size: 16px;
   background-color: #333333;
-  border-top: 0;
-  border-left: 1px solid #242;
-  border-right: 1px solid #353;
-  border-bottom: 0;
-  border-radius: 6px;
+  border: 0;
+  border-radius: 10px;
   margin: 2px;
   padding: 5px;
 }
 QPushButton:disabled {
   color: grey;
-  border-top: 1px solid #505050;
 }
 QPushButton:hover {
   background-color: #232323;
   border-top: 1px solid #101010;
   border-left: 1px solid #333;
   border-right: 1px solid #333;
-  border-bottom: 1px solid #0a0;
+  border-bottom: 1px solid #070;
 }
 QPushButton:pressed {
   background-color: #181818;
   border-top: 1px solid #101010;
   border-left: 1px solid #333;
   border-right: 1px solid #333;
-  border-bottom: 1px solid #0a0;
+  border-bottom: 1px solid #0f0;
 }
 QPushButton#start {
   image: url(ui/icons/button_start.svg);
@@ -164,15 +157,16 @@ QCheckBox::indicator:hover {
 }
 QCheckBox::indicator:checked {
   background-color: #070;
-  border-top: 1px solid #0a0;
-  border-left: 1px solid #0a0;
-  border-right: 1px solid #0a0;
-  border-bottom: 1px solid #0a0;
+  border: 1px solid #0a0;
 }
 QCheckBox::indicator:checked:hover {
   background-color: #090;
 }
 QCheckBox::indicator:disabled {
+  background-color: #202020;
+  border-top: 1px solid #111;
+  border-left: 1px solid #333;
+  border-right: 1px solid #333;
   border-bottom: 1px solid #555;
 }
 
