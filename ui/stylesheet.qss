@@ -71,6 +71,9 @@ QListView::item,
 QTreeView::item {
   height: 22px;
 }
+QComboBox QListView {
+  background-color: #222;
+}
 QListView::item:hover,
 QTreeView::item:hover,
 QTreeView::branch:hover {
@@ -198,6 +201,10 @@ QMenu {
 }
 QMenu:selected {
   background: #333333;
+}
+QMenu::separator {
+  border-top: 1px solid #1b1b1b;
+  border-bottom: 1px solid #363636;
 }
 
 QMenuBar {

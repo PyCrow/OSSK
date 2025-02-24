@@ -1,11 +1,11 @@
 from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtWidgets import QVBoxLayout, QLineEdit, QPushButton, QHBoxLayout, \
-    QCheckBox, QComboBox
+    QCheckBox
 
 from main_utils import UA
 from static_vars import Settings, EMPTY_ITEM
 from ui.components.base import ConfirmableWidget, Field, common_splitter, \
-    SettingsWidget
+    SettingsWidget, ComboBox
 
 
 class AddChannelWidget(ConfirmableWidget):
@@ -51,10 +51,7 @@ class BypassWidget(SettingsWidget):
         self.setWindowTitle("OSSK | Bypass settings")
         self.setFixedSize(450, 160)
 
-        box_cookies_from_browser = QComboBox()
-        # QSS fix
-        box_cookies_from_browser.view().parentWidget().setStyleSheet(
-            'alternate-background-color: #000;')
+        box_cookies_from_browser = ComboBox()
         box_cookies_from_browser.addItem(EMPTY_ITEM)
         box_cookies_from_browser.addItems(UA.browsers)
         box_cookies_from_browser.currentIndexChanged.connect(
