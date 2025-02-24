@@ -7,7 +7,7 @@ _YELLOW = "#ff0"
 _GREEN = "#0f0"
 
 # Elements highlight
-_DIRECT_LIGHT = "#0a0"
+_DIRECT_LIGHT = "#070"
 
 _LINE = (
     f"background-color: {_DEFAULT_BLACK};"
