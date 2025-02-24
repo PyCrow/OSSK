@@ -52,6 +52,9 @@ class BypassWidget(SettingsWidget):
         self.setFixedSize(450, 160)
 
         box_cookies_from_browser = QComboBox()
+        # QSS fix
+        box_cookies_from_browser.view().parentWidget().setStyleSheet(
+            'alternate-background-color: #000;')
         box_cookies_from_browser.addItem(EMPTY_ITEM)
         box_cookies_from_browser.addItems(UA.browsers)
         box_cookies_from_browser.currentIndexChanged.connect(
