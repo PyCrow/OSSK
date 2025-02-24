@@ -9,10 +9,10 @@ from pydantic import Field
 from pydantic_settings import BaseSettings
 
 
-CURRENT_PATH = Path().resolve()
-LOG_FILE = CURRENT_PATH.joinpath('ossk.log')
-SETTINGS_FILE = CURRENT_PATH.joinpath('config.json')
-STYLESHEET_PATH = CURRENT_PATH.joinpath('ui').joinpath('stylesheet.qss')
+PROJECT_PATH = Path().resolve()
+LOG_FILE = PROJECT_PATH.joinpath('ossk.log')
+SETTINGS_FILE = PROJECT_PATH.joinpath('config.json')
+STYLESHEET_PATH = PROJECT_PATH.joinpath('ui').joinpath('stylesheet.qss')
 
 UNKNOWN = '<UNKNOWN>'
 EMPTY_ITEM = '---'
@@ -53,7 +53,7 @@ class SettingsLoader(json.JSONDecoder):
 class Settings(BaseSettings):
 
     records_dir: str = Field(
-        default=str(CURRENT_PATH.joinpath('records')),
+        default=str(PROJECT_PATH.joinpath('records')),
     )
 
     ffmpeg: str = Field(
