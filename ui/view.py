@@ -845,21 +845,19 @@ class ChannelSettingsWindow(ConfirmableWidget):
     def _init_ui(self):
         self.setWindowTitle("OSSK | Channel settings")
 
-        self.setMinimumWidth(300)
-        self.setMaximumWidth(500)
-        self.setMinimumHeight(300)
-        self.setMaximumHeight(500)
-        self.resize(400, 300)
+        self.setFixedSize(500, 220)
 
         self.label_channel = QLabel(self)
         self.label_channel.setTextInteractionFlags(Qt.TextSelectableByMouse)
 
-        self.line_alias = QLineEdit()
-        self.line_alias.setPlaceholderText(
-            "Enter readable alias for the channel")
+        line_alias = QLineEdit()
+        line_alias.setFixedWidth(240)
+        line_alias.setPlaceholderText("Сhanges display name")
+        self.field_alias = Field("Channel alias", line_alias)
 
-        self.box_svq = ComboBox()
-        self.box_svq.addItems(list(AVAILABLE_STREAM_RECORD_QUALITIES.keys()))
+        box_svq = ComboBox()
+        box_svq.addItems(list(AVAILABLE_STREAM_RECORD_QUALITIES.keys()))
+        self.field_svq = Field("Stream video quality", box_svq)
 
         button_apply = QPushButton("Apply", self)
         button_apply.clicked.connect(self.confirm.emit)
@@ -867,11 +865,9 @@ class ChannelSettingsWindow(ConfirmableWidget):
         vbox = QVBoxLayout()
         vbox.addWidget(self.label_channel, alignment=Qt.AlignHCenter)
         vbox.addStretch(1)
-        vbox.addWidget(QLabel("Channel alias"))
-        vbox.addWidget(self.line_alias)
+        vbox.addLayout(self.field_alias)
         vbox.addStretch(1)
-        vbox.addWidget(QLabel("Stream video quality"))
-        vbox.addWidget(self.box_svq)
+        vbox.addLayout(self.field_svq)
         vbox.addStretch(2)
         vbox.addWidget(button_apply)
 
@@ -883,12 +879,12 @@ class ChannelSettingsWindow(ConfirmableWidget):
         through the controller.
         """
         self.label_channel.setText(channel_name)
-        self.line_alias.setText(alias)
-        index_svq = self.box_svq.findText(svq)
-        self.box_svq.setCurrentIndex(index_svq)
+        self.field_alias.widget.setText(alias)
+        index_svq = self.field_svq.widget.findText(svq)
+        self.field_svq.widget.setCurrentIndex(index_svq)
 
     def get_data(self) -> tuple[str, str, str]:
         ch_name = self.label_channel.text()
-        alias = self.line_alias.text()
-        svq = self.box_svq.currentText()
+        alias = self.field_alias.widget.text()
+        svq = self.field_svq.widget.currentText()
         return ch_name, alias, svq
