@@ -1,5 +1,5 @@
 from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtWidgets import QWidget, QLabel, QBoxLayout, QFrame
+from PyQt5.QtWidgets import QWidget, QLabel, QBoxLayout, QFrame, QComboBox
 
 from ui.utils import centralize
 
@@ -52,3 +52,10 @@ class Field(QBoxLayout):
             self.addWidget(widget, alignment=Qt.AlignRight)
         else:
             self.addWidget(widget)
+
+
+class ComboBox(QComboBox):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.view().parentWidget().setStyleSheet(
+            'alternate-background-color: #000;')

@@ -249,7 +249,7 @@ class Slave(SoftStoppableThread):
         records_quality: tuple = stream_data['ch_svq']
         stream_title: str = stream_data['title']
 
-        channel_dir = str(get_channel_dir(self.records_path, channel_name))
+        channel_dir = str(get_channel_dir(channel_name, self.records_path))
         file_name = '%(title)s.%(ext)s'
 
         temp_log = tempfile.TemporaryFile(mode='w+b')

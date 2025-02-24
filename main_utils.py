@@ -56,7 +56,7 @@ def check_dir_exists(_path: str) -> bool:
     return False
 
 
-def get_channel_dir(records_dir: str, channel_name: str) -> Path:
+def get_channel_dir(channel_name: str, records_dir: str) -> Path:
     """ Create channel's dir is not exist and return its path """
     channel_dir = Path(records_dir).joinpath(channel_name)
     if not channel_dir.exists():

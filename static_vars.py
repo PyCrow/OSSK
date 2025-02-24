@@ -143,7 +143,7 @@ class Settings(BaseSettings):
 
 class ChannelConfig(BaseSettings):
     alias: str = Field(default="")
-    svq: str = Field(default='best')
+    svq: str = Field(default='Maximum')
 
     def svq_real(self):
         return AVAILABLE_STREAM_RECORD_QUALITIES[self.svq]

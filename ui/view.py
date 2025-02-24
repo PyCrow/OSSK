@@ -8,16 +8,17 @@ from PyQt5.QtCore import pyqtSignal, pyqtSlot, QModelIndex, Qt, QUrl
 from PyQt5.QtGui import (QColor, QLinearGradient, QMouseEvent,
                          QStandardItem, QStandardItemModel, QDesktopServices)
 from PyQt5.QtWidgets import (
-    QAbstractItemView, QAction, QBoxLayout, QCheckBox, QComboBox, QHBoxLayout,
+    QAbstractItemView, QAction, QBoxLayout, QCheckBox, QHBoxLayout,
     QLabel, QLineEdit, QListView, QMenu, QPushButton, QSpinBox, QTabWidget,
     QTreeView, QVBoxLayout, QWidget, QMainWindow, QFileDialog, QDialog)
 
-from main_utils import check_exists_and_callable, is_callable, check_dir_exists
+from main_utils import check_exists_and_callable, is_callable, \
+    check_dir_exists, get_channel_dir
 from static_vars import (
     logging_handler, AVAILABLE_STREAM_RECORD_QUALITIES, RecordProcess,
     STYLESHEET_PATH, Settings)
 from ui.components.base import common_splitter, ConfirmableWidget, Field, \
-    SettingsWidget
+    SettingsWidget, ComboBox
 from ui.components.menu import AddChannelWidget, BypassWidget
 from ui.dynamic_style import STYLE
 from ui.utils import centralize
@@ -158,12 +159,20 @@ class MainWindow(QMainWindow):
         self.status_bar = self.statusBar()
 
         self.widget_channels_tree = ChannelsTree()
-        self.widget_channels_tree.on_click_stop.triggered\
-            .connect(self._send_stop_process)
-        self.widget_channels_tree.on_click_delete_channel.triggered\
-            .connect(self._send_del_channel)
-        self.widget_channels_tree.on_click_channel_settings.triggered\
-            .connect(self._send_open_channel_settings)
+        self.widget_channels_tree.action_stop.triggered.connect(
+            self._send_stop_process)
+        self.widget_channels_tree.action_channel_settings.triggered.connect(
+            self._send_open_channel_settings)
+        self.widget_channels_tree.action_open_channel_dir.triggered.connect(
+            lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(str(
+                get_channel_dir(
+                    self.widget_channels_tree.selected_channel_name(),
+                    self.settings.records_dir,
+                )
+            )))
+        )
+        self.widget_channels_tree.action_delete_channel.triggered.connect(
+            self._send_del_channel)
 
         self._button_start = QPushButton()
         self._button_start.setObjectName("start")
@@ -363,17 +372,19 @@ class ChannelsTree(QTreeView):
         self._map_channel_item: dict[str, ChannelItem] = {}
         self._map_pid_item: dict[int, RecordProcessItem] = {}
 
-        # Actions initialization
-        self.on_click_channel_settings = QAction("Channel settings", self)
-        self.on_click_delete_channel = QAction("Delete channel", self)
-        self._on_click_open_tab = QAction("Open tab", self)
-        self.on_click_stop = QAction("Stop process", self)
-        self._on_click_hide_process = QAction("Hide", self)
+        # Channel actions
+        self.action_channel_settings = QAction("Channel settings", self)
+        self.action_open_channel_dir = QAction("Open channel folder", self)
+        self.action_delete_channel = QAction("Delete channel", self)
+        # Process actions
+        self._action_open_tab = QAction("Open tab", self)
+        self.action_stop = QAction("Stop process", self)
+        self._action_hide_process = QAction("Hide", self)
 
         # Connect actions
-        self._on_click_open_tab.triggered[bool].connect(
+        self._action_open_tab.triggered[bool].connect(
             self._send_open_tab_by_pid)
-        self._on_click_hide_process.triggered[bool].connect(
+        self._action_hide_process.triggered[bool].connect(
             self._del_finished_process_item)
 
     def mousePressEvent(self, e: QMouseEvent):
@@ -419,19 +430,20 @@ class ChannelsTree(QTreeView):
     # Context menus
     def _single_channel_menu(self) -> QMenu:
         menu = QMenu(self)
-        menu.addAction(self.on_click_channel_settings)
+        menu.addAction(self.action_channel_settings)
+        menu.addAction(self.action_open_channel_dir)
         menu.addSeparator()
-        menu.addAction(self.on_click_delete_channel)
+        menu.addAction(self.action_delete_channel)
         return menu
 
     def _single_process_menu(self, process_finished: bool) -> QMenu:
         menu = QMenu(self)
-        menu.addAction(self._on_click_open_tab)
+        menu.addAction(self._action_open_tab)
         menu.addSeparator()
         if not process_finished:
-            menu.addAction(self.on_click_stop)
+            menu.addAction(self.action_stop)
         else:
-            menu.addAction(self._on_click_hide_process)
+            menu.addAction(self._action_hide_process)
         return menu
 
     # Selected item functions
@@ -440,13 +452,13 @@ class ChannelsTree(QTreeView):
 
     def selected_channel_name(self) -> str:
         """
-        Triggering by own on_click_delete_channel through the controller
+        Triggering by own action_delete_channel through the controller
         """
         return self._selected_item().channel
 
     def selected_process_id(self) -> int:
         """
-        Triggering by own on_click_stop through the controller
+        Triggering by own action_stop through the controller
         """
         return self._selected_item().pid
 
@@ -846,7 +858,7 @@ class ChannelSettingsWindow(ConfirmableWidget):
         self.line_alias.setPlaceholderText(
             "Enter readable alias for the channel")
 
-        self.box_svq = QComboBox()
+        self.box_svq = ComboBox()
         self.box_svq.addItems(list(AVAILABLE_STREAM_RECORD_QUALITIES.keys()))
 
         button_apply = QPushButton("Apply", self)
@@ -867,7 +879,7 @@ class ChannelSettingsWindow(ConfirmableWidget):
 
     def update_data(self, channel_name: str, alias: str, svq: str):
         """
-        Triggering by ChannelsTree.on_click_channel_settings
+        Triggering by ChannelsTree.action_channel_settings
         through the controller.
         """
         self.label_channel.setText(channel_name)
