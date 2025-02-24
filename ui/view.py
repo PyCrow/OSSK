@@ -16,7 +16,7 @@ from main_utils import check_exists_and_callable, is_callable, \
     check_dir_exists, get_channel_dir
 from static_vars import (
     logging_handler, AVAILABLE_STREAM_RECORD_QUALITIES, RecordProcess,
-    STYLESHEET_PATH, Settings)
+    STYLESHEET_PATH, Settings, CHANNEL_URL_TEMPLATE)
 from ui.components.base import common_splitter, ConfirmableWidget, Field, \
     SettingsWidget, ComboBox
 from ui.components.menu import AddChannelWidget, BypassWidget
@@ -848,7 +848,9 @@ class ChannelSettingsWindow(ConfirmableWidget):
         self.setFixedSize(500, 220)
 
         self.label_channel = QLabel(self)
-        self.label_channel.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        self.label_channel.setTextFormat(Qt.RichText)
+        self.label_channel.setTextInteractionFlags(Qt.TextBrowserInteraction)
+        self.label_channel.setOpenExternalLinks(True)
 
         line_alias = QLineEdit()
         line_alias.setFixedWidth(240)
@@ -878,7 +880,10 @@ class ChannelSettingsWindow(ConfirmableWidget):
         Triggering by ChannelsTree.action_channel_settings
         through the controller.
         """
-        self.label_channel.setText(channel_name)
+        label_url = CHANNEL_URL_TEMPLATE.format(channel_name)
+        self.label_channel.setText(
+            f'<a href="{label_url}" style="color: #0f0">{label_url}</a>'
+        )
         self.field_alias.widget.setText(alias)
         index_svq = self.field_svq.widget.findText(svq)
         self.field_svq.widget.setCurrentIndex(index_svq)

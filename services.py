@@ -14,7 +14,8 @@ from PyQt5.QtCore import pyqtSignal, QMutex
 
 from main_utils import get_channel_dir, logger_handler, UA
 from static_vars import (SoftStoppableThread, ChannelConfig, StopThreads,
-                         FLAG_LIVE, RecordProcess, logging_handler)
+                         FLAG_LIVE, RecordProcess, logging_handler,
+                         CHANNEL_URL_LIVE_TEMPLATE)
 
 # Local logging config
 logger = logging.getLogger()
@@ -96,7 +97,7 @@ class Master(SoftStoppableThread):
 
     @logger_handler
     def _check_for_stream(self, channel_name: str):
-        url = f'https://www.youtube.com/@{channel_name}/live'
+        url = CHANNEL_URL_LIVE_TEMPLATE.format(channel_name)
         ytdl_options = {'quiet': True, 'default_search': 'ytsearch'}
 
         with yt_dlp.YoutubeDL(ytdl_options) as ydl:
