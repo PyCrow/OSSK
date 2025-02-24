@@ -9,6 +9,8 @@ from pydantic import Field
 from pydantic_settings import BaseSettings
 
 
+# --- Common values definition ---
+
 PROJECT_PATH = Path().resolve()
 LOG_FILE = PROJECT_PATH.joinpath('ossk.log')
 SETTINGS_FILE = PROJECT_PATH.joinpath('config.json')
@@ -18,18 +20,32 @@ UNKNOWN = '<UNKNOWN>'
 EMPTY_ITEM = '---EMPTY---'
 FLAG_LIVE = 'live event will begin in '
 
-# Logging config
-logging_handler = RotatingFileHandler(LOG_FILE, maxBytes=1024*1024*10,
-                                      backupCount=2, encoding='utf-8')
+logging_handler = RotatingFileHandler(
+    LOG_FILE, maxBytes=1024*1024*5, encoding='utf-8')
 logging_handler.setLevel(logging.DEBUG)
 logging_handler.setFormatter(logging.Formatter(
     '%(asctime)s [%(levelname)s] %(message)s', "%Y-%m-%d %H:%M:%S"))
 
 
+# --- Local values ---
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 logger.addHandler(logging_handler)
 
+AVAILABLE_STREAM_RECORD_QUALITIES = {
+    'Maximum': ('-f', 'bv*+ba/b'),
+    # Download the best video available with the largest resolution
+    # but no better than 480p, or the best video with the smallest resolution
+    # if there is no video under 480p.
+    # Resolution is determined by using the smallest dimension.
+    # So this works correctly for vertical videos as well.
+    '1080p': ('-S', 'res:1080'),
+    '720p': ('-S', 'res:720'),
+    '480p': ('-S', 'res:480'),
+}
+
+
+# --- Defining classes ---
 
 class SettingsDumper(json.JSONEncoder):
     def default(self, obj):
@@ -45,14 +61,6 @@ class SettingsLoader(json.JSONDecoder):
             for name in dct['channels'].keys():
                 dct['channels'][name] = ChannelConfig(**dct['channels'][name])
         return dct
-
-
-class ChannelConfig(BaseSettings):
-    alias: str = Field(default="")
-    svq: str = Field(default='best')
-
-    def svq_real(self):
-        return AVAILABLE_STREAM_RECORD_QUALITIES[self.svq]
 
 
 class Settings(BaseSettings):
@@ -91,7 +99,7 @@ class Settings(BaseSettings):
         default=False,
     )
 
-    channels: dict[str, ChannelConfig] = Field(
+    channels: dict[str, 'ChannelConfig'] = Field(
         default={},
     )
 
@@ -104,7 +112,7 @@ class Settings(BaseSettings):
     )
 
     @classmethod
-    def load(cls) -> tuple[bool, "Settings"]:
+    def load(cls) -> tuple[bool, 'Settings']:
         suc = True
         try:
             if SETTINGS_FILE.exists():
@@ -120,65 +128,25 @@ class Settings(BaseSettings):
             logger.error(e)
         return suc, cls()
 
-    def save(self):
+    def save(self) -> bool:
         suc = True
         settings = self.model_dump()
         try:
             with open(SETTINGS_FILE, 'w') as conf_file:
                 json.dump(settings, conf_file, cls=SettingsDumper, indent=4)
         except Exception as e:
-            suc = True
+            suc = False
             logger.error(e)
         finally:
             return suc
 
 
-AVAILABLE_STREAM_RECORD_QUALITIES = {
-    'best': ('-f', 'bestvideo*+bestaudio/best'),
-    '1080': ('-S', 'res:1080'),
-    '720': ('-S', 'res:720'),
-    '480': ('-S', 'res:480'),
-}
+class ChannelConfig(BaseSettings):
+    alias: str = Field(default="")
+    svq: str = Field(default='best')
 
-
-# Define classes
-class ChannelData:
-    """
-    Channel data
-     - name
-     - alias (editable)
-     - svq (stream video quality)
-    """
-    def __init__(self, name: str, alias: str = '', svq: str = 'best'):
-        """
-        :param name: channel YouTube ID
-        (https://www.youtube.com/@channel_id).
-        Channel GUI alias can be changed in channel settings.
-        """
-        self.name: str = name
-        self.alias: str = alias
-        self.__svq: str = svq
-
-    @property
-    def svq(self):
-        return AVAILABLE_STREAM_RECORD_QUALITIES[self.__svq]
-
-    @svq.setter
-    def svq(self, svq: str):
-        self.__svq = svq
-
-    def svq_view(self):
-        return str(self.__svq)
-
-    def dump(self) -> dict:
-        return {
-            'alias': self.alias,
-            'svq': self.__svq,
-        }
-
-    @staticmethod
-    def load(channel_name: str, channel_data: dict):
-        return ChannelData(channel_name, **channel_data)
+    def svq_real(self):
+        return AVAILABLE_STREAM_RECORD_QUALITIES[self.svq]
 
 
 class StopThreads(Exception):
