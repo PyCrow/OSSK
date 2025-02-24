@@ -18,6 +18,8 @@ STYLESHEET_PATH = PROJECT_PATH.joinpath('ui').joinpath('stylesheet.qss')
 
 UNKNOWN = '<UNKNOWN>'
 EMPTY_ITEM = '---EMPTY---'
+CHANNEL_URL_TEMPLATE = 'https://www.youtube.com/@{}'
+CHANNEL_URL_LIVE_TEMPLATE = f'{CHANNEL_URL_TEMPLATE}/live'
 FLAG_LIVE = 'live event will begin in '
 
 logging_handler = RotatingFileHandler(
