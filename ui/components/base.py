@@ -12,10 +12,10 @@ def common_splitter():
 
 
 class BaseWidget(QWidget):
+    """ Centralize, '_init_ui' """
 
     def __init__(self, *args, **kwargs):
         super(BaseWidget, self).__init__(*args, **kwargs)
-        self.setWindowModality(Qt.ApplicationModal)
         centralize(self)
         self._init_ui()
 
@@ -28,6 +28,7 @@ class ConfirmableWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.setWindowModality(Qt.ApplicationModal)
         self.confirm.connect(self.close)
 
 

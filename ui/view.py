@@ -16,7 +16,8 @@ from main_utils import get_channel_dir
 from static_vars import (
     logging_handler, AVAILABLE_STREAM_RECORD_QUALITIES, RecordProcess,
     STYLESHEET_PATH, Settings, CHANNEL_URL_TEMPLATE)
-from ui.components.base import ConfirmableWidget, Field, ComboBox
+from ui.components.base import ConfirmableWidget, Field, ComboBox, BaseWidget
+from ui.components.items import ChannelItem, RecordProcessItem
 from ui.components.menu import AddChannelWidget, BypassWidget, SettingsWindow
 from ui.utils import centralize
 
@@ -73,19 +74,6 @@ class Status:
         gradient.setColorAt(0.6, QColor(25, 25, 25))
         gradient.setColorAt(1.0, qcolor)
         return gradient
-
-
-class ChannelItem(QStandardItem):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.channel: str = ''
-
-
-class RecordProcessItem(QStandardItem):
-    def __init__(self, *args, **kwargs):
-        self.pid: Union[int, None] = None
-        self.finished: bool = False
-        super(RecordProcessItem, self).__init__(*args, **kwargs)
 
 
 class MainWindow(QMainWindow):
