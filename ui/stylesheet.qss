@@ -71,8 +71,26 @@ QListView::item,
 QTreeView::item {
   height: 22px;
 }
+/* --- ComboBox --- */
+QComboBox::drop-down {
+  image: url(ui/icons/arrow_drop_down.svg);
+  subcontrol-position: center right;
+}
 QComboBox QListView {
-  background-color: #222;
+  background-color: #202020;
+  border-radius: 3px;
+}
+QComboBox::item {
+  color: white;
+}
+QComboBox::item:checked {
+  /* 'background-color' with an indicator, unlike 'selection-background-color' */
+  background-color: #202020;
+  color: #0f0;
+}
+QComboBox::item:selected {
+  /* 'selection-background-color' without an indicator, unlike 'selection-background-color' */
+  selection-background-color: #333333;
 }
 QListView::item:hover,
 QTreeView::item:hover,

@@ -59,4 +59,5 @@ class ComboBox(QComboBox):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.view().parentWidget().setStyleSheet(
-            'alternate-background-color: #000;')
+            'alternate-background-color: #000;'
+        )
