@@ -3,12 +3,12 @@ from PyQt5.QtGui import QDesktopServices
 from PyQt5.QtWidgets import QVBoxLayout, QLineEdit, QPushButton, QHBoxLayout, \
     QCheckBox, QLabel, QBoxLayout, QSpinBox, QFileDialog, QDialog
 
-from main_utils import UA, check_dir_exists, check_exists_and_callable, \
-    is_callable
+from main_utils import check_dir_exists, check_exists_and_callable, is_callable
 from static_vars import Settings, EMPTY_ITEM
 from ui.components.base import ConfirmableWidget, Field, common_splitter, \
     SettingsWidget, ComboBox
 from ui.dynamic_style import STYLE
+from ui.utils import get_supported_browsers
 
 
 class AddChannelWidget(ConfirmableWidget):
@@ -260,15 +260,15 @@ class BypassWidget(SettingsWidget):
 
     def _init_ui(self):
         self.setWindowTitle("OSSK | Bypass settings")
-        self.setFixedSize(450, 160)
+        self.setFixedSize(500, 160)
 
         box_cookies_from_browser = ComboBox()
         box_cookies_from_browser.addItem(EMPTY_ITEM)
-        box_cookies_from_browser.addItems(UA.browsers)
+        box_cookies_from_browser.addItems(get_supported_browsers())
         box_cookies_from_browser.currentIndexChanged.connect(
             self._update_fake_useragent_status)
         self.field_cookies_from_browser = Field(
-            "Use cookies", box_cookies_from_browser)
+            "Use cookies (must be installed)", box_cookies_from_browser)
 
         checkbox_fake_useragent = QCheckBox()
         self.field_fake_useragent = Field("Fake useragent",
