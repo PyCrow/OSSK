@@ -16,7 +16,7 @@ from main_utils import get_channel_dir
 from static_vars import (
     logging_handler, AVAILABLE_STREAM_RECORD_QUALITIES, RecordProcess,
     STYLESHEET_PATH, Settings, CHANNEL_URL_TEMPLATE)
-from ui.components.base import ConfirmableWidget, Field, ComboBox, BaseWidget
+from ui.components.base import ConfirmableWidget, Field, ComboBox
 from ui.components.items import ChannelItem, RecordProcessItem
 from ui.components.menu import AddChannelWidget, BypassWidget, SettingsWindow
 from ui.utils import centralize
