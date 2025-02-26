@@ -66,6 +66,12 @@ class SettingsLoader(json.JSONDecoder):
         return dct
 
 
+class SettingsContainer:
+
+    def update_values(self, setting: 'Settings'):
+        raise NotImplementedError
+
+
 class Settings(BaseSettings):
 
     records_dir: str = Field(

@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import QVBoxLayout, QLineEdit, QPushButton, QHBoxLayout, \
     QCheckBox, QLabel, QBoxLayout, QSpinBox, QFileDialog, QDialog
 
 from main_utils import check_dir_exists, check_exists_and_callable, is_callable
-from static_vars import Settings, EMPTY_ITEM
+from static_vars import EMPTY_ITEM
 from ui.components.base import ConfirmableWidget, Field, common_splitter, \
     SettingsWidget, ComboBox
 from ui.dynamic_style import STYLE
@@ -185,7 +185,7 @@ class SettingsWindow(SettingsWidget):
 
         self.setLayout(vbox)
 
-    def update_values(self, settings: Settings):
+    def update_values(self, settings: 'Settings'):
         if settings is not None:
             self.field_records_dir.setText(settings.records_dir)
             self.field_ffmpeg_file.setText(settings.ffmpeg)
@@ -289,7 +289,7 @@ class BypassWidget(SettingsWidget):
             self.field_cookies_from_browser.widget.currentText() != EMPTY_ITEM
         )
 
-    def update_values(self, settings: Settings):
+    def update_values(self, settings: 'Settings'):
         self.field_fake_useragent.widget.setChecked(settings.fake_useragent)
 
         cookie_item = self.field_cookies_from_browser.widget.findText(

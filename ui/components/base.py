@@ -1,6 +1,7 @@
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import QWidget, QLabel, QBoxLayout, QFrame, QComboBox
 
+from static_vars import SettingsContainer
 from ui.utils import centralize
 
 
@@ -32,10 +33,8 @@ class ConfirmableWidget(BaseWidget):
         self.confirm.connect(self.close)
 
 
-class SettingsWidget(ConfirmableWidget):
-
-    def update_values(self, setting):
-        raise NotImplementedError
+class SettingsWidget(ConfirmableWidget, SettingsContainer):
+    ...
 
 
 class Field(QBoxLayout):
