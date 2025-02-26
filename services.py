@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import subprocess
 import tempfile
+from copy import deepcopy
 from logging import INFO, WARNING, ERROR
 from queue import Queue
 from signal import SIGINT
@@ -15,7 +16,7 @@ from PyQt5.QtCore import pyqtSignal, QMutex
 from main_utils import get_channel_dir, logger_handler, get_useragent
 from static_vars import (SoftStoppableThread, ChannelConfig, StopThreads,
                          FLAG_LIVE, RecordProcess, logging_handler,
-                         CHANNEL_URL_LIVE_TEMPLATE)
+                         CHANNEL_URL_LIVE_TEMPLATE, SettingsContainer)
 
 # Local logging config
 logger = logging.getLogger()
@@ -23,7 +24,7 @@ logger.setLevel(logging.DEBUG)
 logger.addHandler(logging_handler)
 
 
-class Master(SoftStoppableThread):
+class Master(SoftStoppableThread, SettingsContainer):
     log = pyqtSignal(int, str)
     channelOff = pyqtSignal(str)
     channelLive = pyqtSignal(str)
@@ -39,16 +40,26 @@ class Master(SoftStoppableThread):
         """
         super(Master, self).__init__()
         self.MUTEX = threads_lock
+
         self.__start_force_scan = False
         self.__last_status: Dict[str, bool] = {}
         self.__scheduled_streams: Dict[str, bool] = {}
-        self.channels: Dict[str, ChannelConfig] | None = None
-        self.scanner_sleep_min: int | None = None
         self.Slave = Slave()
         self.Slave.log[int, str].connect(self._log)
 
+        # Settings values
+        self.channels: Dict[str, ChannelConfig] | None = None
+        self.scanner_sleep_min: int | None = None
+
     def _log(self, level: int, text: str):
         self.log[int, str].emit(level, text)
+
+    def update_values(self, settings: 'Settings'):
+        # There is no need to make settings deep copy.
+        # All transferring data values are immutable.
+        # TODO: add check for settings data is immutable.
+        self.channels = deepcopy(settings.channels)
+        self.scanner_sleep_min = settings.scanner_sleep_min
 
     def remove_channel(self, channel_name: str):
         if channel_name in self.channels:
@@ -156,7 +167,7 @@ class Master(SoftStoppableThread):
             self.channelOff[str].emit(channel_name)
 
 
-class Slave(SoftStoppableThread):
+class Slave(SoftStoppableThread, SettingsContainer):
     # TODO: add memory check
     log = pyqtSignal(int, str)
     procLog = pyqtSignal(int, str)
@@ -170,12 +181,14 @@ class Slave(SoftStoppableThread):
         Service Slave
         """
         super().__init__()
+
+        self.__temp_logs: Dict[int, IO] = {}
+        self.__last_log_byte: Dict[int, int] = {}
         self.queue: Queue[Dict[str, str]] = Queue(-1)
         self.running_downloads: list[RecordProcess] = []
         self.pids_to_stop: list[int] = []
-        self.temp_logs: Dict[int, IO] = {}
-        self.last_log_byte: Dict[int, int] = {}
 
+        # Settings values
         self.records_path: str | None = None
         self.path_to_ffmpeg: str | None = None
         self.ytdlp_command: str | None = None
@@ -205,6 +218,15 @@ class Slave(SoftStoppableThread):
             self.stop_downloads()
         self._log(INFO, "Recorder stopped.")
         self.works.emit(False)
+
+    def update_values(self, settings: 'Settings'):
+        self.records_path = settings.records_dir
+        self.path_to_ffmpeg = settings.ffmpeg
+        self.ytdlp_command = settings.ytdlp
+        self.max_downloads = settings.max_downloads
+        self.proc_term_timeout_sec = settings.proc_term_timeout_sec
+        self.cookies_from_browser = settings.cookies_from_browser
+        self.fake_useragent = settings.fake_useragent
 
     def get_names_of_active_channels(self):
         return [proc.channel for proc in self.running_downloads]
@@ -288,8 +310,8 @@ class Slave(SoftStoppableThread):
 
         proc = RecordProcess(cmd, stdout=temp_log, stderr=temp_log,
                              channel=channel_name)
-        self.last_log_byte[proc.pid] = 0
-        self.temp_logs[proc.pid] = temp_log
+        self.__last_log_byte[proc.pid] = 0
+        self.__temp_logs[proc.pid] = temp_log
         self.running_downloads.append(proc)
 
         self.streamRec[str, int, str].emit(
@@ -341,17 +363,17 @@ class Slave(SoftStoppableThread):
         self.running_downloads = []
 
     def handle_process_output(self, proc: RecordProcess):
-        last_byte = self.last_log_byte[proc.pid]
-        self.temp_logs[proc.pid].seek(last_byte)
-        line = self.temp_logs[proc.pid].readline()
+        last_byte = self.__last_log_byte[proc.pid]
+        self.__temp_logs[proc.pid].seek(last_byte)
+        line = self.__temp_logs[proc.pid].readline()
         if line == b'':
             return
-        self.last_log_byte[proc.pid] = last_byte + len(line)
+        self.__last_log_byte[proc.pid] = last_byte + len(line)
         self.procLog[int, str].emit(proc.pid,
                                     line.decode('utf-8', errors='ignore'))
 
     def handle_process_finished(self, proc: RecordProcess):
         self.handle_process_output(proc)
-        self.temp_logs[proc.pid].close()
-        del self.temp_logs[proc.pid]
-        del self.last_log_byte[proc.pid]
+        self.__temp_logs[proc.pid].close()
+        del self.__temp_logs[proc.pid]
+        del self.__last_log_byte[proc.pid]

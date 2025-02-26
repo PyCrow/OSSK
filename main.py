@@ -117,21 +117,9 @@ class Controller(QObject):
         self._update_views_settings()
 
     def _update_threads_settings(self):
-        # There is no need to make settings deep copy.
-        # All transferring data values are immutable.
-        # TODO: add check for settings data is immutable.
         THREADS_LOCK.lock()
-        self.Master.channels = deepcopy(self.settings.channels)
-        self.Master.scanner_sleep_min = self.settings.scanner_sleep_min
-        self.Master.Slave.records_path = self.settings.records_dir
-        self.Master.Slave.path_to_ffmpeg = self.settings.ffmpeg
-        self.Master.Slave.ytdlp_command = self.settings.ytdlp
-        self.Master.Slave.max_downloads = self.settings.max_downloads
-        self.Master.Slave.proc_term_timeout_sec = \
-            self.settings.proc_term_timeout_sec
-        self.Master.Slave.fake_useragent = self.settings.fake_useragent
-        self.Master.Slave.cookies_from_browser = \
-            self.settings.cookies_from_browser
+        self.Master.update_values(self.settings)
+        self.Master.Slave.update_values(self.settings)
         THREADS_LOCK.unlock()
         self.add_log_message(DEBUG, "Service settings updated.")
 
