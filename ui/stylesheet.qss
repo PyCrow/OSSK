@@ -4,18 +4,27 @@
   color: #0f0;
 }
 
+/* --- QWidget --- */
+
 QWidget {
   background-color: #262626;
   border: 0px;
 }
 
+/* --- QLabel --- */
+
 QLabel {
   color: white;
 }
 
+/* --- QTabWidget --- */
+
 QTabWidget::tab-bar {
   left: 12px;
 }
+
+/* --- QTabBar --- */
+
 QTabBar::tab {
   max-width: 300px;
   background-color: #303030;
@@ -44,6 +53,9 @@ QTabBar::close-button {
 QTabBar::close-button:hover {
   image: url(ui/icons/cross_hover.svg);
 }
+
+/* --- Multiple customization --- */
+
 QListView,
 QTreeView,
 QLineEdit,
@@ -71,7 +83,14 @@ QListView::item,
 QTreeView::item {
   height: 22px;
 }
-/* --- ComboBox --- */
+QListView::item:hover,
+QTreeView::item:hover,
+QTreeView::branch:hover {
+  background-color: black;
+}
+
+/* --- QComboBox --- */
+
 QComboBox::drop-down {
   image: url(ui/icons/arrow_drop_down.svg);
   subcontrol-position: center right;
@@ -92,16 +111,17 @@ QComboBox::item:selected {
   /* 'selection-background-color' without an indicator, unlike 'selection-background-color' */
   selection-background-color: #333333;
 }
-QListView::item:hover,
-QTreeView::item:hover,
-QTreeView::branch:hover {
-  background-color: black;
-}
+
+/* --- QListView --- */
+
 QListView::item:selected {
   background-color: black;
   border: 1px solid #0f0;
   color: #fff;
 }
+
+/* --- QTreeView --- */
+
 QTreeView::branch:selected {
   background-color: black;
   border-top: 1px solid #0f0;
@@ -118,6 +138,8 @@ QStandardItem {
   background-color: yellow;
   color: red;
 }
+
+/* --- QPushButton --- */
 
 QPushButton {
   min-height: 24;
@@ -159,6 +181,8 @@ QPushButton#stop:disabled {
   image: url(ui/icons/button_stop_disabled.svg);
 }
 
+/* --- QCheckBox --- */
+
 QCheckBox::indicator {
   height: 16px;
   width: 16px;
@@ -191,6 +215,8 @@ QCheckBox::indicator:disabled {
   border-bottom: 1px solid #555;
 }
 
+/* --- QScrollBar --- */
+
 QScrollBar:horizontal {
   background-color: qlineargradient( x1:0, y1:0, x2:0, y2:1,
       stop:0.42 #191919, stop:0.5 #303030, stop:0.58 #191919);
@@ -214,6 +240,8 @@ QScrollBar::sub-page {
   background: none;
 }
 
+/* --- QMenu --- */
+
 QMenu {
   border: 1px solid #333333;
 }
@@ -224,6 +252,8 @@ QMenu::separator {
   border-top: 1px solid #1b1b1b;
   border-bottom: 1px solid #363636;
 }
+
+/* --- QMenuBar --- */
 
 QMenuBar {
   background: #202020;
