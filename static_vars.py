@@ -58,7 +58,8 @@ class SettingsLoader(json.JSONDecoder):
     def __init__(self, *args, **kwargs):
         json.JSONDecoder.__init__(
             self, object_hook=self.object_hook, *args, **kwargs)
-    def object_hook(self, dct: dict):
+    @staticmethod
+    def object_hook(dct: dict):
         if 'channels' in dct:
             for name in dct['channels'].keys():
                 dct['channels'][name] = ChannelConfig(**dct['channels'][name])
