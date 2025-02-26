@@ -40,13 +40,15 @@ logger.addHandler(logging_handler)
 AVAILABLE_STREAM_RECORD_QUALITIES = {
     'Maximum': ('-f', 'bv*+ba/b'),
     # Download the best video available with the largest resolution
-    # but no better than 480p, or the best video with the smallest resolution
-    # if there is no video under 480p.
+    # but no better than <N>p, or the best video with the smallest resolution
+    # if there is no video under <N>p.
     # Resolution is determined by using the smallest dimension.
     # So this works correctly for vertical videos as well.
     '1080p': ('-S', 'res:1080'),
     '720p': ('-S', 'res:720'),
     '480p': ('-S', 'res:480'),
+    '320p': ('-S', 'res:320'),
+    '240p': ('-S', 'res:240'),
 }
 
 
