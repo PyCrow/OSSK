@@ -20,7 +20,7 @@ STYLESHEET_PATH = PROJECT_PATH.joinpath('ui').joinpath('stylesheet.qss')
 FAKE_AGENTS = UserAgent(min_version=130.0, platforms='desktop')
 
 UNKNOWN = '<UNKNOWN>'
-EMPTY_ITEM = '---EMPTY---'
+EMPTY_ITEM = ''
 CHANNEL_URL_TEMPLATE = 'https://www.youtube.com/@{}'
 CHANNEL_URL_LIVE_TEMPLATE = f'{CHANNEL_URL_TEMPLATE}/live'
 FLAG_LIVE = 'live event will begin in '

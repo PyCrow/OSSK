@@ -4,6 +4,7 @@ import logging
 import subprocess
 import tempfile
 from copy import deepcopy
+from dataclasses import dataclass
 from logging import INFO, WARNING, ERROR
 from queue import Queue
 from signal import SIGINT
@@ -22,6 +23,14 @@ from static_vars import (SoftStoppableThread, ChannelConfig, StopThreads,
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 logger.addHandler(logging_handler)
+
+
+@dataclass
+class StreamConfig:
+    channel_name: str
+    stream_quality: tuple
+    url: str
+    title: str
 
 
 class Master(SoftStoppableThread, SettingsContainer):
@@ -153,12 +162,12 @@ class Master(SoftStoppableThread, SettingsContainer):
 
             # TODO: make sending data more thread-safe
             if channel_name not in running_downloads:
-                stream_data = {
-                    'ch_name': channel_name,
-                    'ch_svq': self.channels[channel_name].svq,
-                    'url': info_dict['webpage_url'],
-                    'title': info_dict['title'],
-                }
+                stream_data: StreamConfig = StreamConfig(
+                    channel_name=channel_name,
+                    stream_quality=self.channels[channel_name].svq_real(),
+                    url=info_dict['webpage_url'],
+                    title=info_dict['title'],
+                )
                 self.Slave.queue.put(stream_data, block=True)
                 self._log(INFO, f"Recording {channel_name} added to queue.")
 
@@ -184,7 +193,7 @@ class Slave(SoftStoppableThread, SettingsContainer):
 
         self.__temp_logs: Dict[int, IO] = {}
         self.__last_log_byte: Dict[int, int] = {}
-        self.queue: Queue[Dict[str, str]] = Queue(-1)
+        self.queue: Queue[StreamConfig] = Queue(-1)
         self.running_downloads: list[RecordProcess] = []
         self.pids_to_stop: list[int] = []
 
@@ -264,13 +273,13 @@ class Slave(SoftStoppableThread, SettingsContainer):
         return False
 
     @logger_handler
-    def record_stream(self, stream_data: Dict[str, str | tuple]):
+    def record_stream(self, stream_data: StreamConfig):
         """ Starts stream recording """
 
-        channel_name: str = stream_data['ch_name']
-        stream_url: str = stream_data['url']
-        records_quality: tuple = stream_data['ch_svq']
-        stream_title: str = stream_data['title']
+        channel_name: str = stream_data.channel_name
+        stream_url: str = stream_data.url
+        records_quality: tuple = stream_data.stream_quality
+        stream_title: str = stream_data.title
 
         channel_dir = str(get_channel_dir(channel_name, self.records_path))
         file_name = '%(title)s.%(ext)s'
