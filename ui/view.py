@@ -101,7 +101,7 @@ class MainWindow(QMainWindow):
     def _init_menu(self):
         bar = self.menuBar()
 
-        main_menu = QMenu("File", self)
+        main_menu = QMenu("Main", self)
         action_add_channel = QAction("Add channel to track", self)
         action_add_channel.triggered.connect(self.add_channel_widget.show)
         main_menu.addAction(action_add_channel)
