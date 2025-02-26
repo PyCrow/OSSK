@@ -49,11 +49,6 @@ AVAILABLE_STREAM_RECORD_QUALITIES = {
 
 # --- Defining classes ---
 
-class SettingsDumper(json.JSONEncoder):
-    def default(self, obj):
-        return json.JSONEncoder.default(self, obj)
-
-
 class SettingsLoader(json.JSONDecoder):
     def __init__(self, *args, **kwargs):
         json.JSONDecoder.__init__(
@@ -136,7 +131,7 @@ class Settings(BaseSettings):
         settings = self.model_dump()
         try:
             with open(SETTINGS_FILE, 'w') as conf_file:
-                json.dump(settings, conf_file, cls=SettingsDumper, indent=4)
+                json.dump(settings, conf_file, indent=4)
         except Exception as e:
             suc = False
             logger.error(e)

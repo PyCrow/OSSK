@@ -619,15 +619,19 @@ class LogWidget(ListView):
 
 class ChannelSettingsWindow(ConfirmableWidget):
 
+    def __init__(self):
+        super().__init__()
+        self._channel_name = None
+
     def _init_ui(self):
         self.setWindowTitle("OSSK | Channel settings")
 
         self.setFixedSize(500, 220)
 
-        self.label_channel = QLabel(self)
-        self.label_channel.setTextFormat(Qt.RichText)
-        self.label_channel.setTextInteractionFlags(Qt.TextBrowserInteraction)
-        self.label_channel.setOpenExternalLinks(True)
+        self.label_name = QLabel(self)
+        self.label_name.setTextFormat(Qt.RichText)
+        self.label_name.setTextInteractionFlags(Qt.TextBrowserInteraction)
+        self.label_name.setOpenExternalLinks(True)
 
         line_alias = QLineEdit()
         line_alias.setFixedWidth(240)
@@ -642,7 +646,7 @@ class ChannelSettingsWindow(ConfirmableWidget):
         button_apply.clicked.connect(self.confirm.emit)
 
         vbox = QVBoxLayout()
-        vbox.addWidget(self.label_channel, alignment=Qt.AlignHCenter)
+        vbox.addWidget(self.label_name, alignment=Qt.AlignHCenter)
         vbox.addStretch(1)
         vbox.addLayout(self.field_alias)
         vbox.addStretch(1)
@@ -657,8 +661,9 @@ class ChannelSettingsWindow(ConfirmableWidget):
         Triggering by ChannelsTree.action_channel_settings
         through the controller.
         """
+        self._channel_name = channel_name
         label_url = CHANNEL_URL_TEMPLATE.format(channel_name)
-        self.label_channel.setText(
+        self.label_name.setText(
             f'<a href="{label_url}" style="color: #0f0">{label_url}</a>'
         )
         self.field_alias.widget.setText(alias)
@@ -666,7 +671,7 @@ class ChannelSettingsWindow(ConfirmableWidget):
         self.field_svq.widget.setCurrentIndex(index_svq)
 
     def get_data(self) -> tuple[str, str, str]:
-        ch_name = self.label_channel.text()
+        ch_name = self._channel_name
         alias = self.field_alias.widget.text()
         svq = self.field_svq.widget.currentText()
         return ch_name, alias, svq
