@@ -3,19 +3,16 @@ from pathlib import Path
 from subprocess import run, DEVNULL
 
 from PyQt5.QtCore import QObject, pyqtSignal
-from fake_useragent import UserAgent
 
-from static_vars import StopThreads, logging_handler
+from static_vars import StopThreads, logging_handler, FAKE_AGENTS
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 logger.addHandler(logging_handler)
 
-UA = UserAgent(min_version=130.0, platforms='desktop')
-
 
 def get_useragent(browser: str):
-    return UA.getBrowser(browser)['useragent']
+    return FAKE_AGENTS.getBrowser(browser)['useragent']
 
 
 def logger_handler(func):

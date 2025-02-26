@@ -12,7 +12,7 @@ from typing import IO, Dict
 import yt_dlp
 from PyQt5.QtCore import pyqtSignal, QMutex
 
-from main_utils import get_channel_dir, logger_handler, UA
+from main_utils import get_channel_dir, logger_handler, get_useragent
 from static_vars import (SoftStoppableThread, ChannelConfig, StopThreads,
                          FLAG_LIVE, RecordProcess, logging_handler,
                          CHANNEL_URL_LIVE_TEMPLATE)
@@ -282,7 +282,7 @@ class Slave(SoftStoppableThread):
             '--hls-use-mpegts',
         ]
         if self.cookies_from_browser:
-            useragent = UA.getBrowser(self.cookies_from_browser)['useragent']
+            useragent = get_useragent(self.cookies_from_browser)
             cmd += ['--cookies-from-browser', self.cookies_from_browser,
                     '--user-agent', f'"{useragent}"']
 

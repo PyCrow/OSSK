@@ -5,6 +5,7 @@ from pathlib import Path
 from subprocess import Popen
 
 from PyQt5.QtCore import QThread
+from fake_useragent import UserAgent
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
@@ -15,6 +16,8 @@ PROJECT_PATH = Path().resolve()
 LOG_FILE = PROJECT_PATH.joinpath('ossk.log')
 SETTINGS_FILE = PROJECT_PATH.joinpath('config.json')
 STYLESHEET_PATH = PROJECT_PATH.joinpath('ui').joinpath('stylesheet.qss')
+
+FAKE_AGENTS = UserAgent(min_version=130.0, platforms='desktop')
 
 UNKNOWN = '<UNKNOWN>'
 EMPTY_ITEM = '---EMPTY---'
