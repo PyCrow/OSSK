@@ -60,3 +60,6 @@ class ComboBox(QComboBox):
         self.view().parentWidget().setStyleSheet(
             'alternate-background-color: #000;'
         )
+    def showPopup(self):
+        self.view().setMinimumWidth(self.view().sizeHintForColumn(0)+40)
+        super().showPopup()
