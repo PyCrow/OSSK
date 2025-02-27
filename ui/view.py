@@ -10,7 +10,7 @@ from PyQt5.QtGui import (QColor, QLinearGradient, QMouseEvent,
 from PyQt5.QtWidgets import (
     QAbstractItemView, QAction, QHBoxLayout,
     QLabel, QLineEdit, QListView, QMenu, QPushButton, QTabWidget,
-    QTreeView, QVBoxLayout, QWidget, QMainWindow)
+    QTreeView, QVBoxLayout, QWidget, QMainWindow, QSplitter)
 
 from main_utils import get_channel_dir
 from static_vars import (
@@ -177,6 +177,8 @@ class MainWindow(QMainWindow):
         channels_tree = QVBoxLayout()
         channels_tree.addLayout(hbox_channels_header)
         channels_tree.addWidget(self.widget_channels_tree)
+        channels_widget = QWidget()
+        channels_widget.setLayout(channels_tree)
 
         self.log_tabs = LogTabWidget()
         self.widget_channels_tree.openTabByPid[int, str].connect(
@@ -184,13 +186,11 @@ class MainWindow(QMainWindow):
         self.widget_channels_tree.closeTabByPid[int].connect(
             self.log_tabs.process_hide)
 
-        main_hbox = QVBoxLayout()
-        main_hbox.addLayout(channels_tree, 2)
-        main_hbox.addWidget(self.log_tabs, 3)
-
-        central_widget = QWidget(self)
-        central_widget.setLayout(main_hbox)
-        self.setCentralWidget(central_widget)
+        main_widget = QSplitter()
+        main_widget.setOrientation(Qt.Vertical)
+        main_widget.addWidget(channels_widget)
+        main_widget.addWidget(self.log_tabs)
+        self.setCentralWidget(main_widget)
 
         # Channel settings window
         self.channel_settings_window = ChannelSettingsWindow()

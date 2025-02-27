@@ -19,8 +19,7 @@ class AddChannelWidget(ConfirmableWidget):
         self.setFixedSize(400, 120)
 
         self.field_channel = QLineEdit()
-        self.field_channel.setPlaceholderText(
-            "Enter YouTube channel name")
+        self.field_channel.setPlaceholderText("Enter YouTube channel name")
         self.field_channel.textChanged[str].connect(
             self.checkChannelExists[str].emit)
         self.field_channel.returnPressed.connect(self.confirm.emit)
