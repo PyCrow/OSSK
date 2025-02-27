@@ -169,28 +169,46 @@ class MainWindow(QMainWindow):
         self._button_stop.clicked.connect(self._send_stop_services)
 
         hbox_channels_header = QHBoxLayout()
-        hbox_channels_header.addWidget(QLabel("Monitored channels"),
-                                       stretch=1, alignment=Qt.AlignLeft)
+        hbox_channels_header.addStretch(0)
         hbox_channels_header.addWidget(self._button_start)
         hbox_channels_header.addWidget(self._button_stop)
 
-        channels_tree = QVBoxLayout()
-        channels_tree.addLayout(hbox_channels_header)
-        channels_tree.addWidget(self.widget_channels_tree)
+        # Channels list widget
+        main_channels_layout = QVBoxLayout()
+        main_channels_layout.addWidget(QLabel("Channels"))
+        main_channels_layout.addWidget(self.widget_channels_tree)
         channels_widget = QWidget()
-        channels_widget.setLayout(channels_tree)
+        channels_widget.setLayout(main_channels_layout)
 
+        # Downloads list widget
+        self.downloads_widget = DownloadsList()
+
+        # Log-tab widget
         self.log_tabs = LogTabWidget()
         self.widget_channels_tree.openTabByPid[int, str].connect(
             self.log_tabs.open_tab_by_pid)
         self.widget_channels_tree.closeTabByPid[int].connect(
             self.log_tabs.process_hide)
 
-        main_widget = QSplitter()
-        main_widget.setOrientation(Qt.Vertical)
-        main_widget.addWidget(channels_widget)
-        main_widget.addWidget(self.log_tabs)
-        self.setCentralWidget(main_widget)
+        # Channels-downloads splitter
+        channel_downloads_splitter = QSplitter(Qt.Horizontal)
+        channel_downloads_splitter.addWidget(channels_widget)
+        channel_downloads_splitter.addWidget(self.downloads_widget)
+        channel_downloads_splitter.setStretchFactor(1, 2)
+
+        # Central vertical splitter
+        main_splitter = QSplitter(Qt.Vertical)
+        main_splitter.addWidget(channel_downloads_splitter)
+        main_splitter.addWidget(self.log_tabs)
+        main_splitter.setStretchFactor(2, 1)
+
+        # Central widget
+        central_layout = QVBoxLayout()
+        central_layout.addLayout(hbox_channels_header)
+        central_layout.addWidget(main_splitter)
+        central_widget = QWidget()
+        central_widget.setLayout(central_layout)
+        self.setCentralWidget(central_widget)
 
         # Channel settings window
         self.channel_settings_window = ChannelSettingsWindow()
@@ -332,6 +350,10 @@ class ListView(QListView):
     def mousePressEvent(self, e: QMouseEvent):
         self.clearSelection()
         super(ListView, self).mousePressEvent(e)
+
+
+class DownloadsList(ListView):
+    ...
 
 
 class ChannelsTree(QTreeView):
