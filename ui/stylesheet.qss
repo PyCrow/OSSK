@@ -95,6 +95,30 @@ QSpinBox:hover {
   border: 1px solid #0a0;
 }
 
+/* --- QSpinBox --- */
+
+QSpinBox {
+  padding-left: 5px;
+  padding-right: 15px;
+}
+QSpinBox::up-button,
+QSpinBox::down-button {
+  margin-right: 5px;
+  background-color: transparent;
+}
+QSpinBox::up-arrow {
+  image: url(ui/icons/arrow_drop_up.svg);
+}
+QSpinBox::down-arrow {
+  image: url(ui/icons/arrow_drop_down.svg);
+}
+QSpinBox::up-arrow:hover {
+  image: url(ui/icons/arrow_drop_up_hover.svg);
+}
+QSpinBox::down-arrow:hover {
+  image: url(ui/icons/arrow_drop_down_hover.svg);
+}
+
 /* --- QComboBox --- */
 
 QComboBox::drop-down {
