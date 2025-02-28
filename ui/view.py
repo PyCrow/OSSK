@@ -18,7 +18,8 @@ from static_vars import (
     STYLESHEET_PATH, Settings, CHANNEL_URL_TEMPLATE)
 from ui.components.base import ConfirmableWidget, Field, ComboBox
 from ui.components.items import ChannelItem, RecordProcessItem
-from ui.components.menu import AddChannelWidget, BypassWidget, SettingsWindow
+from ui.components.menu import AddChannelWidget, BypassWidget, SettingsWindow, \
+    DownloadVideoWidget
 from ui.utils import centralize
 
 logger = logging.getLogger()
@@ -102,8 +103,11 @@ class MainWindow(QMainWindow):
         bar = self.menuBar()
 
         main_menu = QMenu("Main", self)
+        action_download_video = QAction("Download video", self)
+        action_download_video.triggered.connect(self.add_download_widget.show)
         action_add_channel = QAction("Add channel to track", self)
         action_add_channel.triggered.connect(self.add_channel_widget.show)
+        main_menu.addAction(action_download_video)
         main_menu.addAction(action_add_channel)
         bar.addMenu(main_menu)
 
@@ -131,6 +135,8 @@ class MainWindow(QMainWindow):
             self.checkExistsChannel.emit)
         self.add_channel_widget.confirm.connect(self._send_add_channel)
         self.add_channel_widget.setStyleSheet(style)
+
+        self.add_download_widget = DownloadVideoWidget()
 
         # Settings window
         self.settings_window = SettingsWindow()
@@ -169,9 +175,9 @@ class MainWindow(QMainWindow):
         self._button_stop.clicked.connect(self._send_stop_services)
 
         hbox_channels_header = QHBoxLayout()
-        hbox_channels_header.addStretch(0)
         hbox_channels_header.addWidget(self._button_start)
         hbox_channels_header.addWidget(self._button_stop)
+        hbox_channels_header.addStretch(0)
 
         # Channels list widget
         main_channels_layout = QVBoxLayout()
@@ -182,6 +188,11 @@ class MainWindow(QMainWindow):
 
         # Downloads list widget
         self.downloads_widget = DownloadsList()
+        downloads_layout = QVBoxLayout()
+        downloads_layout.addLayout(hbox_channels_header)
+        downloads_layout.addWidget(self.downloads_widget)
+        downloads_main_widget = QWidget()
+        downloads_main_widget.setLayout(downloads_layout)
 
         # Log-tab widget
         self.log_tabs = LogTabWidget()
@@ -193,7 +204,7 @@ class MainWindow(QMainWindow):
         # Channels-downloads splitter
         channel_downloads_splitter = QSplitter(Qt.Horizontal)
         channel_downloads_splitter.addWidget(channels_widget)
-        channel_downloads_splitter.addWidget(self.downloads_widget)
+        channel_downloads_splitter.addWidget(downloads_main_widget)
         channel_downloads_splitter.setStretchFactor(1, 2)
 
         # Central vertical splitter
@@ -203,12 +214,7 @@ class MainWindow(QMainWindow):
         main_splitter.setStretchFactor(2, 1)
 
         # Central widget
-        central_layout = QVBoxLayout()
-        central_layout.addLayout(hbox_channels_header)
-        central_layout.addWidget(main_splitter)
-        central_widget = QWidget()
-        central_widget.setLayout(central_layout)
-        self.setCentralWidget(central_widget)
+        self.setCentralWidget(main_splitter)
 
         # Channel settings window
         self.channel_settings_window = ChannelSettingsWindow()
@@ -646,6 +652,7 @@ class ChannelSettingsWindow(ConfirmableWidget):
         self._channel_name = None
 
     def _init_ui(self):
+        super()._init_ui()
         self.setWindowTitle("OSSK | Channel settings")
 
         self.setFixedSize(500, 220)
@@ -664,19 +671,12 @@ class ChannelSettingsWindow(ConfirmableWidget):
         box_svq.addItems(list(AVAILABLE_STREAM_RECORD_QUALITIES.keys()))
         self.field_svq = Field("Stream video quality", box_svq)
 
-        button_apply = QPushButton("Apply", self)
-        button_apply.clicked.connect(self.confirm.emit)
-
-        vbox = QVBoxLayout()
-        vbox.addWidget(self.label_name, alignment=Qt.AlignHCenter)
-        vbox.addStretch(1)
-        vbox.addLayout(self.field_alias)
-        vbox.addStretch(1)
-        vbox.addLayout(self.field_svq)
-        vbox.addStretch(2)
-        vbox.addWidget(button_apply)
-
-        self.setLayout(vbox)
+        self.central.addWidget(self.label_name, alignment=Qt.AlignHCenter)
+        self.central.addStretch(1)
+        self.central.addLayout(self.field_alias)
+        self.central.addStretch(1)
+        self.central.addLayout(self.field_svq)
+        self.central.addStretch(1)
 
     def update_data(self, channel_name: str, alias: str, svq: str):
         """

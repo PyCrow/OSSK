@@ -263,7 +263,7 @@ QMenuBar::item:selected {
   border-bottom: 1px solid #333;
 }
 
-QFrame#splitter {
+QFrame#field_splitter {
   background: #303030;
 }
 
@@ -278,4 +278,13 @@ QToolTip {
 
 QStatusBar {
   color: #909090;
+}
+
+/* --- CUSTOM WIDGETS --- */
+
+#button_cancel {
+  color: #f44;
+}
+#button_cancel:hover {
+  border-bottom: 1px solid #a33;
 }

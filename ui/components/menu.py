@@ -11,10 +11,28 @@ from ui.dynamic_style import STYLE
 from ui.utils import get_supported_browsers
 
 
+class DownloadVideoWidget(ConfirmableWidget):
+
+    def _init_ui(self):
+        super()._init_ui()
+        self.setWindowTitle("OSSK | Add channel to track")
+        self.setFixedSize(400, 120)
+
+        self.field_url = QLineEdit()
+        self.field_url.setPlaceholderText("Enter video url")
+        self.field_url.returnPressed.connect(self.confirm.emit)
+
+    def show(self):
+        self.field_url.clear()
+        self.field_url.setFocus()
+        super().show()
+
+
 class AddChannelWidget(ConfirmableWidget):
     checkChannelExists = pyqtSignal(str)
 
     def _init_ui(self):
+        super()._init_ui()
         self.setWindowTitle("OSSK | Add channel to track")
         self.setFixedSize(400, 120)
 
@@ -24,22 +42,7 @@ class AddChannelWidget(ConfirmableWidget):
             self.checkChannelExists[str].emit)
         self.field_channel.returnPressed.connect(self.confirm.emit)
 
-        button_commit = QPushButton("Apply")
-        button_commit.setFixedWidth(100)
-        button_commit.clicked[bool].connect(self.confirm.emit)
-        button_cancel = QPushButton("Cancel")
-        button_cancel.setFixedWidth(100)
-        button_cancel.clicked[bool].connect(self.close)
-
-        buttons_layout = QHBoxLayout()
-        buttons_layout.setAlignment(Qt.AlignRight)
-        buttons_layout.addWidget(button_commit)
-        buttons_layout.addWidget(button_cancel)
-
-        vbox = QVBoxLayout()
-        vbox.addWidget(self.field_channel)
-        vbox.addLayout(buttons_layout)
-        self.setLayout(vbox)
+        self.central.addWidget(self.field_channel)
 
     def show(self):
         self.field_channel.clear()
@@ -50,6 +53,7 @@ class AddChannelWidget(ConfirmableWidget):
 class SettingsWindow(SettingsWidget):
 
     def _init_ui(self):
+        super()._init_ui()
         self.setWindowTitle("OSSK | General settings")
         self.setFixedSize(750, 500)
 
@@ -162,27 +166,19 @@ class SettingsWindow(SettingsWidget):
         field_hide_suc_fin_proc = Field("Hide successfully finished processes",
                                         self.box_hide_suc_fin_proc)
 
-        self.button_apply = QPushButton("Apply", self)
-        self.button_apply.clicked.connect(self._post_validation)
-
-        vbox = QVBoxLayout()
-        vbox.addLayout(records_layout)
-        vbox.addWidget(common_splitter())
-        vbox.addLayout(ffmpeg_layout)
-        vbox.addWidget(common_splitter())
-        vbox.addLayout(field_ytdlp)
-        vbox.addWidget(common_splitter())
-        vbox.addLayout(field_max_downloads)
-        vbox.addWidget(common_splitter())
-        vbox.addLayout(field_scanner_sleep)
-        vbox.addWidget(common_splitter())
-        vbox.addLayout(field_proc_term_timeout)
-        vbox.addWidget(common_splitter())
-        vbox.addLayout(field_hide_suc_fin_proc)
-        vbox.addSpacing(20)
-        vbox.addWidget(self.button_apply)
-
-        self.setLayout(vbox)
+        self.central.addLayout(records_layout)
+        self.central.addWidget(common_splitter())
+        self.central.addLayout(ffmpeg_layout)
+        self.central.addWidget(common_splitter())
+        self.central.addLayout(field_ytdlp)
+        self.central.addWidget(common_splitter())
+        self.central.addLayout(field_max_downloads)
+        self.central.addWidget(common_splitter())
+        self.central.addLayout(field_scanner_sleep)
+        self.central.addWidget(common_splitter())
+        self.central.addLayout(field_proc_term_timeout)
+        self.central.addWidget(common_splitter())
+        self.central.addLayout(field_hide_suc_fin_proc)
 
     def update_values(self, settings: 'Settings'):
         if settings is not None:
@@ -258,6 +254,7 @@ class SettingsWindow(SettingsWidget):
 class BypassWidget(SettingsWidget):
 
     def _init_ui(self):
+        super()._init_ui()
         self.setWindowTitle("OSSK | Bypass settings")
         self.setFixedSize(500, 160)
 
@@ -276,12 +273,9 @@ class BypassWidget(SettingsWidget):
         button_apply = QPushButton("Apply")
         button_apply.clicked.connect(self.confirm.emit)
 
-        vbox = QVBoxLayout()
-        vbox.addLayout(self.field_cookies_from_browser)
-        vbox.addWidget(common_splitter())
-        vbox.addLayout(self.field_fake_useragent)
-        vbox.addWidget(button_apply)
-        self.setLayout(vbox)
+        self.central.addLayout(self.field_cookies_from_browser)
+        self.central.addWidget(common_splitter())
+        self.central.addLayout(self.field_fake_useragent)
 
     def _update_fake_useragent_status(self):
         self.field_fake_useragent.widget.setEnabled(
