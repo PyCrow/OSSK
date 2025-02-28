@@ -436,7 +436,7 @@ class ChannelsTree(QTreeView):
 
     def set_channel_status(self, ch_index: int, status_id: int):
         """ Sets channel's row color """
-        # TODO: make it with a dynamic_style or any other way
+        # TODO: refactor gradient
         color = Status.Channel.gradient(status_id)
         self._model.item(ch_index).setBackground(color)
 
@@ -655,7 +655,7 @@ class ChannelSettingsWindow(ConfirmableWidget):
         super()._init_ui()
         self.setWindowTitle("OSSK | Channel settings")
 
-        self.setFixedSize(500, 220)
+        self.setFixedSize(480, 200)
 
         self.label_name = QLabel(self)
         self.label_name.setTextFormat(Qt.RichText)

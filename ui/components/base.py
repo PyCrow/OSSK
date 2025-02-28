@@ -6,6 +6,11 @@ from static_vars import SettingsContainer
 from ui.utils import centralize
 
 
+def update_style(widget: QWidget):
+    widget.style().unpolish(widget)
+    widget.style().polish(widget)
+
+
 def common_splitter():
     splitter = QFrame()
     splitter.setObjectName('field_splitter')
@@ -51,6 +56,7 @@ class ConfirmableWidget(BaseWidget):
         # Central widget
         self.central = QVBoxLayout()
         central_widget = QWidget(self)
+        central_widget.setObjectName('ConfirmableWidgetCentral')
         central_widget.setLayout(self.central)
 
         # Hidden vertical box
@@ -74,6 +80,7 @@ class Field(QBoxLayout):
     ):
         super(Field, self).__init__(orientation)
         self.widget = widget
+        self.addStrut(36)
         self.addWidget(QLabel(field_name), alignment=Qt.AlignLeft)
         if orientation == QBoxLayout.Direction.LeftToRight:
             self.addWidget(widget, alignment=Qt.AlignRight)

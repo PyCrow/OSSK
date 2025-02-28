@@ -14,8 +14,8 @@ from static_vars import (
     logging_handler,
     ChannelConfig,
     Settings)
+from ui.components.base import update_style
 from ui.view import MainWindow, Status
-from ui.dynamic_style import STYLE
 from main_utils import ServiceController
 
 
@@ -231,9 +231,9 @@ class Controller(QObject):
 
     @pyqtSlot(str)
     def highlight_on_exists(self, ch_name: str):
-        status = STYLE.LINE_INVALID if ch_name in self.settings.channels \
-            else STYLE.LINE_VALID
-        self.Window.add_channel_widget.field_channel.setStyleSheet(status)
+        status = 'failed' if ch_name in self.settings.channels else ''
+        self.Window.add_channel_widget.field_channel.setObjectName(status)
+        update_style(self.Window.add_channel_widget.field_channel)
 
     @pyqtSlot(str)
     def open_channel_settings(self, channel_name: str):

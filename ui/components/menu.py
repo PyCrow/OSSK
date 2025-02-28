@@ -6,8 +6,7 @@ from PyQt5.QtWidgets import QVBoxLayout, QLineEdit, QPushButton, QHBoxLayout, \
 from main_utils import check_dir_exists, check_exists_and_callable, is_callable
 from static_vars import EMPTY_ITEM
 from ui.components.base import ConfirmableWidget, Field, common_splitter, \
-    SettingsWidget, ComboBox
-from ui.dynamic_style import STYLE
+    SettingsWidget, ComboBox, update_style
 from ui.utils import get_supported_browsers
 
 
@@ -34,7 +33,7 @@ class AddChannelWidget(ConfirmableWidget):
     def _init_ui(self):
         super()._init_ui()
         self.setWindowTitle("OSSK | Add channel to track")
-        self.setFixedSize(400, 120)
+        self.setFixedSize(400, 130)
 
         self.field_channel = QLineEdit()
         self.field_channel.setPlaceholderText("Enter YouTube channel name")
@@ -62,7 +61,7 @@ class SettingsWindow(SettingsWidget):
         self.field_records_dir.setPlaceholderText(
             "Enter path to records directory")
         self.field_records_dir.textChanged[str].connect(
-            self._check_records_dir)
+            self._valid_records_dir)
         self.field_records_dir.setToolTip(
             "Checks is the specified path available as a directory.\n"
             "The field is highlighted in red if the path is\n"
@@ -87,7 +86,7 @@ class SettingsWindow(SettingsWidget):
         # Field: Path to ffmpeg
         self.field_ffmpeg_file = QLineEdit()
         self.field_ffmpeg_file.setPlaceholderText("Enter path to ffmpeg")
-        self.field_ffmpeg_file.textChanged[str].connect(self._check_ffmpeg)
+        self.field_ffmpeg_file.textChanged[str].connect(self._valid_ffmpeg)
         self.field_ffmpeg_file.setToolTip(
             "Checks:\n"
             "1. Is the specified path available as a file.\n"
@@ -122,7 +121,7 @@ class SettingsWindow(SettingsWidget):
         self.box_max_downloads = QSpinBox(self)
         self.box_max_downloads.setRange(0, 50)
         self.box_max_downloads.valueChanged[int].connect(
-            self._check_max_downloads)
+            self._valid_max_downloads)
         self.box_max_downloads.setToolTip(
             "Range from 1 to 50.\n"
             "It is not recommended to set a value greater than 12 or 0.\n"
@@ -134,7 +133,7 @@ class SettingsWindow(SettingsWidget):
         self.box_scanner_sleep = QSpinBox(self)
         self.box_scanner_sleep.setRange(1, 60)
         self.box_scanner_sleep.valueChanged[int].connect(
-            self._check_scanner_sleep)
+            self._valid_scanner_sleep)
         self.box_scanner_sleep.setToolTip(
             "Waiting time between channel scans (minutes).\n"
             "Range from 1 to 60.\n"
@@ -147,7 +146,7 @@ class SettingsWindow(SettingsWidget):
         self.box_proc_term_timeout = QSpinBox(self)
         self.box_proc_term_timeout.setRange(0, 3600)
         self.box_proc_term_timeout.valueChanged[int].connect(
-            self._check_proc_term_timeout)
+            self._valid_proc_term_timeout)
         self.box_proc_term_timeout.setToolTip(
             "Waiting time for process finished (seconds).\n"
             "Range from 0 (don't wait) to 3600 (hour).\n"
@@ -212,42 +211,45 @@ class SettingsWindow(SettingsWidget):
             self.field_ffmpeg_file.setText(d.selectedFiles()[0])
 
     @pyqtSlot(int)
-    def _check_max_downloads(self, value: int):
-        status = STYLE.SPIN_WARNING if value not in range(1, 13) \
-            else STYLE.SPIN_VALID
-        self.box_max_downloads.setStyleSheet(status)
+    def _valid_max_downloads(self, value: int):
+        status = '' if value in range(1, 13) else 'warning'
+        self.box_max_downloads.setObjectName(status)
+        update_style(self.box_max_downloads)
 
     @pyqtSlot(str)
-    def _check_records_dir(self, records_dir: str):
-        suc = check_dir_exists(records_dir)
-        status = STYLE.LINE_INVALID if not suc else STYLE.LINE_VALID
-        self.field_records_dir.setStyleSheet(status)
+    def _valid_records_dir(self, records_dir: str):
+        status = '' if check_dir_exists(records_dir) else 'failed'
+        self.field_records_dir.setObjectName(status)
+        update_style(self.field_records_dir)
 
     @pyqtSlot(str)
-    def _check_ffmpeg(self, ffmpeg_path: str):
-        suc = check_exists_and_callable(ffmpeg_path)
-        status = STYLE.LINE_INVALID if not suc else STYLE.LINE_VALID
-        self.field_ffmpeg_file.setStyleSheet(status)
+    def _valid_ffmpeg(self, ffmpeg_path: str):
+        status = 'failed' if not check_exists_and_callable(ffmpeg_path) else ''
+        self.field_ffmpeg_file.setObjectName(status)
+        update_style(self.field_ffmpeg_file)
 
-    def _check_ytdlp(self):
+    def _valid_ytdlp(self):
         ytdlp_path = self.line_ytdlp.text()
         suc = is_callable(ytdlp_path)
-        status = STYLE.LINE_INVALID if not suc else STYLE.LINE_VALID
-        self.line_ytdlp.setStyleSheet(status)
+        status = '' if suc else 'failed'
+        self.line_ytdlp.setObjectName(status)
+        update_style(self.line_ytdlp)
         return suc
 
     @pyqtSlot(int)
-    def _check_scanner_sleep(self, value: int):
-        status = STYLE.SPIN_WARNING if value < 5 else STYLE.SPIN_VALID
-        self.box_scanner_sleep.setStyleSheet(status)
+    def _valid_scanner_sleep(self, value: int):
+        status = 'warning' if value < 5 else ''
+        self.box_scanner_sleep.setObjectName(status)
+        update_style(self.box_scanner_sleep)
 
     @pyqtSlot(int)
-    def _check_proc_term_timeout(self, value: int):
-        status = STYLE.SPIN_WARNING if value < 20 else STYLE.SPIN_VALID
-        self.box_proc_term_timeout.setStyleSheet(status)
+    def _valid_proc_term_timeout(self, value: int):
+        status = 'warning' if value < 20 else ''
+        self.box_proc_term_timeout.setObjectName(status)
+        update_style(self.box_proc_term_timeout)
 
     def _post_validation(self):
-        if self._check_ytdlp():
+        if self._valid_ytdlp():
             self.confirm.emit()
 
 

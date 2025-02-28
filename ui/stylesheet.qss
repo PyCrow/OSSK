@@ -88,6 +88,12 @@ QTreeView::item:hover,
 QTreeView::branch:hover {
   background-color: black;
 }
+QCheckBox::indicator:hover,
+QComboBox:hover,
+QLineEdit:hover,
+QSpinBox:hover {
+  border: 1px solid #0a0;
+}
 
 /* --- QComboBox --- */
 
@@ -184,25 +190,22 @@ QPushButton#stop:disabled {
 /* --- QCheckBox --- */
 
 QCheckBox::indicator {
-  height: 16px;
-  width: 16px;
+  height: 20px;
+  width: 20px;
   background-color: #191919;
   border-top: 1px solid #101010;
   border-left: 1px solid #333;
   border-right: 1px solid #333;
   border-bottom: 1px solid #0a0;
-  border-radius: 8px;
+  border-radius: 11px;
 }
 QCheckBox::indicator:hover {
   background-color: #030;
-  border-top: 1px solid #444;
-  border-left: 1px solid #050;
-  border-right: 1px solid #050;
-  border-bottom: 1px solid #0a0;
 }
-QCheckBox::indicator:checked {
-  background-color: #070;
+QCheckBox::indicator:enabled:checked {
+  background-color: #040;
   border: 1px solid #0a0;
+  image: url(ui/icons/checkbox_checked.svg);
 }
 QCheckBox::indicator:checked:hover {
   background-color: #090;
@@ -264,7 +267,8 @@ QMenuBar::item:selected {
 }
 
 QFrame#field_splitter {
-  background: #303030;
+  background: qlineargradient( x1:0, y1:0, x2:1, y2:0,
+      stop:0 #333, stop:1 #262626);
 }
 
 QToolTip {
@@ -281,6 +285,17 @@ QStatusBar {
 }
 
 /* --- CUSTOM WIDGETS --- */
+
+#warning {
+  border: 1px solid #f90;
+}
+#failed {
+  border: 1px solid #f00;
+}
+
+#ConfirmableWidgetCentral {
+  border-bottom: 3px solid #383838;
+}
 
 #button_cancel {
   color: #f44;
