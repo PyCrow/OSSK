@@ -21,6 +21,8 @@ class DownloadVideoWidget(ConfirmableWidget):
         self.field_url.setPlaceholderText("Enter video url")
         self.field_url.returnPressed.connect(self.confirm.emit)
 
+        self.central.addWidget(self.field_url)
+
     def show(self):
         self.field_url.clear()
         self.field_url.setFocus()

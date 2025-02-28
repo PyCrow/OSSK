@@ -70,9 +70,8 @@ class Controller(QObject):
         # Service management
         self.Window.runServices[str, str].connect(self.run_services)
         self.Window.stopServices.connect(self.set_stop_services)
-
-        # Process
         self.Window.stopProcess[int].connect(self.stop_single_process)
+        self.Window.runSingleDownloads[str].connect(self.run_single_download)
 
     def _connect_service_signals(self):
         # New message signals
@@ -173,6 +172,10 @@ class Controller(QObject):
         THREADS_LOCK.lock()
         self.Master.Slave.pids_to_stop.append(pid)
         THREADS_LOCK.unlock()
+
+    @pyqtSlot(str)
+    def run_single_download(self, url: str):
+        print(url)
 
     @pyqtSlot(int, str)
     def add_log_message(self, level: int, text: str):

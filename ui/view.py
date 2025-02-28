@@ -82,6 +82,7 @@ class MainWindow(QMainWindow):
     runServices = pyqtSignal(str, str)
     stopServices = pyqtSignal()
     stopProcess = pyqtSignal(int)
+    runSingleDownloads = pyqtSignal(str)
 
     checkExistsChannel = pyqtSignal(str)
     addChannel = pyqtSignal(str)
@@ -137,6 +138,8 @@ class MainWindow(QMainWindow):
         self.add_channel_widget.setStyleSheet(style)
 
         self.add_download_widget = DownloadVideoWidget()
+        self.add_download_widget.setStyleSheet(style)
+        self.add_download_widget.confirm.connect(self._send_add_download)
 
         # Settings window
         self.settings_window = SettingsWindow()
@@ -302,6 +305,11 @@ class MainWindow(QMainWindow):
         """ [OUT] """
         pid = self.widget_channels_tree.selected_process_id()
         self.stopProcess[int].emit(pid)
+
+    @pyqtSlot()
+    def _send_add_download(self):
+        download_url = self.add_download_widget.field_url.text()
+        self.runSingleDownloads[str].emit(download_url)
 
     @pyqtSlot()
     def _send_add_channel(self):
