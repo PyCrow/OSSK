@@ -33,7 +33,7 @@ class Status:
         OFF = 0
         LIVE = 1
         _color_map = {OFF: QColor(50, 50, 50),
-                      LIVE: QColor(0, 180, 0)}
+                      LIVE: QColor(0, 80, 0)}
 
         @staticmethod
         def gradient(status_id: int) -> QLinearGradient:
@@ -46,8 +46,8 @@ class Status:
         FAIL = 2
 
         _color_map = {OFF: QColor(50, 50, 50),
-                      REC: QColor(0, 180, 0),
-                      FAIL: QColor(180, 0, 0)}
+                      REC: QColor(0, 80, 0),
+                      FAIL: QColor(80, 0, 0)}
 
         @staticmethod
         def foreground(status_id: int) -> QColor:
@@ -71,9 +71,9 @@ class Status:
     @staticmethod
     def _smooth_gradient(qcolor: QColor):
         gradient = QLinearGradient(0, 0, 300, 0)
-        gradient.setColorAt(0.0, QColor(25, 25, 25))
-        gradient.setColorAt(0.6, QColor(25, 25, 25))
-        gradient.setColorAt(1.0, qcolor)
+        gradient.setColorAt(0.0, qcolor)
+        gradient.setColorAt(0.5, QColor(25, 25, 25))
+        gradient.setColorAt(1.0, QColor(25, 25, 25))
         return gradient
 
 
@@ -367,7 +367,9 @@ class ListView(QListView):
 
 
 class DownloadsList(ListView):
-    ...
+
+    def add_download_item(self):
+        ...
 
 
 class ChannelsTree(QTreeView):
