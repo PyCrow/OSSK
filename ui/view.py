@@ -22,7 +22,7 @@ from ui.components.menu import AddChannelWidget, BypassWidget, SettingsWindow, \
     DownloadVideoWidget
 from ui.utils import centralize
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 logger.addHandler(logging_handler)
 

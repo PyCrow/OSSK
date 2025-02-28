@@ -20,7 +20,7 @@ from static_vars import (SoftStoppableThread, ChannelConfig, StopThreads,
                          CHANNEL_URL_LIVE_TEMPLATE, SettingsContainer)
 
 # Local logging config
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 logger.addHandler(logging_handler)
 

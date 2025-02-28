@@ -10,10 +10,7 @@ from PyQt5.QtCore import QObject, QMutex, QThread, pyqtSlot
 from PyQt5.QtWidgets import QApplication
 
 from services import Master
-from static_vars import (
-    logging_handler,
-    ChannelConfig,
-    Settings)
+from static_vars import logging_handler, ChannelConfig, Settings
 from ui.components.base import update_style
 from ui.view import MainWindow, Status
 from main_utils import ServiceController
@@ -23,7 +20,7 @@ from main_utils import ServiceController
 THREADS_LOCK = QMutex()
 
 # Local logging config
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 logger.setLevel(DEBUG)
 logger.addHandler(logging_handler)
 DEBUG_LEVELS = {DEBUG: 'DEBUG', INFO: 'INFO',
