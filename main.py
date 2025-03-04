@@ -175,7 +175,7 @@ class Controller(QObject):
 
     @pyqtSlot(str)
     def run_single_download(self, url: str):
-        print(url)
+        raise NotImplementedError  # fixme
 
     @pyqtSlot(int, str)
     def add_log_message(self, level: int, text: str):
@@ -270,18 +270,18 @@ class Controller(QObject):
     @pyqtSlot(str, int, str)
     def _stream_rec(self, ch_name: str, pid: int, stream_name: str):
         self.Window.log_tabs.stream_rec(pid)
-        self.Window.widget_channels_tree.add_child_process_item(
-            ch_name, pid, stream_name)
+        self.Window.downloads_widget.add_download_row(
+            ch_name, stream_name, pid)
 
     @pyqtSlot(int)
     def _stream_finished(self, pid: int):
         self.Window.log_tabs.stream_finished(pid)
-        self.Window.widget_channels_tree.stream_finished(pid)
+        self.Window.downloads_widget.set_stream_finished(pid)
 
     @pyqtSlot(int)
     def _stream_fail(self, pid: int):
         self.Window.log_tabs.stream_failed(pid)
-        self.Window.widget_channels_tree.stream_failed(pid)
+        self.Window.downloads_widget.set_stream_failed(pid)
 
 
 if __name__ == '__main__':

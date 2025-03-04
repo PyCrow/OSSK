@@ -10,7 +10,8 @@ from PyQt5.QtGui import (QColor, QLinearGradient, QMouseEvent,
 from PyQt5.QtWidgets import (
     QAbstractItemView, QAction, QHBoxLayout,
     QLabel, QLineEdit, QListView, QMenu, QPushButton, QTabWidget,
-    QTreeView, QVBoxLayout, QWidget, QMainWindow, QSplitter)
+    QTreeView, QVBoxLayout, QWidget, QMainWindow, QSplitter, QTableView,
+    QHeaderView)
 
 from main_utils import get_channel_dir
 from static_vars import (
@@ -18,8 +19,9 @@ from static_vars import (
     STYLESHEET_PATH, Settings, CHANNEL_URL_TEMPLATE)
 from ui.components.base import ConfirmableWidget, Field, ComboBox
 from ui.components.items import ChannelItem, RecordProcessItem
-from ui.components.menu import AddChannelWidget, BypassWidget, SettingsWindow, \
-    DownloadVideoWidget
+from ui.components.menu import \
+    AddChannelWidget, BypassWidget, SettingsWindow, DownloadVideoWidget
+from ui.components.models import DownloadsModel
 from ui.utils import centralize
 
 logger = logging.getLogger(__name__)
@@ -152,9 +154,8 @@ class MainWindow(QMainWindow):
 
         self.status_bar = self.statusBar()
 
+        # Main widgets
         self.widget_channels_tree = ChannelsTree()
-        self.widget_channels_tree.action_stop.triggered.connect(
-            self._send_stop_process)
         self.widget_channels_tree.action_channel_settings.triggered.connect(
             self._send_open_channel_settings)
         self.widget_channels_tree.action_open_channel_dir.triggered.connect(
@@ -189,20 +190,18 @@ class MainWindow(QMainWindow):
         channels_widget = QWidget()
         channels_widget.setLayout(main_channels_layout)
 
+        # Log-tab widget
+        self.log_tabs = LogTabWidget()
+
         # Downloads list widget
         self.downloads_widget = DownloadsList()
+        self.downloads_widget.openPID.connect(self.log_tabs.open_tab_by_pid)
+        self.downloads_widget.stopPID.connect(self.stopProcess[int].emit)
         downloads_layout = QVBoxLayout()
         downloads_layout.addLayout(hbox_channels_header)
         downloads_layout.addWidget(self.downloads_widget)
         downloads_main_widget = QWidget()
         downloads_main_widget.setLayout(downloads_layout)
-
-        # Log-tab widget
-        self.log_tabs = LogTabWidget()
-        self.widget_channels_tree.openTabByPid[int, str].connect(
-            self.log_tabs.open_tab_by_pid)
-        self.widget_channels_tree.closeTabByPid[int].connect(
-            self.log_tabs.process_hide)
 
         # Channels-downloads splitter
         channel_downloads_splitter = QSplitter(Qt.Horizontal)
@@ -301,12 +300,6 @@ class MainWindow(QMainWindow):
         self.stopServices.emit()
 
     @pyqtSlot()
-    def _send_stop_process(self):
-        """ [OUT] """
-        pid = self.widget_channels_tree.selected_process_id()
-        self.stopProcess[int].emit(pid)
-
-    @pyqtSlot()
     def _send_add_download(self):
         download_url = self.add_download_widget.field_url.text()
         self.runSingleDownloads[str].emit(download_url)
@@ -366,15 +359,70 @@ class ListView(QListView):
         super(ListView, self).mousePressEvent(e)
 
 
-class DownloadsList(ListView):
+class DownloadsList(QTableView):
+    openPID = pyqtSignal(int, str)
+    stopPID = pyqtSignal(int)
 
-    def add_download_item(self):
-        ...
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.model = DownloadsModel()
+        self.setModel(self.model)
+        self.horizontalHeader().setSectionResizeMode(
+            QHeaderView.ResizeToContents)
+        self.verticalHeader().setVisible(False)
+        self.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
+        self.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
+        self.setMouseTracking(True)
+
+        self.__selected = None
+
+        self._action_open_tab = QAction("Open tab", self)
+        self._action_open_tab.triggered.connect(self._send_open_pid)
+        self._action_stop = QAction("Stop process", self)
+        self._action_stop.triggered.connect(self._send_stop_pid)
+        self._action_hide_process = QAction("Hide", self)
+        self._action_hide_process.triggered.connect(self._hide_process)
+
+    def contextMenuEvent(self, e):
+        index = self.indexAt(e.pos())
+        if index.isValid():
+            self.__selected = index  # fixme: for '_hide_process' only
+            proc_is_finished = self.model.isFinished(index)
+            self._process_menu(proc_is_finished).exec(e.globalPos())
+        else:
+            self.__selected = None
+
+    def _process_menu(self, process_finished: bool):
+        menu = QMenu(self)
+        menu.addAction(self._action_open_tab)
+        menu.addSeparator()
+        if not process_finished:
+            menu.addAction(self._action_stop)
+        else:
+            menu.addAction(self._action_hide_process)
+        return menu
+
+    def _hide_process(self):
+        self.model.delProcess(self.__selected)
+
+    def _send_open_pid(self):
+        pid, tab_name = self.model.get_tab_data(self.__selected)
+        self.openPID.emit(pid, tab_name)
+
+    def _send_stop_pid(self):
+        self.stopPID.emit(self.model.pid(self.__selected))
+
+    def add_download_row(self, channel_name, stream_name, pid):
+        self.model.add_process(channel_name, stream_name, pid)
+
+    def set_stream_finished(self, pid: int):
+        self.model.setFinished(pid)
+
+    def set_stream_failed(self, pid: int):
+        self.model.setFailed(pid)
 
 
 class ChannelsTree(QTreeView):
-    openTabByPid = pyqtSignal(int, str)
-    closeTabByPid = pyqtSignal(int)
 
     def __init__(self):
         super(ChannelsTree, self).__init__()
@@ -399,16 +447,6 @@ class ChannelsTree(QTreeView):
         self.action_channel_settings = QAction("Channel settings", self)
         self.action_open_channel_dir = QAction("Open channel folder", self)
         self.action_delete_channel = QAction("Delete channel", self)
-        # Process actions
-        self._action_open_tab = QAction("Open tab", self)
-        self.action_stop = QAction("Stop process", self)
-        self._action_hide_process = QAction("Hide", self)
-
-        # Connect actions
-        self._action_open_tab.triggered[bool].connect(
-            self._send_open_tab_by_pid)
-        self._action_hide_process.triggered[bool].connect(
-            self._del_finished_process_item)
 
     def mousePressEvent(self, e: QMouseEvent):
         self.clearSelection()
@@ -422,10 +460,6 @@ class ChannelsTree(QTreeView):
             selected_item = self._model.itemFromIndex(self.selected_item_index)
             if isinstance(selected_item, ChannelItem):
                 self._single_channel_menu().exec(event.globalPos())
-            elif isinstance(selected_item, RecordProcessItem):
-                self._single_process_menu(
-                    selected_item.finished
-                ).exec(event.globalPos())
 
     # Channel management
     def add_channel_item(self, channel_name: str, alias: str):
@@ -459,16 +493,6 @@ class ChannelsTree(QTreeView):
         menu.addAction(self.action_delete_channel)
         return menu
 
-    def _single_process_menu(self, process_finished: bool) -> QMenu:
-        menu = QMenu(self)
-        menu.addAction(self._action_open_tab)
-        menu.addSeparator()
-        if not process_finished:
-            menu.addAction(self.action_stop)
-        else:
-            menu.addAction(self._action_hide_process)
-        return menu
-
     # Selected item functions
     def _selected_item(self) -> Union[ChannelItem, RecordProcessItem]:
         return self._model.itemFromIndex(self.selected_item_index)
@@ -478,60 +502,6 @@ class ChannelsTree(QTreeView):
         Triggering by own action_delete_channel through the controller
         """
         return self._selected_item().channel
-
-    def selected_process_id(self) -> int:
-        """
-        Triggering by own action_stop through the controller
-        """
-        return self._selected_item().pid
-
-    def _send_open_tab_by_pid(self):
-        process_item = self._selected_item()
-        stream_name = process_item.text()
-        self.openTabByPid[int, str].emit(process_item.pid, stream_name)
-
-    # Process management
-    def add_child_process_item(
-            self,
-            channel_name: str,
-            pid: int,
-            stream_name: str
-    ):
-        channel_item = self._map_channel_item[channel_name]
-        process_item = RecordProcessItem(stream_name)
-        process_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
-        process_item.pid = pid
-        self._map_pid_item[pid] = process_item
-        channel_item.appendRow(process_item)
-        self.expand(self._model.indexFromItem(channel_item))
-
-    @pyqtSlot()
-    def _del_finished_process_item(self):
-        process_item = self._selected_item()
-        if not process_item.finished:
-            logger.error("Process cannot be hidden: process not finished yet")
-            return
-        channel_item = process_item.parent()
-        channel_item.removeRow(process_item.row())
-        del self._map_pid_item[process_item.pid]
-        self.closeTabByPid[int].emit(process_item.pid)
-
-    def stream_finished(self, pid: int):
-        process_item = self._map_pid_item[pid]
-
-        if self.hide_suc_fin_proc:
-            channel_item = process_item.parent()
-            channel_item.removeRow(process_item.row())
-            del self._map_pid_item[process_item.pid]
-        else:
-            process_item.finished = True
-            color = Status.Stream.foreground(Status.Stream.OFF)
-            process_item.setForeground(color)
-
-    def stream_failed(self, pid: int):
-        self._map_pid_item[pid].finished = True
-        color = Status.Stream.foreground(Status.Stream.FAIL)
-        self._map_pid_item[pid].setForeground(color)
 
 
 class LogTabWidget(QTabWidget):

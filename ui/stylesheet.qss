@@ -54,13 +54,34 @@ QTabBar::close-button:hover {
   image: url(ui/icons/cross_hover.svg);
 }
 
+QHeaderView {
+  border-radius: 8px;
+}
+QHeaderView::section {
+  background-color: transparent;
+  border: 1px solid #404040;
+}
+QHeaderView::section:first {
+  border-top-left-radius: 8px;
+  border-bottom-left-radius: 8px;
+}
+QHeaderView::section:last {
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
+}
+QHeaderView::section:middle {
+  border-left: 1px solid #333;
+  border-right: 1px solid #333;
+}
+
 /* --- Multiple customization --- */
 
-QListView,
-QTreeView,
+QComboBox,
 QLineEdit,
+QListView,
 QSpinBox,
-QComboBox {
+QTableView,
+QTreeView {
   background-color: #191919;
   border-top: 1px solid #000;
   border-left: 1px solid #333;
@@ -69,21 +90,24 @@ QComboBox {
   border-radius: 12px;
   padding: 5px;
 }
+QComboBox:disabled,
+QLineEdit:disabled,
 QListView:disabled,
 QListView::item:disabled,
-QTreeView:disabled,
-QTreeView::item:disabled,
-QLineEdit:disabled,
 QSpinBox:disabled,
-QComboBox:disabled {
+QTreeView:disabled,
+QTreeView::item:disabled {
   color: #aaa;
   border-bottom: 1px solid #555;
 }
 QListView::item,
+QTableView::item,
 QTreeView::item {
   height: 22px;
 }
 QListView::item:hover,
+QTableView::item:hover,
+QTableView::item:selected,
 QTreeView::item:hover,
 QTreeView::branch:hover {
   background-color: black;
@@ -291,7 +315,8 @@ QMenuBar::item:selected {
 }
 
 QFrame#field_splitter {
-  background: qlineargradient( x1:0, y1:0, x2:1, y2:0,
+  background: qlineargradient(
+      x1:0, y1:0, x2:1, y2:0,
       stop:0 #333, stop:1 #262626);
 }
 

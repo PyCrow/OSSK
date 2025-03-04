@@ -33,6 +33,7 @@ logging_handler.setFormatter(logging.Formatter(
 
 
 # --- Local values ---
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 logger.addHandler(logging_handler)
