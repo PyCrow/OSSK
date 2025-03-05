@@ -42,7 +42,7 @@ class DownloadsModel(QAbstractTableModel):
     def columnCount(self, parent=None):
         return len(self.__headers)
 
-    def data(self, index: 'QModelIndex', role=Qt.DisplayRole):
+    def data(self, index: QModelIndex, role=Qt.DisplayRole):
         row = index.row()
         col = index.column()
         proc_data = self.__data[row]

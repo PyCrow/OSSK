@@ -21,7 +21,7 @@ from ui.components.base import ConfirmableWidget, Field, ComboBox
 from ui.components.items import ChannelItem, RecordProcessItem
 from ui.components.menu import \
     AddChannelWidget, BypassWidget, SettingsWindow, DownloadVideoWidget
-from ui.components.models import DownloadsModel
+from ui.components.models import COL, DownloadsModel
 from ui.utils import centralize
 
 logger = logging.getLogger(__name__)
@@ -372,6 +372,10 @@ class DownloadsList(QTableView):
     def _init_ui(self):
         self.model = DownloadsModel()
         self.setModel(self.model)
+        self.horizontalHeader().resizeSection(COL.CHANNEL, 120)
+        self.horizontalHeader().resizeSection(COL.NAME, 250)
+        self.horizontalHeader().resizeSection(COL.STATUS, 110)
+        self.horizontalHeader().resizeSection(COL.PID, 80)
         self.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
         self.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
         self.setMouseTracking(True)
