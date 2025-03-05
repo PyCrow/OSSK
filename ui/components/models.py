@@ -106,5 +106,11 @@ class DownloadsModel(QAbstractTableModel):
     def setFailed(self, pid: int):
         self._find_process(pid)[COL.STATUS] = ProcStatus.FAILED
 
+    def isFailed(self, index: QModelIndex):
+        return self.__data[index.row()][COL.STATUS] == ProcStatus.FAILED
+
     def delProcess(self, index: QModelIndex):
-        del self.__data[index.row()]
+        row = index.row()
+        self.beginRemoveRows(QModelIndex(), row, row)
+        del self.__data[row]
+        self.endRemoveRows()

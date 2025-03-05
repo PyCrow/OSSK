@@ -376,6 +376,7 @@ class DownloadsList(QTableView):
         self.horizontalHeader().resizeSection(COL.NAME, 250)
         self.horizontalHeader().resizeSection(COL.STATUS, 110)
         self.horizontalHeader().resizeSection(COL.PID, 80)
+        self.verticalHeader().hide()
         self.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
         self.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
         self.setMouseTracking(True)
@@ -391,7 +392,8 @@ class DownloadsList(QTableView):
         index = self.indexAt(e.pos())
         if index.isValid():
             self.__selected = index  # fixme: for '_hide_process' only
-            proc_is_finished = self.model.isFinished(index)
+            proc_is_finished = \
+                self.model.isFinished(index) or self.model.isFailed(index)
             self._process_menu(proc_is_finished).exec(e.globalPos())
         else:
             self.__selected = None
