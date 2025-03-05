@@ -342,6 +342,10 @@ QStatusBar {
   border: 1px solid #f00;
 }
 
+#centralWidget {
+  padding: 10px;
+}
+
 #ConfirmableWidgetCentral {
   border-bottom: 3px solid #383838;
 }

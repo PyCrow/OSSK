@@ -211,6 +211,7 @@ class MainWindow(QMainWindow):
 
         # Central vertical splitter
         main_splitter = QSplitter(Qt.Vertical)
+        main_splitter.setObjectName('centralWidget')
         main_splitter.addWidget(channel_downloads_splitter)
         main_splitter.addWidget(self.log_tabs)
         main_splitter.setStretchFactor(2, 1)
