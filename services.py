@@ -24,6 +24,8 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 logger.addHandler(logging_handler)
 
+YTDL_OPTIONS = {'quiet': True, 'default_search': 'ytsearch'}
+
 
 @dataclass
 class StreamConfig:
@@ -118,13 +120,9 @@ class Master(SoftStoppableThread, SettingsContainer):
     @logger_handler
     def _check_for_stream(self, channel_name: str):
         url = CHANNEL_URL_LIVE_TEMPLATE.format(channel_name)
-        ytdl_options = {'quiet': True, 'default_search': 'ytsearch'}
-
-        with yt_dlp.YoutubeDL(ytdl_options) as ydl:
+        with yt_dlp.YoutubeDL(YTDL_OPTIONS) as ydl:
             try:
-                info_dict: dict = ydl.extract_info(
-                    url, download=False,
-                    extra_info={'quiet': True, 'verbose': False})
+                info_dict: dict = ydl.extract_info(url, download=False)
             except yt_dlp.utils.UserNotLive:
                 self.channelOff[str].emit(channel_name)
                 return
@@ -325,6 +323,17 @@ class Slave(SoftStoppableThread, SettingsContainer):
 
         self.streamRec[str, int, str].emit(
             channel_name, proc.pid, stream_title)
+
+    def run_single_download(self, url: str):
+        if self.ready_to_download():
+            return
+            stream_data: StreamConfig = StreamConfig(
+                channel_name='',
+                stream_quality=('-f', 'bv*+ba/b'),
+                url=url,
+                title=url,
+            )
+            self.queue.put(stream_data, block=True)
 
     def check_pids_to_stop(self):
         if not self.pids_to_stop:

@@ -175,7 +175,9 @@ class Controller(QObject):
 
     @pyqtSlot(str)
     def run_single_download(self, url: str):
-        raise NotImplementedError  # fixme
+        THREADS_LOCK.lock()
+        self.Master.Slave.run_single_download(url)
+        THREADS_LOCK.unlock()
 
     @pyqtSlot(int, str)
     def add_log_message(self, level: int, text: str):
