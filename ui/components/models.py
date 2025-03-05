@@ -45,17 +45,17 @@ class DownloadsModel(QAbstractTableModel):
     def data(self, index: 'QModelIndex', role=Qt.DisplayRole):
         row = index.row()
         col = index.column()
-        data = self.__data[row][col]
+        proc_data = self.__data[row]
+        cell_data = proc_data[col]
         if role == Qt.DisplayRole:
             if col == COL.STATUS:
-                return ProcStatus.str(data)
-            return data
+                return ProcStatus.str(cell_data)
+            return cell_data
         if role == Qt.ForegroundRole:
-            if col == COL.STATUS:
-                if data == ProcStatus.FINISHED:
-                    return QColor(0, 255, 0)
-                if data == ProcStatus.FAILED:
-                    return QColor(255, 0, 0)
+            if proc_data[COL.STATUS] == ProcStatus.FINISHED:
+                return QColor(0, 255, 0)
+            if proc_data[COL.STATUS] == ProcStatus.FAILED:
+                return QColor(255, 0, 0)
             return QColor(255, 255, 255)
         return QVariant()
 

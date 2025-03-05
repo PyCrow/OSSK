@@ -366,16 +366,15 @@ class DownloadsList(QTableView):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.__selected = None
+        self._init_ui()
+
+    def _init_ui(self):
         self.model = DownloadsModel()
         self.setModel(self.model)
-        self.horizontalHeader().setSectionResizeMode(
-            QHeaderView.ResizeToContents)
-        self.verticalHeader().setVisible(False)
         self.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
         self.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
         self.setMouseTracking(True)
-
-        self.__selected = None
 
         self._action_open_tab = QAction("Open tab", self)
         self._action_open_tab.triggered.connect(self._send_open_pid)
