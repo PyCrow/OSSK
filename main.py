@@ -286,8 +286,14 @@ class Controller(QObject):
         self.Window.downloads_widget.set_stream_failed(pid)
 
 
+def excepthook(exc_type, exc_value, exc_tb):
+    tb = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
+    logger.exception(tb)
+
+
 if __name__ == '__main__':
     controller = None
+    sys.excepthook = excepthook
     try:
         app = QApplication(sys.argv)
         controller = Controller()
