@@ -137,11 +137,11 @@ class SettingsWindow(SettingsWidget):
         self.box_scanner_sleep.valueChanged[int].connect(
             self._valid_scanner_sleep)
         self.box_scanner_sleep.setToolTip(
-            "Waiting time between channel scans (minutes).\n"
+            "Approximate wait time between channel scan cycles (minutes).\n"
             "Range from 1 to 60.\n"
             "It is not recommended to set it to less than 5 minutes, so\n"
             " that YouTube does not consider the scan as a DoS attack.")
-        field_scanner_sleep = Field("Time between scans (minutes)",
+        field_scanner_sleep = Field("Approximate time between scans (minutes)",
                                     self.box_scanner_sleep)
 
         # Field: Process termination timeout
