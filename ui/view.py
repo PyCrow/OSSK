@@ -125,7 +125,7 @@ class MainWindow(QMainWindow):
 
     def _init_ui(self):
         self.setWindowTitle("OSSK")
-        self.resize(860, 660)
+        self.resize(1020, 660)
         centralize(self)
 
         # Style loading
@@ -372,8 +372,8 @@ class DownloadsList(QTableView):
     def _init_ui(self):
         self.model = DownloadsModel()
         self.setModel(self.model)
-        self.horizontalHeader().resizeSection(COL.CHANNEL, 120)
-        self.horizontalHeader().resizeSection(COL.NAME, 250)
+        self.horizontalHeader().resizeSection(COL.CHANNEL, 150)
+        self.horizontalHeader().resizeSection(COL.NAME, 350)
         self.horizontalHeader().resizeSection(COL.STATUS, 110)
         self.horizontalHeader().resizeSection(COL.PID, 80)
         self.verticalHeader().hide()
