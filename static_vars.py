@@ -182,7 +182,7 @@ class SoftStoppableThread(QThread):
         """
         self.__stop = True
 
-    def _raise_on_stop(self):
+    def _check_force_stop(self):
         """
         Raise StopThreads if 'stop' == True
         """

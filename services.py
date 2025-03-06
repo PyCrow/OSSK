@@ -7,6 +7,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from logging import INFO, WARNING, ERROR
 from queue import Queue
+from random import randrange
 from signal import SIGINT
 from time import sleep
 from typing import IO, Dict
@@ -89,10 +90,8 @@ class Master(SoftStoppableThread, SettingsContainer):
             while True:
                 for channel_name in list(self.channels.keys()):
                     self._check_for_stream(channel_name)
-                    self._raise_on_stop()
+                    self._check_force_stop()
                 self.__start_force_scan = False
-                self._raise_on_stop()
-
                 self.wait_and_check()
         except StopThreads:
             pass
@@ -102,13 +101,22 @@ class Master(SoftStoppableThread, SettingsContainer):
     def wait_and_check(self):
         """ Waiting with a check to stop """
         # Convert minutes to seconds
-        c = self.scanner_sleep_min * 60
-        while c != 0 and not self.__start_force_scan:
-            self.nextScanTimer[int].emit(c)
+        sleep_sec = self.scanner_sleep_min * 60
+        # Random sleep
+        min_sleep_sec = 60
+        delta_sec = 120
+        start_range = sleep_sec - delta_sec
+        if start_range < min_sleep_sec:
+            start_range = min_sleep_sec
+        stop_range = sleep_sec + delta_sec
+        sleep_sec = randrange(start_range, stop_range)
+        # Waiting process
+        while sleep_sec != 0 and not self.__start_force_scan:
+            self.nextScanTimer[int].emit(sleep_sec)
             sleep(1)
-            self._raise_on_stop()
-            c -= 1
-        self.nextScanTimer[int].emit(c)
+            self._check_force_stop()
+            sleep_sec -= 1
+        self.nextScanTimer[int].emit(sleep_sec)
 
     def channel_status_changed(self, channel_name: str, status: bool):
         if (channel_name in self.__last_status
@@ -215,12 +223,12 @@ class Slave(SoftStoppableThread, SettingsContainer):
         try:
             while True:
                 self.check_running_downloads()
-                self._raise_on_stop()
+                self._check_force_stop()
                 while self.ready_to_download() and not self.queue.empty():
                     stream_data = self.queue.get()
                     self.record_stream(stream_data)
                 self.check_pids_to_stop()
-                self._raise_on_stop()
+                self._check_force_stop()
         except StopThreads:
             self.stop_downloads()
         self._log(INFO, "Recorder stopped.")
@@ -312,8 +320,11 @@ class Slave(SoftStoppableThread, SettingsContainer):
         ]
         if self.cookies_from_browser:
             useragent = get_useragent(self.cookies_from_browser)
-            cmd += ['--cookies-from-browser', self.cookies_from_browser,
-                    '--user-agent', f'"{useragent}"']
+            cmd += [
+                '--cookies-from-browser', self.cookies_from_browser,
+                # '--cookies', 'cookies.txt'  # fixme
+                '--user-agent', f'"{useragent}"'
+            ]
 
         proc = RecordProcess(cmd, stdout=temp_log, stderr=temp_log,
                              channel=channel_name)
