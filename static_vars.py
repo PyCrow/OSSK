@@ -3,6 +3,7 @@ import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from subprocess import Popen
+from typing import Optional
 
 from PyQt5.QtCore import QThread
 from fake_useragent import UserAgent
@@ -13,9 +14,10 @@ from pydantic_settings import BaseSettings
 # --- Common values definition ---
 
 PROJECT_PATH = Path().resolve()
-LOG_FILE = PROJECT_PATH.joinpath('ossk.log')
-SETTINGS_FILE = PROJECT_PATH.joinpath('config.json')
-STYLESHEET_PATH = PROJECT_PATH.joinpath('ui').joinpath('stylesheet.qss')
+LOG_FILE = PROJECT_PATH / 'ossk.log'
+SETTINGS_FILE = PROJECT_PATH / 'config.json'
+STYLESHEET_PATH = PROJECT_PATH / 'ui' / 'stylesheet.qss'
+DB_PATH = PROJECT_PATH / 'db' / 'ossk.db'
 
 FAKE_AGENTS = UserAgent(min_version=130.0, platforms='desktop')
 
@@ -121,6 +123,7 @@ class Settings(BaseSettings):
         default=True,
     )
 
+
     @classmethod
     def load(cls) -> tuple[bool, 'Settings']:
         suc = True
@@ -152,6 +155,8 @@ class Settings(BaseSettings):
 
 
 class ChannelConfig(BaseSettings):
+    pk: Optional[int] = Field(default=None)  # field for managing db
+    url: str = Field()
     alias: str = Field(default="")
     svq: str = Field(default='Maximum')
 

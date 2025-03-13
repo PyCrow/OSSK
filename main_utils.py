@@ -1,10 +1,12 @@
 import logging
+import sqlite3
 from pathlib import Path
 from subprocess import run, DEVNULL
+from typing import Tuple
 
 from PyQt5.QtCore import QObject, pyqtSignal
 
-from static_vars import StopThreads, logging_handler, FAKE_AGENTS
+from static_vars import StopThreads, logging_handler, FAKE_AGENTS, DB_PATH
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
