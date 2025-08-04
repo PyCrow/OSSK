@@ -190,7 +190,7 @@ class Controller(QObject):
         """ Add a channel to the monitored list """
         if not channel_name or channel_name in self.settings.channels:
             return
-        channel_data = ChannelConfig()
+        channel_data = ChannelConfig(url=channel_name)
         self.settings.channels[channel_name] = channel_data
 
         # Saving settings
