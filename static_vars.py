@@ -86,7 +86,7 @@ class Settings(BaseSettings):
     )
 
     ytdlp: str = Field(
-        default='python -m yt_dlp',
+        default='python3 -m yt_dlp',
     )
 
     max_downloads: int = Field(
