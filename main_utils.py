@@ -1,8 +1,6 @@
 import logging
-import sqlite3
 from pathlib import Path
-from subprocess import run, DEVNULL
-from typing import Tuple
+from subprocess import run, PIPE, STDOUT
 
 from PyQt5.QtCore import QObject, pyqtSignal
 
@@ -35,9 +33,7 @@ def is_callable(path: str):
     cmd = path.split()
     cmd.append('--help')
     try:
-        return run(cmd, stdout=DEVNULL, stderr=DEVNULL).returncode == 0
-    except (FileNotFoundError, PermissionError):
-        return False
+        return run(cmd, stdout=PIPE, stderr=STDOUT).returncode == 0
     except Exception as e:
         logger.exception(e)
         return False
@@ -64,7 +60,8 @@ def get_channel_dir(channel_name: str, records_dir: str) -> Path:
 
 
 class ServiceController(QObject):
-    finished = pyqtSignal(bool, str)
+    log = pyqtSignal(int, str)
+    valid = pyqtSignal(bool)
 
     def __init__(self, ffmpeg_path: str = None, ytdlp_command: str = None):
         if ffmpeg_path is None and ytdlp_command is None:
@@ -77,10 +74,13 @@ class ServiceController(QObject):
     def run(self):
         if self.ytdlp_command is not None \
                 and not is_callable(self.ytdlp_command):
-            self.finished[bool, str].emit(False, "yt-dlp not found!")
-
-        if self.ffmpeg_path is not None \
+            self.log[int, str].emit(logging.ERROR, "yt-dlp not found!")
+            self.log[int, str].emit(logging.DEBUG, f"{self.ytdlp_command=}")
+            self.valid.emit(False)
+        elif self.ffmpeg_path is not None \
                 and not check_exists_and_callable(self.ffmpeg_path):
-            self.finished[bool, str].emit(False, "ffmpeg not found!")
-
-        self.finished[bool, str].emit(True, "")
+            self.log[int, str].emit(logging.ERROR, "ffmpeg not found!")
+            self.log[int, str].emit(logging.DEBUG, f"{self.ffmpeg_path=}")
+            self.valid.emit(False)
+        else:
+            self.valid.emit(True)

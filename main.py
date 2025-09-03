@@ -28,6 +28,9 @@ DEBUG_LEVELS = {DEBUG: 'DEBUG', INFO: 'INFO',
 
 
 class Controller(QObject):
+    master_works = False
+    slave_works = False
+
     def __init__(self):
         super(Controller, self).__init__()
 
@@ -80,8 +83,8 @@ class Controller(QObject):
             self.Window.log_tabs.proc_log)
 
         # Stream status signals
-        self.Master.works[bool].connect(self.Window.update_master_enabled)
-        self.Master.Slave.works[bool].connect(self.Window.update_slave_enabled)
+        self.Master.works[bool].connect(self.update_main_buttons_status)
+        self.Master.Slave.works[bool].connect(self.update_main_buttons_status)
         self.Master.Slave.streamRec[str, int, str].connect(self._stream_rec)
         self.Master.Slave.streamFinished[int].connect(self._stream_finished)
         self.Master.Slave.streamFailed[int].connect(self._stream_fail)
@@ -124,11 +127,15 @@ class Controller(QObject):
         # The View should not change settings data.
         self.Window.update_settings(self.settings)
 
+    def update_main_buttons_status(self):
+        if self.Master.isRunning() or self.Master.Slave.isRunning():
+            self.Window.set_main_buttons_enabled(False, True)
+        else:
+            self.Window.set_main_buttons_enabled(True, False)
+
     @pyqtSlot(str, str)
     def run_services(self, ffmpeg_path: str, ytdlp_command: str):
-        """
-        Run checks for ffmpeg and yt-dlp in another thread.
-        """
+        """ Run checks for 'ffmpeg' and 'yt-dlp' in another thread. """
         # Initialize
         self._srv_thread = QThread()
         self._srv_controller = ServiceController(ffmpeg_path, ytdlp_command)
@@ -136,28 +143,22 @@ class Controller(QObject):
 
         # Connect signals
         self._srv_thread.started.connect(self._srv_controller.run)
-        self._srv_controller.finished[bool, str].connect(self._real_run_master)
-        self._srv_controller.finished.connect(self._srv_thread.quit)
-        self._srv_controller.finished.connect(self._srv_controller.deleteLater)
+        self._srv_controller.log.connect(self.add_log_message)
+        self._srv_controller.valid.connect(self._run_services)
         self._srv_thread.finished.connect(self._srv_thread.deleteLater)
 
         self._srv_thread.start()
 
-    @pyqtSlot(bool, str)
-    def _real_run_master(self, suc: bool, message: str):
-        """
-        Checks thread output and services, then start services.
-
-        :param suc: Is ffmpeg and yt-dlp checks finished successfully
-        :param message: Error message
-        """
-        if not suc:
-            self.add_log_message(WARNING, message)
-
-        if self.Master.isRunning() and self.Master.Slave.isRunning():
-            self.Master.set_start_force_scan()
+    @pyqtSlot(bool)
+    def _run_services(self, valid: bool):
+        """ Checks thread output and services, then start services. """
+        self.update_main_buttons_status()
+        if not valid:
             return
-
+        # Stop useless service subthread
+        self._srv_thread.quit()
+        self._srv_controller.deleteLater()
+        # Start services
         self.Master.start()
 
     @pyqtSlot()

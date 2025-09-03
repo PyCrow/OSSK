@@ -94,12 +94,10 @@ class MainWindow(QMainWindow):
 
     def __init__(self, settings: Settings):
         super(MainWindow, self).__init__()
-        self._master_works = False
-        self._slave_works = False
         self.settings: Union[Settings, None] = None
         self._init_ui()
         self._init_menu()
-        self._update_manage_buttons_status()
+        self.set_main_buttons_enabled(True, False)
         self.init_settings(settings)
 
     def _init_menu(self):
@@ -275,22 +273,17 @@ class MainWindow(QMainWindow):
         settings = self.get_common_settings_values()
         self.saveSettings[Settings].emit(settings)
 
-    def _update_manage_buttons_status(self):
-        if self._master_works or self._slave_works:
-            self._button_start.setEnabled(False)
-            self._button_stop.setEnabled(True)
-        else:
-            self._button_start.setEnabled(True)
-            self._button_stop.setEnabled(False)
+    def set_main_buttons_enabled(self, start: bool, stop: bool):
+        self._button_start.setEnabled(start)
+        self._button_stop.setEnabled(stop)
 
     # OUTGOING SIGNALS
     @pyqtSlot()
     def _send_start_services(self):
         """ [OUT] """
+        self.set_main_buttons_enabled(False, False)
         ffmpeg_path = self.settings_window.field_ffmpeg_file.text()
         ytdlp_command = self.settings_window.line_ytdlp.text()
-        self._button_start.setEnabled(False)
-        self._button_stop.setEnabled(False)
         self.runServices[str, str].emit(ffmpeg_path, ytdlp_command)
 
     @pyqtSlot()
@@ -334,16 +327,6 @@ class MainWindow(QMainWindow):
     def update_scan_timer(self, seconds: int):
         """ [IN] """
         self.status_bar.showMessage(f"Next scan in: {seconds} seconds", 3000)
-
-    @pyqtSlot(bool)
-    def update_master_enabled(self, enabled: bool):
-        self._master_works = enabled
-        self._update_manage_buttons_status()
-
-    @pyqtSlot(bool)
-    def update_slave_enabled(self, enabled: bool):
-        self._slave_works = enabled
-        self._update_manage_buttons_status()
 
 
 class ListView(QListView):
